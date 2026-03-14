@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+enum RoleUser {
+  SUPER_ADMIN
+  ADMIN
+  GERANT
+  SECRETAIRE
+  INTERVENANT
+  PARTICIPANT
+  RESPONSABLE
+}
+
+enum StatutPresence {
+  PRESENT
+  ABSENT
+  RETARD
+  JUSTIFIE
+}
+
+enum StatusSession {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum StatusPaymentPlan {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+model Etablissement {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  logoUrl      String?
+  primaryColor String?  @default("#0F515C")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]
+  rooms        Room[]
+  activities   Activity[]
+  groups       Groupe[]
+  students     Student[]
+  sessions     Session[]
+  paymentPlans PaymentPlan[]
+  tranches     Tranche[]
+  paiements    Paiement[]
+  attendance   AttendanceRecord[]
+  documents    Document[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      RoleUser
+  avatarUrl String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  etablissementId String?
+  etablissement   Etablissement? @relation(fields: [etablissementId], references: [id])
+
+  sessions Session[] @relation("InstructorSessions")
+  groups   Groupe[]  @relation("InstructorGroups")
+
+  @@index([etablissementId])
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String
+  capacity    Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  sessions Session[]
+
+  @@index([etablissementId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  duration    Int? // duration in minutes
+  color       String?  @default("#0F515C")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  groups   Groupe[]
+  sessions Session[]
+
+  @@index([etablissementId])
+}
+
+model Groupe {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id])
+
+  instructorId String
+  instructor   User   @relation("InstructorGroups", fields: [instructorId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  students Student[]
+  sessions Session[]
+
+  @@index([etablissementId])
+}
+
+model Student {
+  id               String    @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  birthDate        DateTime?
+  registrationDate DateTime  @default(now())
+  isActive         Boolean   @default(true)
+  isMinor          Boolean   @default(false)
+  
+  // Infos Parent (si mineur)
+  parentName       String?
+  parentPhone      String?
+  parentEmail      String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  groups       Groupe[]
+  paymentPlans PaymentPlan[]
+  attendance   AttendanceRecord[]
+
+  @@index([etablissementId])
+}
+
+/**
+ * PaymentPlan : Le contrat financier global (ex: Frais annuels).
+ */
+model PaymentPlan {
+  id              String            @id @default(uuid())
+  totalAmount     Float
+  paidAmount      Float             @default(0)
+  currency        String            @default("DZD")
+  status          StatusPaymentPlan @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  studentId       String
+  student         Student           @relation(fields: [studentId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement      @relation(fields: [etablissementId], references: [id])
+
+  tranches        Tranche[]
+
+  @@index([etablissementId])
+}
+
+/**
+ * Tranche : Une échéance prévue dans le plan de paiement.
+ */
+model Tranche {
+  id              String        @id @default(uuid())
+  amount          Float         // Montant attendu
+  dueDate         DateTime
+  isPaid          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  paymentPlanId   String
+  paymentPlan     PaymentPlan   @relation(fields: [paymentPlanId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  paiements       Paiement[]
+
+  @@index([etablissementId])
+}
+
+/**
+ * Paiement : Un flux financier réel (reçu).
+ */
+model Paiement {
+  id              String        @id @default(uuid())
+  amount          Float         // Montant réellement payé
+  date            DateTime      @default(now())
+  method          PaymentMethod @default(CASH)
+  reference       String?       // N° de reçu ou transaction
+  note            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  trancheId       String
+  tranche         Tranche       @relation(fields: [trancheId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  @@index([etablissementId])
+}
+
+model Session {
+  id        String        @id @default(uuid())
+  startTime DateTime
+  endTime   DateTime
+  status    StatusSession @default(SCHEDULED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id])
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  instructorId String
+  instructor   User   @relation("InstructorSessions", fields: [instructorId], references: [id])
+
+  groupId String?
+  group   Groupe? @relation(fields: [groupId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  attendance AttendanceRecord[]
+
+  @@index([etablissementId])
+}
+
+model AttendanceRecord {
+  id              String         @id @default(uuid())
+  status          StatutPresence @default(PRESENT)
+  retardMinutes   Int?           @default(0)
+  note            String?
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([etablissementId])
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  type      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  etablissementId String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+
+  @@index([etablissementId])
+}
