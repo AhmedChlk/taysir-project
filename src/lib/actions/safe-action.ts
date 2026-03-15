@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { RoleUser } from "@prisma/client";
 
 // Récupération de la session
