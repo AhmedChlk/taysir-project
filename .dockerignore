@@ -1,0 +1,27 @@
+# Ignorer les node_modules locaux et artifacts
+node_modules
+.next
+out
+build
+
+# Ignorer Git
+.git
+.gitignore
+
+# Ignorer les secrets et config locales
+.env
+.env.local
+.env.production
+.env.development
+
+# Ignorer Docker et logs
+Dockerfile
+docker-compose.yml
+.dockerignore
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignorer fichiers OS
+.DS_Store
+Thumbs.db
