@@ -1,6 +1,6 @@
-import { RoleUser, StatutPresence, StatusSession, StatusPaymentPlan } from "@prisma/client";
+import { RoleUser, StatutPresence, StatusSession, StatusPaymentPlan, PaymentMethod } from "@prisma/client";
 
-export { RoleUser as UserRole };
+export { RoleUser as UserRole, PaymentMethod };
 
 export interface Tenant {
   id: string;
@@ -44,10 +44,10 @@ export interface Group {
   id: string;
   etablissementId: string;
   name: string;
-  activityId: string;
-  instructorId: string;
   isActive: boolean;
-  students?: { id: string }[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  students?: Student[];
 }
 
 export interface Student {
@@ -57,10 +57,16 @@ export interface Student {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  isMinor?: boolean;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  parentEmail?: string | null;
   birthDate?: Date | null;
   registrationDate: Date;
   isActive: boolean;
-  groups?: { id: string }[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  groups?: Group[];
 }
 
 export interface Session {
@@ -75,7 +81,7 @@ export interface Session {
   status: StatusSession;
 }
 
-export interface Payment {
+export interface PaymentPlan {
   id: string;
   etablissementId: string;
   studentId: string;
@@ -83,6 +89,30 @@ export interface Payment {
   paidAmount: number;
   currency: string;
   status: StatusPaymentPlan;
+  tranches?: Tranche[];
+  student?: Student;
+}
+
+// Alias to avoid breaking existing code that uses 'Payment'
+export type Payment = PaymentPlan;
+
+export interface Tranche {
+  id: string;
+  amount: number;
+  dueDate: Date;
+  isPaid: boolean;
+  paymentPlanId: string;
+  paiements?: Paiement[];
+}
+
+export interface Paiement {
+  id: string;
+  amount: number;
+  date: Date;
+  method: PaymentMethod;
+  reference?: string | null;
+  note?: string | null;
+  trancheId: string;
 }
 
 export interface AttendanceRecord {

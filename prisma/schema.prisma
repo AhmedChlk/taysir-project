@@ -81,7 +81,6 @@ model User {
   etablissement   Etablissement? @relation(fields: [etablissementId], references: [id])
 
   sessions Session[] @relation("InstructorSessions")
-  groups   Groupe[]  @relation("InstructorGroups")
 
   @@index([etablissementId])
 }
@@ -104,7 +103,7 @@ model Room {
 
 model Activity {
   id          String   @id @default(uuid())
-  name        String
+  name         String
   description String?
   duration    Int? // duration in minutes
   color       String?  @default("#0F515C")
@@ -114,7 +113,6 @@ model Activity {
   etablissementId String
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
 
-  groups   Groupe[]
   sessions Session[]
 
   @@index([etablissementId])
@@ -126,12 +124,6 @@ model Groupe {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  activityId String
-  activity   Activity @relation(fields: [activityId], references: [id])
-
-  instructorId String
-  instructor   User   @relation("InstructorGroups", fields: [instructorId], references: [id])
 
   etablissementId String
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
@@ -255,8 +247,8 @@ model Session {
   instructorId String
   instructor   User   @relation("InstructorSessions", fields: [instructorId], references: [id])
 
-  groupId String?
-  group   Groupe? @relation(fields: [groupId], references: [id])
+  groupId String
+  group   Groupe @relation(fields: [groupId], references: [id])
 
   etablissementId String
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
