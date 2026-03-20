@@ -147,6 +147,7 @@
   "duration_mins": "{count} دقيقة",
   "label_color": "لون الملصق",
   "attendance_subtitle": "تتبع حضور وتأخر الطلاب في الوقت الفعلي.",
+  "select_session": "اختر الحصة",
   "confirm_delete": "هل أنت متأكد من رغبتك في حذف هذا العنصر؟",
   "save_success": "تم الحفظ بنجاح.",
   "paid": "تم الدفع",

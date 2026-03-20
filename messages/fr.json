@@ -147,6 +147,7 @@
   "duration_mins": "{count} minutes",
   "label_color": "Couleur de l'étiquette",
   "attendance_subtitle": "Suivez les présences et les retards des élèves en temps réel.",
+  "select_session": "Sélectionner une séance",
   "confirm_delete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
   "save_success": "Enregistré avec succès.",
   "paid": "Payé",
