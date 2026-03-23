@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { clsx } from "clsx";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
+import { Toggle } from "@/components/ui/Toggle";
 import { User, UserRole } from "@/types/schema";
-import { UserPlus, Mail, ShieldCheck, Trash2, Loader2 } from "lucide-react";
+import { UserPlus, Mail, ShieldCheck, Trash2, Loader2, Key, Filter, CheckCircle2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
-import { createUserAction, updateUserAction, deleteUserAction } from "@/actions/users.actions";
+import { createUserAction, updateUserAction, deleteUserAction, resetUserPasswordAction } from "@/actions/users.actions";
 import { useRouter } from "@/i18n/routing";
 
 interface StaffClientViewProps {
@@ -17,7 +19,10 @@ interface StaffClientViewProps {
 
 export default function StaffClientView({ initialStaff = [] }: StaffClientViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [newPassword, setNewPassword] = useState("");
   const [isPending, startTransition] = useTransition();
   const t = useTranslations();
   const router = useRouter();
@@ -25,6 +30,36 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
   const handleAction = (u: User) => {
     setSelectedStaff(u);
     setIsModalOpen(true);
+  };
+
+  const handleToggleStatus = async (user: User) => {
+    startTransition(async () => {
+      const result = await updateUserAction({ 
+        id: user.id, 
+        isActive: !user.isActive 
+      });
+      if (result.success) {
+        router.refresh();
+      }
+    });
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedStaff || newPassword.length < 8) return;
+    
+    startTransition(async () => {
+      const result = await resetUserPasswordAction({ 
+        id: selectedStaff.id, 
+        newPassword 
+      });
+      if (result.success) {
+        setIsResetModalOpen(false);
+        setNewPassword("");
+        alert(t("save_success"));
+      } else {
+        alert(result.error.message);
+      }
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -106,22 +141,50 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
     {
       header: t("status_header"),
       accessor: (u: User) => (
-        <div className="flex items-center justify-between gap-4">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            u.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+        <div className="flex items-center gap-3">
+          <Toggle 
+            enabled={u.isActive} 
+            onChange={() => handleToggleStatus(u)} 
+          />
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+            u.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
           }`}>
+            {u.isActive ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
             {u.isActive ? t("active") : t("inactive")}
           </span>
+        </div>
+      ),
+    },
+    {
+      header: t("actions"),
+      accessor: (u: User) => (
+        <div className="flex items-center justify-end gap-2">
+          <button 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              setSelectedStaff(u);
+              setIsResetModalOpen(true);
+            }}
+            className="p-2 text-gray-400 hover:text-primary-teal hover:bg-primary-teal/5 rounded-lg transition-all"
+            title="Réinitialiser le mot de passe"
+          >
+            <Key size={18} />
+          </button>
           <button 
             onClick={(e) => { e.stopPropagation(); handleDelete(u.id); }}
-            className="text-gray-400 hover:text-red-600 transition-colors"
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+            title={t("delete")}
           >
-            <Trash2 size={16} />
+            <Trash2 size={18} />
           </button>
         </div>
       ),
     },
   ];
+
+  const filteredStaff = initialStaff.filter(u => 
+    roleFilter === "ALL" || u.role === roleFilter
+  );
 
   return (
     <div className="space-y-8">
@@ -142,12 +205,72 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         </button>
       </div>
 
+      {/* Role Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setRoleFilter("ALL")}
+          className={clsx(
+            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
+            roleFilter === "ALL" ? "bg-primary-teal text-white border-primary-teal shadow-md" : "bg-white text-gray-600 border-gray-100 hover:border-primary-teal/30"
+          )}
+        >
+          <Filter size={16} />
+          Tous
+        </button>
+        {[UserRole.GERANT, UserRole.SECRETAIRE, UserRole.INTERVENANT].map((role) => (
+          <button
+            key={role}
+            onClick={() => setRoleFilter(role)}
+            className={clsx(
+              "px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
+              roleFilter === role ? "bg-primary-teal text-white border-primary-teal shadow-md" : "bg-white text-gray-600 border-gray-100 hover:border-primary-teal/30"
+            )}
+          >
+            {role === UserRole.GERANT ? t("manager") : role === UserRole.SECRETAIRE ? t("secretary") : t("teacher")}
+          </button>
+        ))}
+      </div>
+
       <DataTable
-        data={initialStaff}
+        data={filteredStaff}
         columns={columns}
         searchPlaceholder={t("search_staff_placeholder")}
         onAction={handleAction}
       />
+
+      {/* Password Reset Modal */}
+      <Modal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        title="Réinitialiser le mot de passe"
+        footer={
+          <>
+            <button disabled={isPending} onClick={() => setIsResetModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
+            <button 
+              onClick={handleResetPassword}
+              disabled={isPending || newPassword.length < 8} 
+              className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
+            >
+              {isPending && <Loader2 size={16} className="animate-spin" />}
+              {t("change_password")}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Vous réinitialisez le mot de passe de <span className="font-bold text-gray-900">{formatFullName(selectedStaff?.firstName, selectedStaff?.lastName)}</span>.
+          </p>
+          <Input 
+            label={t("new_password")} 
+            type="password" 
+            value={newPassword} 
+            onChange={(e) => setNewPassword(e.target.value)} 
+            placeholder="Minimum 8 caractères"
+            required 
+          />
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isModalOpen}
