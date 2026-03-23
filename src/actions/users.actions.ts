@@ -75,6 +75,21 @@ export const updateUserAction = createSafeAction(
   }
 );
 
+// Réinitialiser le mot de passe
+export const resetUserPasswordAction = createSafeAction(
+  z.object({ id: z.string().uuid(), newPassword: z.string().min(8) }),
+  async ({ id, newPassword }, { tenantId }) => {
+    const tenantPrisma = getTenantPrisma(tenantId);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    return await tenantPrisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+      select: { id: true, email: true },
+    });
+  }
+);
+
 // Supprimer un utilisateur
 export const deleteUserAction = createSafeAction(
   z.object({ id: z.string().uuid() }),
