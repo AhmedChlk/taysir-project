@@ -32,6 +32,17 @@ export const ListUsersSchema = z.object({
   role: z.nativeEnum(RoleUser).optional(),
 });
 
+// Validation des plans de paiement
+export const CreatePaymentPlanSchema = z.object({
+  studentId: z.string().uuid(),
+  totalAmount: z.number().positive(),
+  currency: z.string().length(3).default("DZD"),
+  tranches: z.array(z.object({
+    amount: z.number().positive(),
+    dueDate: z.string(), // ISO Date
+  })).min(1),
+});
+
 // Validation des paiements
 export const RegisterPaymentSchema = z.object({
   trancheId: z.string().uuid("ID de tranche invalide."),
@@ -92,8 +103,6 @@ export const UserSchema = z.object({
 // Validation pour les groupes
 export const CreateGroupSchema = z.object({
   name: z.string().min(2, "Nom trop court."),
-  activityId: z.string().uuid(),
-  instructorId: z.string().uuid(),
 });
 
 export const UpdateGroupSchema = CreateGroupSchema.extend({
@@ -105,8 +114,6 @@ export const GroupSchema = z.object({
   id: z.string(),
   etablissementId: z.string(),
   name: z.string().min(2),
-  activityId: z.string(),
-  instructorId: z.string(),
   isActive: z.boolean(),
 });
 
