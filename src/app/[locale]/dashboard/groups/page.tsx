@@ -1,12 +1,13 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import GroupsClientView from "@/components/dashboard/groups/GroupsClientView";
-import { getGroups, getActivities, getStaff } from "@/services/api";
+import { getGroups, getActivities, getStaff, getStudents } from "@/services/api";
 
 export default async function GroupsPage() {
-  const [groups, activities, staff] = await Promise.all([
+  const [groups, activities, staff, students] = await Promise.all([
     getGroups(),
     getActivities(),
-    getStaff()
+    getStaff(),
+    getStudents()
   ]);
 
   return (
@@ -15,6 +16,7 @@ export default async function GroupsPage() {
         initialGroups={groups} 
         activities={activities} 
         staff={staff} 
+        students={students}
       />
     </DashboardLayout>
   );

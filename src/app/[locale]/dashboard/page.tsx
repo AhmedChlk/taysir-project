@@ -1,14 +1,22 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import DashboardClientView from "@/components/dashboard/DashboardClientView";
-import { getStudents, getActivities, getRooms, getSessions, getAttendanceStats } from "@/services/api";
+import { 
+  getStudents, 
+  getActivities, 
+  getRooms, 
+  getSessions, 
+  getAttendanceStats,
+  getPayments 
+} from "@/services/api";
 
 export default async function DashboardPage() {
-  const [students, activities, rooms, sessions, attendanceStats] = await Promise.all([
+  const [students, activities, rooms, sessions, attendanceStats, payments] = await Promise.all([
     getStudents(),
     getActivities(),
     getRooms(),
     getSessions(),
-    getAttendanceStats()
+    getAttendanceStats(),
+    getPayments()
   ]);
 
   return (
@@ -19,6 +27,7 @@ export default async function DashboardPage() {
         rooms={rooms}
         sessions={sessions}
         attendanceStats={attendanceStats}
+        payments={payments}
       />
     </DashboardLayout>
   );
