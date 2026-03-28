@@ -32,7 +32,6 @@
   "email": "Email",
   "password": "Mot de passe",
   "login_button": "Se connecter",
-  "select_session": "Sélectionner une séance",
   "error_invalid_credentials": "Identifiants invalides",
   "error_generic": "Une erreur est survenue",
   "footer_copyright": "© 2026 Taysir - Gestion de Scolarité",
