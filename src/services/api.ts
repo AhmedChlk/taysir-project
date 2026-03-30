@@ -3,7 +3,7 @@
 import "server-only";
 import { prisma, getTenantPrisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 
@@ -109,11 +109,18 @@ export const getStudents = async () => {
   });
 };
 
-// Liste des paiements
+// Liste des paiements (PaymentPlans)
 export const getPayments = async () => {
   const client = await getPrisma();
   return await client.paymentPlan.findMany({
-    include: { student: true }
+    include: { 
+      student: true,
+      tranches: {
+        include: { paiements: true },
+        orderBy: { dueDate: "asc" }
+      }
+    },
+    orderBy: { createdAt: "desc" }
   });
 };
 
