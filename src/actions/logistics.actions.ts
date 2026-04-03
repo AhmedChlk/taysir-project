@@ -1,122 +1,198 @@
-// Actions pour la logistique (salles, activités, groupes)
 "use server";
 
-import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
-import { getTenantPrisma } from "@/lib/prisma";
-import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { 
-  MarkPresenceSchema, 
-  RoomSchema, 
-  ActivitySchema,
-  CreateGroupSchema,
-  UpdateGroupSchema
-} from "@/lib/validations";
-import { revalidateTag } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-// --- GROUPES ---
+// Utilitaire pour récupérer le Tenant (Établissement) localement
+async function getEtablissementId() {
+  const etablissement = await prisma.etablissement.findFirst();
+  if (!etablissement) throw new Error("Établissement introuvable");
+  return etablissement.id;
+}
 
-export const createGroupAction = createSafeAction(CreateGroupSchema, async (data, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.groupe.create({ data: data as any });
-  revalidateTag(`groups-${tenantId}`);
-  return result;
-});
+// Purificateur de données pour éviter les crashs Next.js 16 Server Components
+function purify(data: any) {
+  return JSON.parse(JSON.stringify(data));
+}
 
-export const updateGroupAction = createSafeAction(UpdateGroupSchema, async ({ id, ...data }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.groupe.update({ where: { id }, data });
-  revalidateTag(`groups-${tenantId}`);
-  return result;
-});
+// ==========================================
+// --- SALLES (ROOMS) ---
+// ==========================================
 
-export const deleteGroupAction = createSafeAction(z.object({ id: z.string().uuid() }), async ({ id }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.groupe.delete({ where: { id } });
-  revalidateTag(`groups-${tenantId}`);
-  return result;
-});
+export async function createRoomAction(data: any) {
+  try {
+    const tid = await getEtablissementId();
+    const result = await prisma.room.create({
+      data: {
+        name: data.name,
+        capacity: Number(data.capacity),
+        description: data.description,
+        etablissement: { connect: { id: tid } },
+      },
+    });
+    revalidatePath("/dashboard/rooms");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-// --- SALLES ---
+export async function updateRoomAction(data: any) {
+  try {
+    const { id, ...updateData } = data;
+    const result = await prisma.room.update({
+      where: { id },
+      data: {
+        ...updateData,
+        capacity: Number(updateData.capacity),
+      },
+    });
+    revalidatePath("/dashboard/rooms");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-export const createRoomAction = createSafeAction(RoomSchema, async (data, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.room.create({ data: data as any });
-  revalidateTag(`rooms-${tenantId}`);
-  return result;
-});
+export async function deleteRoomAction({ id }: { id: string }) {
+  try {
+    await prisma.room.delete({ where: { id } });
+    revalidatePath("/dashboard/rooms");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-export const updateRoomAction = createSafeAction(RoomSchema.extend({ id: z.string().uuid() }), async ({ id, ...data }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.room.update({ where: { id }, data });
-  revalidateTag(`rooms-${tenantId}`);
-  return result;
-});
+// ==========================================
+// --- GROUPES (GROUPS) ---
+// ==========================================
 
-export const deleteRoomAction = createSafeAction(z.object({ id: z.string().uuid() }), async ({ id }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.room.delete({ where: { id } });
-  revalidateTag(`rooms-${tenantId}`);
-  return result;
-});
+export async function createGroupAction(data: any) {
+  try {
+    const tid = await getEtablissementId();
+    const result = await prisma.groupe.create({
+      data: {
+        name: data.name,
+        level: data.level,
+        schedule: data.schedule,
+        capacity: data.capacity ? Number(data.capacity) : null,
+        etablissement: { connect: { id: tid } },
+      },
+    });
+    revalidatePath("/dashboard/groups");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-// --- ACTIVITÉS ---
+export async function updateGroupAction(data: any) {
+  try {
+    const { id, ...updateData } = data;
+    const result = await prisma.groupe.update({
+      where: { id },
+      data: {
+        ...updateData,
+        ...(updateData.capacity && { capacity: Number(updateData.capacity) }),
+      },
+    });
+    revalidatePath("/dashboard/groups");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-export const createActivityAction = createSafeAction(ActivitySchema, async (data, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.activity.create({ data: data as any });
-  revalidateTag(`activities-${tenantId}`);
-  return result;
-});
+export async function deleteGroupAction({ id }: { id: string }) {
+  try {
+    await prisma.groupe.delete({ where: { id } });
+    revalidatePath("/dashboard/groups");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-export const updateActivityAction = createSafeAction(ActivitySchema.extend({ id: z.string().uuid() }), async ({ id, ...data }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.activity.update({ where: { id }, data });
-  revalidateTag(`activities-${tenantId}`);
-  return result;
-});
+// ==========================================
+// --- ACTIVITÉS (ACTIVITIES) ---
+// ==========================================
 
-export const deleteActivityAction = createSafeAction(z.object({ id: z.string().uuid() }), async ({ id }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const result = await tenantPrisma.activity.delete({ where: { id } });
-  revalidateTag(`activities-${tenantId}`);
-  return result;
-});
+export async function createActivityAction(data: any) {
+  try {
+    const tid = await getEtablissementId();
+    const result = await prisma.activity.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        // basePrice supprimé ici pour correspondre à ton schéma
+        etablissement: { connect: { id: tid } },
+      },
+    });
+    revalidatePath("/dashboard/activities");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-// --- PRÉSENCES ---
+export async function updateActivityAction(data: any) {
+  try {
+    const { id, ...updateData } = data;
+    const result = await prisma.activity.update({
+      where: { id },
+      data: {
+        name: updateData.name,
+        description: updateData.description,
+        // basePrice supprimé ici aussi
+      },
+    });
+    revalidatePath("/dashboard/activities");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-export const markPresenceAction = createSafeAction(
-  MarkPresenceSchema,
-  async (data, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
+export async function deleteActivityAction({ id }: { id: string }) {
+  try {
+    await prisma.activity.delete({ where: { id } });
+    revalidatePath("/dashboard/activities");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
 
-    const seance = await tenantPrisma.session.findUnique({ where: { id: data.seanceId } });
-    if (!seance) {
-      throw new TaysirError("Séance introuvable.", ErrorCodes.ERR_NOT_FOUND, 404);
-    }
+// ==========================================
+// --- PRÉSENCES (ATTENDANCE) ---
+// ==========================================
 
-    const result = await tenantPrisma.attendanceRecord.upsert({
-      where: { 
-        sessionId_studentId: { 
-          sessionId: data.seanceId, 
-          studentId: data.participantId 
-        } 
+export async function markPresenceAction(data: any) {
+  try {
+    const result = await prisma.attendanceRecord.upsert({
+      where: {
+        sessionId_studentId: {
+          sessionId: data.seanceId,
+          studentId: data.participantId,
+        },
       },
       create: {
         status: data.statut,
-        retardMinutes: data.retard || 0,
+        retardMinutes: data.retard ? Number(data.retard) : 0,
         note: data.note,
         sessionId: data.seanceId,
         studentId: data.participantId,
-      } as any,
+      },
       update: {
         status: data.statut,
-        retardMinutes: data.retard || 0,
+        retardMinutes: data.retard ? Number(data.retard) : 0,
         note: data.note,
       },
     });
-
-    revalidateTag(`attendance-${tenantId}`);
-    return result;
+    revalidatePath("/dashboard/attendance");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
   }
-);
+}
