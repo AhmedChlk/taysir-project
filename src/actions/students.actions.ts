@@ -1,96 +1,118 @@
-// Actions pour gérer les étudiants
 "use server";
 
-import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
-import { getTenantPrisma } from "@/lib/prisma";
-import { CreateStudentSchema, UpdateStudentSchema } from "@/lib/validations";
-import { revalidateTag } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-// Ajouter un étudiant
-export const createStudentAction = createSafeAction(CreateStudentSchema, async (data, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  const { groupId, ...studentData } = data;
-  
-  // Nettoyage des données
-  const cleanedData = {
-    ...studentData,
-    email: studentData.email || null,
-    phone: studentData.phone || null,
-    parentName: studentData.parentName || null,
-    parentPhone: studentData.parentPhone || null,
-    parentEmail: studentData.parentEmail || null,
-  };
-  
-  const student = await tenantPrisma.student.create({ 
-    data: {
-      ...cleanedData,
-      groups: groupId ? { connect: { id: groupId } } : undefined
-    } 
-  });
-  
-  revalidateTag(`students-${tenantId}`);
-  return student;
-});
+// Utilitaire pour récupérer l'établissement localement
+async function getEtablissementId() {
+  const etablissement = await prisma.etablissement.findFirst();
+  if (!etablissement) throw new Error("Établissement introuvable");
+  return etablissement.id;
+}
 
-// Modifier un étudiant
-export const updateStudentAction = createSafeAction(UpdateStudentSchema, async ({ id, groupId, ...data }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  
-  const cleanedData = {
-    ...data,
-    email: data.email || null,
-    phone: data.phone || null,
-    parentName: data.parentName || null,
-    parentPhone: data.parentPhone || null,
-    parentEmail: data.parentEmail || null,
-  };
-  
-  const result = await tenantPrisma.student.update({ 
-    where: { id }, 
-    data: {
-      ...cleanedData,
-      // Si un groupe est fourni, on connecte, sinon on ne touche pas aux groupes existants
-      // Pour une gestion plus fine (enlever/ajouter), il faudrait une action dédiée
-      groups: groupId ? { connect: { id: groupId } } : undefined
-    } 
-  });
+// Purificateur de données pour éviter les crashs Server Components
+function purify(data: any) {
+  return JSON.parse(JSON.stringify(data));
+}
 
-  revalidateTag(`students-${tenantId}`);
-  return result;
-});
+// ==========================================
+// --- ÉLÈVES (STUDENTS) ---
+// ==========================================
 
-// Supprimer un étudiant
-export const deleteStudentAction = createSafeAction(z.object({ id: z.string().uuid() }), async ({ id }, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  
-  // On supprime d'abord les relations ou on laisse Prisma gérer selon le schema
-  const result = await tenantPrisma.student.delete({ where: { id } });
-  
-  revalidateTag(`students-${tenantId}`);
-  return result;
-});
+export async function createStudentAction(data: any) {
+  try {
+    const tid = await getEtablissementId();
 
-// Ajouter un étudiant à un groupe
-export const addStudentToGroupAction = createSafeAction(
-  z.object({ studentId: z.string().uuid(), groupId: z.string().uuid() }),
-  async ({ studentId, groupId }, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
-    return await tenantPrisma.groupe.update({
-      where: { id: groupId },
-      data: { students: { connect: { id: studentId } } }
+    // On isole groupId s'il est présent pour le gérer dans la relation "connect"
+    const { groupId, ...studentData } = data;
+
+    const result = await prisma.student.create({
+      data: {
+        firstName: studentData.firstName,
+        lastName: studentData.lastName,
+        email: studentData.email || null,
+        phone: studentData.phone || null,
+        isMinor: studentData.isMinor || false,
+        parentName: studentData.parentName || null,
+        parentPhone: studentData.parentPhone || null,
+        parentEmail: studentData.parentEmail || null,
+        // CORRECTION DU BUG ICI : On lie l'élève à l'établissement
+        etablissementId: tid,
+        
+        // Si un groupe est sélectionné à la création, on le connecte
+        ...(groupId && {
+          groups: {
+            connect: { id: groupId }
+          }
+        })
+      },
     });
-  }
-);
 
-// Enlever un étudiant d'un groupe
-export const removeStudentFromGroupAction = createSafeAction(
-  z.object({ studentId: z.string().uuid(), groupId: z.string().uuid() }),
-  async ({ studentId, groupId }, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
-    return await tenantPrisma.groupe.update({
-      where: { id: groupId },
-      data: { students: { disconnect: { id: studentId } } }
-    });
+    revalidatePath("/dashboard/students");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    console.error("Erreur createStudent:", error);
+    return { success: false, error: { message: error.message } };
   }
-);
+}
+
+export async function updateStudentAction(data: any) {
+  try {
+    const { id, groupId, ...updateData } = data;
+    
+    const result = await prisma.student.update({
+      where: { id },
+      data: {
+        firstName: updateData.firstName,
+        lastName: updateData.lastName,
+        email: updateData.email || null,
+        phone: updateData.phone || null,
+        isMinor: updateData.isMinor || false,
+        parentName: updateData.parentName || null,
+        parentPhone: updateData.parentPhone || null,
+        parentEmail: updateData.parentEmail || null,
+        
+        // Connexion à un nouveau groupe si on le modifie
+        ...(groupId && {
+          groups: {
+            connect: { id: groupId }
+          }
+        })
+      },
+    });
+
+    revalidatePath("/dashboard/students");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
+
+export async function deleteStudentAction({ id }: { id: string }) {
+  try {
+    await prisma.student.delete({ where: { id } });
+    revalidatePath("/dashboard/students");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
+
+// Action pour retirer un élève d'un groupe spécifique
+export async function removeStudentFromGroupAction({ studentId, groupId }: { studentId: string, groupId: string }) {
+  try {
+    await prisma.student.update({
+      where: { id: studentId },
+      data: {
+        groups: {
+          disconnect: { id: groupId }
+        }
+      }
+    });
+    revalidatePath("/dashboard/groups");
+    revalidatePath("/dashboard/students");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
