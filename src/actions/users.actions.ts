@@ -1,88 +1,92 @@
-// Gestion des utilisateurs
-
 "use server";
 
-import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { createSafeAction } from "@/lib/actions/safe-action";
-import { getTenantPrisma, prisma } from "@/lib/prisma";
-import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { 
-  CreateUserSchema, 
-  UpdateUserSchema, 
-  ListUsersSchema 
-} from "@/lib/validations";
+import { revalidatePath } from "next/cache";
 
-// Créer un nouvel utilisateur
-export const createUserAction = createSafeAction(
-  CreateUserSchema,
-  async (data, { tenantId }) => {
-    // L'unicité de l'email est globale au système
+// Utilitaire pour récupérer l'établissement localement
+async function getEtablissementId() {
+  const etablissement = await prisma.etablissement.findFirst();
+  if (!etablissement) throw new Error("Établissement introuvable");
+  return etablissement.id;
+}
+
+// Purificateur pour éviter le crash des Server Components
+function purify(data: any) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+// ==========================================
+// --- STAFF / UTILISATEURS (USERS) ---
+// ==========================================
+
+export async function createUserAction(data: any) {
+  try {
+    // 1. Vérification de l'email unique
     const emailTaken = await prisma.user.findUnique({ where: { email: data.email } });
     if (emailTaken) {
-      throw new TaysirError("Email déjà utilisé.", ErrorCodes.ERR_INVALID_DATA, 400);
+      return { success: false, error: { message: "Cet email est déjà utilisé." } };
     }
 
+    // 2. Hashage du mot de passe
     const hashedPassword = await bcrypt.hash(data.password, 12);
-    const tenantPrisma = getTenantPrisma(tenantId);
+    const tid = await getEtablissementId();
 
-    return await tenantPrisma.user.create({
+    // 3. Création
+    const result = await prisma.user.create({
       data: {
-        ...data,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
         password: hashedPassword,
-      } as any,
-      select: {
-        id: true, email: true, firstName: true, lastName: true, role: true,
+        role: data.role,
+        isActive: true, // Actif par défaut
+        etablissementId: tid,
       },
     });
+
+    // 4. Rafraîchissement forcé de la page Staff
+    revalidatePath("/dashboard/staff");
+    
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
   }
-);
+}
 
-// Récupérer la liste des utilisateurs de l'école
-export const getUsersListAction = createSafeAction(
-  ListUsersSchema,
-  async (filters, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
+export async function updateUserAction(data: any) {
+  try {
+    const { id, password, ...updateData } = data;
+    const updatePayload: any = { ...updateData };
 
-    return await tenantPrisma.user.findMany({
-      where: {
-        ...(filters.role ? { role: filters.role } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, avatarUrl: true,
-      },
-    });
-  }
-);
-
-// Modifier un utilisateur
-export const updateUserAction = createSafeAction(
-  UpdateUserSchema,
-  async ({ id, ...updateData }, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
-
-    const user = await tenantPrisma.user.findUnique({ where: { id } });
-    if (!user) {
-      throw new TaysirError("Utilisateur introuvable ou accès refusé.", ErrorCodes.ERR_NOT_FOUND, 404);
+    // Si on modifie le mot de passe, on le hash à nouveau
+    if (password && password.trim() !== "") {
+      updatePayload.password = await bcrypt.hash(password, 12);
     }
 
-    return await tenantPrisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
-      data: updateData,
-      select: { id: true, email: true, role: true, isActive: true },
+      data: updatePayload,
     });
-  }
-);
 
-// Supprimer un utilisateur
-export const deleteUserAction = createSafeAction(
-  z.object({ id: z.string().uuid() }),
-  async ({ id }, { tenantId, role }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
+    // Rafraîchissement forcé
+    revalidatePath("/dashboard/staff");
     
-    return await tenantPrisma.user.delete({
-      where: { id },
-    });
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
   }
-);
+}
+
+export async function deleteUserAction({ id }: { id: string }) {
+  try {
+    await prisma.user.delete({ where: { id } });
+    
+    // Rafraîchissement forcé
+    revalidatePath("/dashboard/staff");
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
+}
