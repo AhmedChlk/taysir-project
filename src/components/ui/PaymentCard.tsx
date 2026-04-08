@@ -53,8 +53,16 @@ export default function PaymentCard({ payment, student, onManage }: PaymentCardP
             {firstNameChar}{lastNameChar}
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{student?.firstName ?? t("unknown")} {student?.lastName ?? ""}</h3>
-            <p className="text-xs text-gray-500">ID: {student?.id ?? "N/A"}</p>
+            <h3 className="font-semibold text-gray-900">
+              {student?.firstName ?? t("unknown")} {student?.lastName ?? ""}
+            </h3>
+            {student?.isMinor ? (
+              <p className="text-[10px] text-orange-600 font-bold uppercase">
+                Payé par : {student?.parentName || "Parent"}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">ID: {student?.id ?? "N/A"}</p>
+            )}
           </div>
         </div>
         <span className={clsx("flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium", config.color)}>

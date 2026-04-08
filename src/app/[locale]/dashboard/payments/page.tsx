@@ -11,15 +11,7 @@ export default async function PaymentsPage() {
   return (
     <DashboardLayout>
       <PaymentsClientView 
-        initialPayments={payments.map(p => ({
-          id: p.id,
-          etablissementId: p.etablissementId,
-          studentId: p.studentId,
-          totalAmount: p.totalAmount,
-          paidAmount: p.paidAmount,
-          currency: p.currency,
-          status: p.status
-        }))}
+        initialPayments={payments}
         students={students}
       />
     </DashboardLayout>
