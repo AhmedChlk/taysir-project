@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
-import { Input, Select, Toggle } from "@/components/ui/FormInput";
+import { Input, Select } from "@/components/ui/FormInput";
+import { Toggle } from "@/components/ui/Toggle";
 import { Student, Group } from "@/types/schema";
 import { Plus, User, Mail, Phone, Trash2, Loader2, Baby } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -189,7 +190,7 @@ export default function StudentsClientView({ initialStudents = [], groups = [] }
               <Baby size={20} className="text-primary-teal" />
               <span className="text-sm font-semibold text-gray-700">L'élève est-il mineur ?</span>
             </div>
-            <Toggle checked={isMinor} onChange={setIsMinor} />
+            <Toggle enabled={isMinor} onChange={setIsMinor} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
