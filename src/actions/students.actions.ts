@@ -25,11 +25,12 @@ export const createStudentAction = createSafeAction(CreateStudentSchema, async (
   const student = await tenantPrisma.student.create({ 
     data: {
       ...cleanedData,
+      etablissementId: tenantId,
       groups: groupId ? { connect: { id: groupId } } : undefined
     } 
   });
   
-  revalidateTag(`students-${tenantId}`);
+  revalidateTag(`students-${tenantId}`, "max");
   return student;
 });
 
@@ -47,16 +48,17 @@ export const updateStudentAction = createSafeAction(UpdateStudentSchema, async (
   };
   
   const result = await tenantPrisma.student.update({ 
-    where: { id }, 
+    where: { id, etablissementId: tenantId }, 
     data: {
       ...cleanedData,
+      etablissementId: tenantId,
       // Si un groupe est fourni, on connecte, sinon on ne touche pas aux groupes existants
       // Pour une gestion plus fine (enlever/ajouter), il faudrait une action dédiée
       groups: groupId ? { connect: { id: groupId } } : undefined
     } 
   });
 
-  revalidateTag(`students-${tenantId}`);
+  revalidateTag(`students-${tenantId}`, "max");
   return result;
 });
 
@@ -65,9 +67,9 @@ export const deleteStudentAction = createSafeAction(z.object({ id: z.string().uu
   const tenantPrisma = getTenantPrisma(tenantId);
   
   // On supprime d'abord les relations ou on laisse Prisma gérer selon le schema
-  const result = await tenantPrisma.student.delete({ where: { id } });
+  const result = await tenantPrisma.student.delete({ where: { id, etablissementId: tenantId } });
   
-  revalidateTag(`students-${tenantId}`);
+  revalidateTag(`students-${tenantId}`, "max");
   return result;
 });
 
@@ -77,7 +79,7 @@ export const addStudentToGroupAction = createSafeAction(
   async ({ studentId, groupId }, { tenantId }) => {
     const tenantPrisma = getTenantPrisma(tenantId);
     return await tenantPrisma.groupe.update({
-      where: { id: groupId },
+      where: { id: groupId, etablissementId: tenantId },
       data: { students: { connect: { id: studentId } } }
     });
   }
@@ -89,7 +91,7 @@ export const removeStudentFromGroupAction = createSafeAction(
   async ({ studentId, groupId }, { tenantId }) => {
     const tenantPrisma = getTenantPrisma(tenantId);
     return await tenantPrisma.groupe.update({
-      where: { id: groupId },
+      where: { id: groupId, etablissementId: tenantId },
       data: { students: { disconnect: { id: studentId } } }
     });
   }
