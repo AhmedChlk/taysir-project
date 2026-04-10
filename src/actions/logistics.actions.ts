@@ -125,7 +125,8 @@ export async function createActivityAction(data: any) {
       data: {
         name: data.name,
         description: data.description,
-        // basePrice supprimé ici pour correspondre à ton schéma
+        duration: data.duration ? Number(data.duration) : 0,
+        color: data.color || "#0F515C",
         etablissement: { connect: { id: tid } },
       },
     });
@@ -144,7 +145,8 @@ export async function updateActivityAction(data: any) {
       data: {
         name: updateData.name,
         description: updateData.description,
-        // basePrice supprimé ici aussi
+        duration: updateData.duration ? Number(updateData.duration) : 0,
+        color: updateData.color,
       },
     });
     revalidatePath("/dashboard/activities");
