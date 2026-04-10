@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import PaymentCard from "@/components/ui/PaymentCard";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
@@ -9,6 +10,7 @@ import { Payment, Student } from "@/types/schema";
 import { Search, Plus, CreditCard } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
+import { createPaymentAction, updatePaymentAction } from "@/actions/finance.actions";
 
 interface PaymentsClientViewProps {
   initialPayments: Payment[];
@@ -16,13 +18,17 @@ interface PaymentsClientViewProps {
 }
 
 export default function PaymentsClientView({ initialPayments = [], students = [] }: PaymentsClientViewProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const t = useTranslations();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [payments] = useState<Payment[]>(initialPayments || []);
-  const t = useTranslations();
+  // On utilise directement initialPayments pour que la page reflète la DB au rafraîchissement
+  const payments = initialPayments || []; 
 
   const studentsMap = useMemo(() => {
     return (students || []).reduce((acc, s) => {
@@ -32,7 +38,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
   }, [students]);
 
   const filteredPayments = useMemo(() => {
-    return (payments || []).filter(payment => {
+    return payments.filter(payment => {
       const student = studentsMap[payment.studentId];
       const studentName = formatFullName(student?.firstName, student?.lastName).toLowerCase();
       const nameMatch = studentName.includes(searchTerm.toLowerCase());
@@ -50,6 +56,55 @@ export default function PaymentsClientView({ initialPayments = [], students = []
     label: formatFullName(s?.firstName, s?.lastName) || t("unknown"), 
     value: s?.id ?? "" 
   }));
+
+  // === FONCTIONS D'ENREGISTREMENT VERS LA BASE DE DONNÉES ===
+
+  const handleAddPayment = async (formData: FormData) => {
+    const studentId = formData.get("studentId") as string;
+    const amount = formData.get("amount") as string;
+    const paidAmount = formData.get("paidAmount") as string;
+    
+    if (!studentId || !amount) {
+      alert("⚠️ Veuillez sélectionner un élève et indiquer un montant.");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await createPaymentAction({
+        studentId,
+        amount,
+        paidAmount,
+      });
+
+      if (result?.success) {
+        setIsAddModalOpen(false);
+        router.refresh(); 
+      } else {
+        alert("❌ Erreur : " + result?.error?.message);
+      }
+    });
+  };
+  
+  const handleUpdatePayment = async (formData: FormData) => {
+    if (!selectedPayment) return;
+    const amount = formData.get("addedAmount") as string;
+
+    startTransition(async () => {
+      // Pour l'exemple d'une mise à jour de paiement
+      const result = await updatePaymentAction({
+        id: selectedPayment.id,
+        amount: Number(selectedPayment.totalAmount) + Number(amount),
+      });
+
+      if (result?.success) {
+        setIsManageModalOpen(false);
+        setSelectedPayment(null);
+        router.refresh();
+      } else {
+        alert("❌ Erreur : " + result?.error?.message);
+      }
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -84,8 +139,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
           className="rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-primary-teal"
         >
           <option value="all">{t("status_header")}</option>
-          <option value="PAID">{t("active")}</option>
-          <option value="PARTIAL">{t("active")} (Partiel)</option>
+          <option value="ACTIVE">{t("active")}</option>
           <option value="PENDING">{t("inactive")}</option>
         </select>
       </div>
@@ -114,28 +168,35 @@ export default function PaymentsClientView({ initialPayments = [], students = []
         />
       )}
 
-      {/* Add Payment Modal */}
+      {/* === MODAL : AJOUTER UN PAIEMENT === */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title={t("add")}
         footer={
           <>
-            <button onClick={() => setIsAddModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
-            <button onClick={() => setIsAddModalOpen(false)} className="rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors">{t("save")}</button>
+            <button onClick={() => setIsAddModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+              {t("cancel")}
+            </button>
+            {/* Ce bouton déclenche le formulaire lié par l'ID "add-payment-form" */}
+            <button type="submit" form="add-payment-form" disabled={isPending} className="rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors disabled:opacity-50">
+              {isPending ? "..." : t("save")}
+            </button>
           </>
         }
       >
-        <div className="space-y-4">
+        <form id="add-payment-form" action={handleAddPayment} className="space-y-4">
           <Select 
+            name="studentId" 
             label={t("total_students")} 
             options={studentOptions} 
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input label={t("amount")} type="number" placeholder="Ex: 5000" />
-            <Input label={t("paid_amount")} type="number" placeholder="Ex: 2500" />
+            <Input name="amount" label={t("amount")} type="number" placeholder="Ex: 5000" />
+            <Input name="paidAmount" label={t("paid_amount")} type="number" placeholder="Ex: 2500" />
           </div>
           <Select 
+            name="method"
             label={t("role_header")} 
             options={[
               { label: "Espèces", value: "CASH" },
@@ -143,30 +204,37 @@ export default function PaymentsClientView({ initialPayments = [], students = []
               { label: "Virement", value: "TRANSFER" },
             ]} 
           />
-        </div>
+        </form>
       </Modal>
 
-      {/* Manage Payment Modal */}
+      {/* === MODAL : GÉRER LE PAIEMENT (MODIFIER) === */}
       <Modal
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
         title={t("edit_member")}
         footer={
           <>
-            <button onClick={() => setIsManageModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
-            <button onClick={() => setIsManageModalOpen(false)} className="rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors">{t("save")}</button>
+            <button onClick={() => setIsManageModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+              {t("cancel")}
+            </button>
+            <button type="submit" form="update-payment-form" disabled={isPending} className="rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors disabled:opacity-50">
+              {isPending ? "..." : t("save")}
+            </button>
           </>
         }
       >
-        <div className="space-y-6">
+        <form id="update-payment-form" action={handleUpdatePayment} className="space-y-6">
           <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
-            <p className="text-sm text-blue-800">{t("remaining")} : <span className="font-bold">{(selectedPayment?.totalAmount || 0) - (selectedPayment?.paidAmount || 0)} DZD</span></p>
+            <p className="text-sm text-blue-800">
+              {t("remaining")} : <span className="font-bold">{(selectedPayment?.totalAmount || 0) - (selectedPayment?.paidAmount || 0)} DZD</span>
+            </p>
           </div>
           <div className="space-y-4">
             <h4 className="font-semibold text-gray-900 border-b pb-2 text-sm">{t("add")}</h4>
             <div className="grid grid-cols-2 gap-4">
-              <Input label={t("amount")} type="number" placeholder="Ex: 1000" />
+              <Input name="addedAmount" label={t("amount")} type="number" placeholder="Ex: 1000" />
               <Select 
+                name="methodUpdate"
                 label={t("role_header")} 
                 options={[
                   { label: "Espèces", value: "CASH" },
@@ -174,9 +242,9 @@ export default function PaymentsClientView({ initialPayments = [], students = []
                 ]} 
               />
             </div>
-            <Input label={t("days_mon")} type="date" defaultValue={new Date().toISOString().split('T')[0]} />
+            <Input name="paymentDate" label={t("days_mon")} type="date" defaultValue={new Date().toISOString().split('T')[0]} />
           </div>
-        </div>
+        </form>
       </Modal>
     </div>
   );
