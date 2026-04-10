@@ -17,39 +17,42 @@ export async function createPaymentAction(data: any) {
   try {
     const tid = await getEtablissementId();
     
-    if (!data.studentId) {
-      return { success: false, error: { message: "L'ID de l'élève est obligatoire." } };
-    }
+    // --- DEBUG : Regarde ton terminal Codespaces après avoir cliqué sur Sauvegarder ---
+    console.log("DONNÉES REÇUES PAR LE SERVEUR :", data);
 
-    // On s'assure que les nombres sont bien des "Float" pour Prisma
+    // 1. On s'assure que l'ID de l'élève est présent
+    if (!data.studentId) throw new Error("ID de l'élève manquant");
+
+    // 2. Conversion stricte en nombres (Prisma déteste les strings pour des montants)
     const total = parseFloat(data.amount) || 0;
-    const paid = parseFloat(data.paidAmount) || total;
+    const paid = parseFloat(data.paidAmount) || 0;
 
-    // Détermination du statut compatible avec ton schéma
-    let status = "PENDING";
-    if (paid >= total && total > 0) status = "PAID";
-    else if (paid > 0) status = "PARTIAL";
+    // 3. Logique de statut basée sur tes Enums probables (PAID, PARTIAL, PENDING)
+    let finalStatus = "PENDING";
+    if (paid >= total && total > 0) finalStatus = "PAID";
+    else if (paid > 0) finalStatus = "PARTIAL";
 
+    // 4. Création avec les champs EXACTS du schéma
     const result = await prisma.paymentPlan.create({
       data: {
         totalAmount: total,
         paidAmount: paid,
-        status: status,
-        currency: "DZD", // Souvent obligatoire dans ton schéma
-        // On ajoute la méthode de paiement (CASH par défaut)
-        // car elle est souvent obligatoire dans les modèles financiers
-        method: data.method || "CASH", 
-
+        currency: "DZD", // Champ obligatoire d'après ton erreur précédente
+        status: finalStatus,
+        
+        // Relations
         etablissement: { connect: { id: tid } },
         student: { connect: { id: data.studentId } }
       },
     });
 
+    console.log("✅ PAIEMENT CRÉÉ AVEC SUCCÈS :", result.id);
+
     revalidatePath("/dashboard/payments");
     return { success: true, data: purify(result) };
   } catch (error: any) {
-    console.error("Erreur Prisma détaillée:", error);
-    // On renvoie l'erreur brute pour comprendre quel champ manque si ça rate encore
+    // Ce log te dira exactement quel champ manque ou est mal typé
+    console.error("❌ ERREUR PRISMA DÉTAILLÉE :", error.message);
     return { success: false, error: { message: error.message } };
   }
 }
