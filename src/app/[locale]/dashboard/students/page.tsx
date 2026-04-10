@@ -8,9 +8,13 @@ export default async function StudentsPage() {
     getGroups()
   ]);
 
+  // Correction pour la sérialisation Prisma
+  const plainStudents = JSON.parse(JSON.stringify(students));
+  const plainGroups = JSON.parse(JSON.stringify(groups));
+
   return (
     <DashboardLayout>
-      <StudentsClientView initialStudents={students} groups={groups} />
+      <StudentsClientView initialStudents={plainStudents} groups={plainGroups} />
     </DashboardLayout>
   );
 }

@@ -4,10 +4,13 @@ import { getStaff } from "@/services/api";
 
 export default async function StaffPage() {
   const staff = await getStaff();
+  
+  // Correction pour la sérialisation Prisma
+  const plainStaff = JSON.parse(JSON.stringify(staff));
 
   return (
     <DashboardLayout>
-      <StaffClientView initialStaff={staff} />
+      <StaffClientView initialStaff={plainStaff} />
     </DashboardLayout>
   );
 }

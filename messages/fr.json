@@ -158,5 +158,10 @@
   "remaining": "Reste",
   "manage_payment": "Gérer le paiement",
   "amount": "Montant",
-  "paid_amount": "Montant payé"
+  "paid_amount": "Montant payé",
+  "name": "Nom",
+  "activity": "Activité",
+  "instructor": "Instructeur",
+  "level": "Niveau",
+  "schedule": "Emploi du temps"
 }

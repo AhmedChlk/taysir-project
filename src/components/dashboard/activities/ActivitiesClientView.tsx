@@ -39,33 +39,34 @@ export default function ActivitiesClientView({ initialActivities = [] }: Activit
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const data = {
-      name: formData.get("name") as string,
-      duration: parseInt(formData.get("duration") as string, 10),
-      description: formData.get("description") as string,
-      color: formData.get("color") as string,
-    };
-
-    startTransition(async () => {
-      let result;
-      if (selectedActivity) {
-        result = await updateActivityAction({ id: selectedActivity.id, ...data });
-      } else {
-        result = await createActivityAction(data);
-      }
-
-      if (result.success) {
-        setIsModalOpen(false);
-        setSelectedActivity(null);
-        router.refresh();
-      } else {
-        alert(result.error.message);
-      }
-    });
+  e.preventDefault();
+  const formData = new FormData(e.currentTarget);
+  
+  const data = {
+    id: selectedActivity?.id, // Uniquement pour l'update
+    name: formData.get("name"),
+    duration: formData.get("duration"),
+    description: formData.get("description"),
+    color: formData.get("color"),
   };
+
+  startTransition(async () => {
+    let result;
+    if (selectedActivity) {
+      result = await updateActivityAction(data);
+    } else {
+      result = await createActivityAction(data);
+    }
+
+    if (result?.success) {
+      setIsModalOpen(false); // Ferme la modale
+      setSelectedActivity(null);
+      router.refresh(); // Rafraîchit les données
+    } else {
+      alert("Erreur : " + result?.error?.message);
+    }
+  });
+};
 
   const columns = [
     {

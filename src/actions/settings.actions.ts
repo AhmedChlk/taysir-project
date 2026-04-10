@@ -1,5 +1,3 @@
-// Gestion du profil et des paramètres
-
 "use server";
 
 import { z } from "zod";

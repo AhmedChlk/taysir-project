@@ -1,5 +1,3 @@
-// Récupération des stats du tableau de bord
-
 "use server";
 
 import { unstable_cache } from "next/cache";

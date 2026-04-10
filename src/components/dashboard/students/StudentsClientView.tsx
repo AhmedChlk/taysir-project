@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
-import { Input, Select, Toggle } from "@/components/ui/FormInput";
+import { Input, Select } from "@/components/ui/FormInput";
+import { Toggle } from "@/components/ui/Toggle";
 import { Student, Group } from "@/types/schema";
 import { Plus, User, Mail, Phone, Trash2, Loader2, Baby } from "lucide-react";
 import { useTranslations } from "next-intl";
