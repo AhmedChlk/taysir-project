@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum RoleUser {
@@ -123,6 +122,9 @@ model Activity {
 model Groupe {
   id        String   @id @default(uuid())
   name      String
+  level     String?  // Ajouté : niveau du groupe (ex: L1)
+  schedule  String?  // Ajouté : emploi du temps (ex: Lun, Mer 10:00)
+  capacity  Int?     // Ajouté : capacité maximale (ex: 15)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

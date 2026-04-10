@@ -29,10 +29,6 @@
   "login_subtitle": "الوصول إلى مساحة الإدارة الخاصة بك",
   "login_welcome_back": "مرحباً بعودتك",
   "login_welcome_desc": "بسط تسيير مؤسستك التربوية.",
-<<<<<<< HEAD
-  "select_session": "اختر الحصة",
-=======
->>>>>>> b6c044d (feat: Dashboard layout et support multilingue (Francais/Arabe))
   "email": "البريد الإلكتروني",
   "password": "كلمة المرور",
   "login_button": "تسجيل الدخول",
