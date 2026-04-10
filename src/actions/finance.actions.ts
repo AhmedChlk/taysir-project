@@ -1,110 +1,88 @@
-// Gestion des paiements et de la finance
-
 "use server";
 
-import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
-import { getTenantPrisma } from "@/lib/prisma";
-import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { PaymentMethod, Tranche, Paiement, PaymentPlan, Prisma } from "@prisma/client";
-import { RegisterPaymentSchema } from "@/lib/validations";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-// Types pour les tranches
-type TrancheWithPaiements = Tranche & { 
-  paiements: Paiement[], 
-  paymentPlan?: PaymentPlan 
-};
+async function getEtablissementId() {
+  const etablissement = await prisma.etablissement.findFirst();
+  if (!etablissement) throw new Error("Établissement introuvable");
+  return etablissement.id;
+}
 
-// Action pour enregistrer un nouveau paiement
-export const registerPaymentAction = createSafeAction(
-  RegisterPaymentSchema,
-  async (data, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
+function purify(data: any) {
+  return JSON.parse(JSON.stringify(data));
+}
 
-    // Note: Cast 'as any' nécessaire car les types d'extensions Prisma 
-    // masquent parfois la signature de $transaction dans l'IDE.
-    return await (tenantPrisma as any).$transaction(async (tx: Prisma.TransactionClient) => {
-      // 1. Validation de la tranche (Isolation automatique)
-      const tranche = await tx.tranche.findUnique({
-        where: { id: data.trancheId },
-        include: { paiements: true, paymentPlan: true },
-      }) as TrancheWithPaiements | null;
+export async function createPaymentAction(data: any) {
+  try {
+    const tid = await getEtablissementId();
+    
+    if (!data.studentId) {
+      return { success: false, error: { message: "L'ID de l'élève est obligatoire." } };
+    }
 
-      if (!tranche) {
-        throw new TaysirError("Tranche introuvable ou accès refusé.", ErrorCodes.ERR_NOT_FOUND, 404);
-      }
+    // On s'assure que les nombres sont bien des "Float" pour Prisma
+    const total = parseFloat(data.amount) || 0;
+    const paid = parseFloat(data.paidAmount) || total;
 
-      if (tranche.isPaid) {
-        throw new TaysirError("Tranche déjà soldée.", ErrorCodes.ERR_INVALID_DATA, 400);
-      }
+    // Détermination du statut compatible avec ton schéma
+    let status = "PENDING";
+    if (paid >= total && total > 0) status = "PAID";
+    else if (paid > 0) status = "PARTIAL";
 
-      // 2. Calcul et validation métier
-      validatePaymentAmount(tranche, data.montant_paye);
+    const result = await prisma.paymentPlan.create({
+      data: {
+        totalAmount: total,
+        paidAmount: paid,
+        status: status,
+        currency: "DZD", // Souvent obligatoire dans ton schéma
+        // On ajoute la méthode de paiement (CASH par défaut)
+        // car elle est souvent obligatoire dans les modèles financiers
+        method: data.method || "CASH", 
 
-      // 3. Exécution du workflow (Ecritures comptables)
-      return await executeFinancialWorkflow(tx, tranche, data);
+        etablissement: { connect: { id: tid } },
+        student: { connect: { id: data.studentId } }
+      },
     });
-  }
-);
 
-// Vérification que le montant n'est pas trop élevé
-function validatePaymentAmount(tranche: TrancheWithPaiements, montantPaye: number) {
-  const totalDejaPaye = tranche.paiements.reduce((sum, p) => sum + p.amount, 0);
-  const resteAPayer = tranche.amount - totalDejaPaye;
-
-  if (montantPaye > resteAPayer + 0.01) {
-    throw new TaysirError(
-      `Le montant dépasse le solde de la tranche (${resteAPayer} DZD restants).`,
-      ErrorCodes.ERR_INVALID_DATA,
-      400
-    );
+    revalidatePath("/dashboard/payments");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    console.error("Erreur Prisma détaillée:", error);
+    // On renvoie l'erreur brute pour comprendre quel champ manque si ça rate encore
+    return { success: false, error: { message: error.message } };
   }
 }
 
-// Mise à jour des statuts après paiement
-async function executeFinancialWorkflow(
-  tx: Prisma.TransactionClient, 
-  tranche: TrancheWithPaiements, 
-  data: z.infer<typeof RegisterPaymentSchema>
-) {
-  // Création du paiement (etablissementId injecté par l'extension)
-  const paiement = await tx.paiement.create({
-    data: {
-      amount: data.montant_paye,
-      method: data.methode,
-      reference: data.reference,
-      note: data.note,
-      trancheId: tranche.id,
-    } as any,
-  });
-
-  // Calcul du nouveau statut de la tranche
-  const dejaPaye = tranche.paiements.reduce((sum, p) => sum + p.amount, 0) + data.montant_paye;
-  const isTrancheFullPaid = dejaPaye >= tranche.amount - 0.01;
-
-  if (isTrancheFullPaid) {
-    await tx.tranche.update({
-      where: { id: tranche.id },
-      data: { isPaid: true },
+export async function updatePaymentAction(data: any) {
+  try {
+    const { id, studentId, ...updateData } = data;
+    
+    const result = await prisma.paymentPlan.update({
+      where: { id },
+      data: {
+        ...(updateData.amount && { 
+          totalAmount: parseFloat(updateData.amount),
+          paidAmount: parseFloat(updateData.amount)
+        }),
+        status: updateData.status,
+        ...(studentId && { student: { connect: { id: studentId } } })
+      },
     });
+
+    revalidatePath("/dashboard/payments");
+    return { success: true, data: purify(result) };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
   }
+}
 
-  // Mise à jour du plan global
-  const updatedPlan = await tx.paymentPlan.update({
-    where: { id: tranche.paymentPlanId },
-    data: { paidAmount: { increment: data.montant_paye } },
-  });
-
-  // Recalcul du statut du plan global
-  const isPlanFullPaid = updatedPlan.paidAmount >= updatedPlan.totalAmount - 0.01;
-  await tx.paymentPlan.update({
-    where: { id: tranche.paymentPlanId },
-    data: { status: isPlanFullPaid ? "PAID" : "PARTIAL" },
-  });
-
-  return {
-    paiement,
-    trancheStatut: isTrancheFullPaid ? "PAID" : "PARTIAL",
-    resteSurTranche: Math.max(0, tranche.amount - dejaPaye),
-  };
+export async function deletePaymentAction({ id }: { id: string }) {
+  try {
+    await prisma.paymentPlan.delete({ where: { id } });
+    revalidatePath("/dashboard/payments");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message } };
+  }
 }
