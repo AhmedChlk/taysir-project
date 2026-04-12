@@ -1,0 +1,66 @@
+.rbc-toolbar {
+  padding: 1rem;
+  margin-bottom: 0 !important;
+}
+
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-event {
+  background-color: #0F515C;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.85rem;
+  transition: opacity 0.2s;
+}
+
+.rbc-event:hover {
+  opacity: 0.9;
+}
+
+.rbc-today {
+  background-color: rgba(15, 81, 92, 0.05);
+}
+
+.rbc-off-range-bg {
+  background-color: #f9fafb;
+}
+
+.rbc-header {
+  padding: 10px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.rbc-toolbar button {
+  color: #0F515C;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 5px 15px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #0F515C;
+  color: white;
+  border-color: #0F515C;
+  box-shadow: none;
+}
+
+.rbc-toolbar button.rbc-active:hover {
+  background-color: #1A7A89;
+}
+
+/* RTL Specific tweaks if needed */
+[dir="rtl"] .rbc-time-view .rbc-time-header {
+  margin-right: 0 !important;
+  margin-left: 10px !important;
+}
