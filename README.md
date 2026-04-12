@@ -33,8 +33,8 @@ L'application est entièrement conteneurisée. Il suffit d'une seule commande po
 
 1.  **Cloner le dépôt :**
     ```bash
-    git clone https://github.com/ahmed/taysir-project.git
-    cd taysir-project/taysir-front
+    git clone https://github.com/AhmedChlk/taysir-project.git
+    cd taysir-project
     ```
 
 2.  **Lancer avec Docker Compose :**
