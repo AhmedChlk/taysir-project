@@ -1,82 +1,66 @@
-# Taysir - Gestion de Scolarité
+# Taysir - Plateforme de Gestion Scolaire 🏫
 
-**Projet Universitaire - L3 Informatique**
+## Vision & Architecture
+Taysir est un ERP scolaire moderne conçu pour la sérénité. L'interface utilise la palette **Taysir Teal** (#0F515C) avec un design asymétrique Bento Box et des animations basées sur la physique des ressorts.
 
-Taysir est une plateforme SaaS de gestion pour les établissements scolaires. Ce projet a été développé dans le cadre de la Licence 3 Informatique. Il permet de gérer les inscriptions, les plannings, les présences et les paiements des élèves au sein d'une ou plusieurs écoles.
+### Optimisations de Performance 🚀
+*   **Requêtes Mémoïsées** : Utilisation de `React.cache` pour réduire les appels Redondants à `getServerSession`.
+*   **Prisma Client Cache** : Les clients étendus pour le multi-tenant sont mis en cache pour éviter l'overhead de `$extends`.
+*   **Indexation DB** : Index ajoutés sur les dates (`startTime`, `dueDate`, `date`) et IDs de tenant pour des requêtes instantanées.
+*   **Standalone Mode** : Build Docker optimisé pour une empreinte VPS minimale.
 
-## Prérequis Système
+---
 
-Pour faire fonctionner ce projet, vous devez avoir installé sur votre machine :
-*   **Docker** et **Docker Compose**
-*   **Node.js** (v20 ou supérieure) - *Optionnel, si vous voulez lancer sans Docker.*
-*   **Git**
+## Guide d'Installation (Local)
 
-## Structure du projet
+### 1. Variables d'Environnement
+Créez un fichier `.env` à la racine :
+```env
+# Database (PostgreSQL)
+POSTGRES_PRISMA_URL="postgresql://user:password@localhost:5432/taysir_db?schema=public"
+POSTGRES_URL_NON_POOLING="postgresql://user:password@localhost:5432/taysir_db?schema=public"
 
-```
-taysir/
-├── src/                # Code source de l'application React/Next.js
-│   ├── actions/        # Logique métier serveur (Command Pattern)
-│   ├── app/            # Pages de l'application (App Router)
-│   ├── components/     # Composants React réutilisables
-│   └── lib/            # Fichiers utilitaires, configuration DB (Singleton)
-├── prisma/             # Schéma de la base de données et scripts de seed
-├── public/             # Images et assets statiques
-├── docker-compose.yml  # Configuration Docker pour l'environnement
-├── Dockerfile          # Configuration de l'image de l'application
-└── RAPPORT_TECHNIQUE.md # Rapport détaillé du projet
+# Authentification
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="générer-un-secret-ici"
 ```
 
-## Instructions d'installation et de lancement (Recommandé : via Docker)
-
-L'application est entièrement conteneurisée. Il suffit d'une seule commande pour lancer l'application et la base de données.
-
-1.  **Cloner le dépôt :**
-    ```bash
-    git clone https://github.com/AhmedChlk/taysir-project.git
-    cd taysir-project
-    ```
-
-2.  **Lancer avec Docker Compose :**
-    ```bash
-    docker compose up --build -d
-    ```
-    *Cette commande va télécharger l'image PostgreSQL, construire l'image Next.js, installer les dépendances et démarrer les deux conteneurs en arrière-plan.*
-
-3.  **Accéder à l'application :**
-    Ouvrez votre navigateur et allez sur : [http://localhost:3000](http://localhost:3000)
-
-4.  **Initialiser la base de données (Seed) :**
-    La première fois, pour avoir des données de test (utilisateurs, écoles), exécutez la commande suivante dans le conteneur web :
-    ```bash
-    docker compose exec web npx prisma db push
-    docker compose exec web npm run prisma:seed
-    ```
-
-### Arrêter l'application
-Pour stopper les conteneurs :
+### 2. Initialisation
 ```bash
-docker compose down
+npm install
+npx prisma db push
+npx prisma db seed
 ```
 
-## Lancer l'application sans Docker (Mode local)
+**Accès par défaut :**
+- **Email** : `admin@taysir.dz`
+- **Mot de passe** : `Taysir2026!`
 
-Si vous préférez ne pas utiliser Docker, vous aurez besoin d'une base de données PostgreSQL locale.
-
-1.  Copiez le fichier `.env.local` (ou modifiez le `.env`) pour pointer vers votre base de données locale.
-2.  Installez les dépendances : `npm install`
-3.  Initialisez la base de données : `npx prisma db push`
-4.  Générez le client : `npx prisma generate`
-5.  Lancez le serveur : `npm run dev`
-
-## Tests
-
-L'application inclut des tests (via Vitest et React Testing Library). Pour les lancer localement :
+### 3. Lancement
 ```bash
-npm run test
+npm run dev
 ```
 
-## Identifiants de test
-Lors de l'utilisation des données de test (seed), vous pouvez vous connecter avec :
-*   **Email** : admin@taysir.dz
-*   **Mot de passe** : admin123
+---
+
+## Déploiement Production (Docker / VPS)
+
+Le projet est 100% prêt pour Docker. Les migrations Prisma s'exécutent automatiquement au démarrage du conteneur.
+
+### Lancement Rapide
+```bash
+docker compose up -d --build
+```
+
+### Configuration Docker Compose
+Le fichier `docker-compose.yml` est configuré pour isoler la base de données (non accessible depuis l'extérieur) et utiliser un réseau interne pour une sécurité maximale.
+
+---
+
+## Stack Technique
+- **Frontend** : Next.js 16 (App Router), Tailwind CSS v4, Framer Motion.
+- **Backend** : Prisma 6, NextAuth, PostgreSQL.
+- **i18n** : `next-intl` (Support FR/AR avec RTL).
+
+---
+*Projet stabilisé, optimisé et documenté par @taysir-fixer.*

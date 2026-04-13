@@ -6,7 +6,7 @@ import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
 import { Toggle } from "@/components/ui/Toggle";
 import { Student, Group } from "@/types/schema";
-import { Plus, User, Mail, Phone, Trash2, Loader2, Baby } from "lucide-react";
+import { Plus, User, Phone, Trash2, Loader2, Baby } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createStudentAction, updateStudentAction, deleteStudentAction } from "@/actions/students.actions";
 import { useRouter } from "@/i18n/routing";
@@ -126,7 +126,7 @@ export default function StudentsClientView({ initialStudents = [], groups = [] }
           </span>
           <button 
             onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
-            className="text-gray-400 hover:text-red-600 transition-colors"
+            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
           >
             <Trash2 size={16} />
           </button>
@@ -148,7 +148,7 @@ export default function StudentsClientView({ initialStudents = [], groups = [] }
             setIsMinor(false);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 rounded-lg bg-primary-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} />
           {t("add_student")}
@@ -171,12 +171,18 @@ export default function StudentsClientView({ initialStudents = [], groups = [] }
         title={selectedStudent ? t("edit_student") : t("add_student")}
         footer={
           <>
-            <button disabled={isPending} onClick={() => setIsModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
+            <button 
+              disabled={isPending} 
+              onClick={() => setIsModalOpen(false)} 
+              className="btn-ghost"
+            >
+              {t("cancel")}
+            </button>
             <button 
               form="student-form"
               type="submit"
               disabled={isPending} 
-              className="flex items-center gap-2 rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors"
+              className="btn-primary flex items-center gap-2"
             >
               {isPending && <Loader2 size={16} className="animate-spin" />}
               {selectedStudent ? t("save_changes") : t("add")}
@@ -188,7 +194,7 @@ export default function StudentsClientView({ initialStudents = [], groups = [] }
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
             <div className="flex items-center gap-2">
               <Baby size={20} className="text-primary-teal" />
-              <span className="text-sm font-semibold text-gray-700">L'élève est-il mineur ?</span>
+              <span className="text-sm font-semibold text-gray-700">L&apos;élève est-il mineur ?</span>
             </div>
             <Toggle enabled={isMinor} onChange={setIsMinor} />
           </div>

@@ -61,10 +61,10 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-gray-900">{t("profile_photo")}</h3>
               <div className="flex gap-3">
-                <button type="button" className="rounded-lg bg-white border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                <button type="button" className="btn-secondary text-xs">
                   {t("change_avatar")}
                 </button>
-                <button type="button" className="rounded-lg px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors">
+                <button type="button" className="bg-red-600 text-white px-4 py-2 text-xs font-semibold rounded-xl hover:bg-red-700 transition-colors">
                   {t("delete")}
                 </button>
               </div>
@@ -82,7 +82,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
             <button 
               type="submit"
               disabled={isPending}
-              className="flex items-center gap-2 rounded-lg bg-primary-teal px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal transition-all active:scale-[0.98] disabled:opacity-50"
+              className="btn-primary flex items-center gap-2 disabled:opacity-50"
             >
               {isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               {t("save")}
@@ -104,7 +104,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
           <button 
             onClick={handleDeleteAccount}
             disabled={isPending}
-            className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors shadow-sm shadow-red-200 disabled:opacity-50"
+            className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-red-700 active:scale-95 shadow-sm disabled:opacity-50"
           >
             {isPending && <Loader2 size={16} className="inline animate-spin me-2" />}
             {t("delete_account_btn")}

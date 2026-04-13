@@ -1,70 +1,72 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary-teal: #0F515C;
-  --accent-teal: #1A7A89;
+  --background: #F8FAFB;
+  --foreground: #004D4A; /* Taysir Teal Darker */
+  --primary: #006A67;    /* Taysir Teal 2026 */
+  --secondary: #008B87;  /* Taysir Teal Light */
+  --accent: #FE7F2D;     /* Accent Corail */
+  --accent-foreground: #FFFFFF;
 }
 
 @theme {
-  --color-primary-teal: var(--primary-teal);
-  --color-accent-teal: var(--accent-teal);
-  --color-brand-white: #FFFFFF;
+  --color-taysir-teal: #006A67;
+  --color-taysir-light: #008B87;
+  --color-taysir-accent: #FE7F2D;
+  --color-taysir-bg: #F8FAFB;
+  --color-taysir-white: #FFFFFF;
   
-  --font-sans: var(--font-inter), "Helvetica Neue", Arial, sans-serif;
+  /* Alias pour la compatibilité avec le code existant */
+  --color-primary-teal: #006A67;
+  --color-accent-teal: #008B87;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  .btn-primary {
+    @apply bg-taysir-teal text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-taysir-light text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent text-taysir-teal px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-taysir-teal/5 active:scale-95;
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
+  font-family: var(--font-inter), 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-header, .sidebar, aside {
-  background-color: var(--primary-teal);
-  color: white;
+/* Bento Box ERP Style */
+.bento-card {
+  background-color: white;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px -2px rgba(15, 81, 92, 0.08);
+  border: 1px solid rgba(15, 81, 92, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* RTL Support - Basic setup */
-[dir="rtl"] {
-  text-align: right;
-}
-
-[dir="ltr"] {
-  text-align: left;
+.bento-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -4px rgba(15, 81, 92, 0.12);
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 81, 92, 0.1);
   border-radius: 10px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Hide scrollbar by default for clean UI but allow scrolling */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  background: rgba(15, 81, 92, 0.2);
 }

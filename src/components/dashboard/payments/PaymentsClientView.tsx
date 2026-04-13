@@ -4,8 +4,8 @@ import { useState, useMemo, useTransition } from "react";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
 import EmptyState from "@/components/ui/EmptyState";
-import { Payment, Student, Tranche, PaymentMethod } from "@/types/schema";
-import { Search, Plus, CreditCard, Wallet, Calendar, CheckCircle2, AlertCircle, ArrowRight, Loader2, TrendingUp, DollarSign } from "lucide-react";
+import { Payment, Student, PaymentMethod } from "@/types/schema";
+import { Search, Plus, Wallet, Calendar, CheckCircle2, AlertCircle, ArrowRight, Loader2, TrendingUp, DollarSign } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
 import { createPaymentPlanAction, registerPaymentAction } from "@/actions/finance.actions";
@@ -41,7 +41,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
   // --- States for REGISTERING a Payment ---
   const [selectedTrancheId, setSelectedTrancheId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [paymentMethod, _setPaymentMethod] = useState<PaymentMethod>("CASH");
 
   const studentsMap = useMemo(() => {
     return (students || []).reduce((acc, s) => {
@@ -168,7 +168,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-primary-teal px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-teal/30 hover:bg-primary-teal/90 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
+          className="btn-primary flex items-center gap-2 text-sm"
         >
           <Plus size={20} strokeWidth={2.5} />
           Nouveau Plan Financier
@@ -265,15 +265,20 @@ export default function PaymentsClientView({ initialPayments = [], students = []
         title="Créer un Plan Financier"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
-            <button onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">Annuler</button>
+            <button 
+              onClick={() => setIsAddModalOpen(false)} 
+              className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl px-5 py-2.5 transition-all font-bold text-sm"
+            >
+              Annuler
+            </button>
             <button 
               form="add-plan-form"
               type="submit"
               disabled={isPending || !newPlanStudentId || newPlanTotal <= 0}
-              className="flex items-center gap-2 px-6 py-2.5 bg-primary-teal text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-teal/20 hover:bg-primary-teal/90 transition-all active:scale-95 disabled:opacity-50"
+              className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
             >
               {isPending && <Loader2 size={18} className="animate-spin" />}
-              Créer l'échéancier
+              Créer l&apos;échéancier
             </button>
           </div>
         }
@@ -314,7 +319,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
            <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
              <Calendar size={18} className="text-blue-500 shrink-0 mt-0.5" />
              <p className="text-xs text-blue-700 font-medium leading-relaxed">
-               Les tranches seront automatiquement espacées d'un mois à partir d'aujourd'hui. Vous pourrez les modifier individuellement par la suite.
+               Les tranches seront automatiquement espacées d&apos;un mois à partir d&apos;aujourd&apos;hui. Vous pourrez les modifier individuellement par la suite.
              </p>
           </div>
         </form>
@@ -324,10 +329,10 @@ export default function PaymentsClientView({ initialPayments = [], students = []
       <Modal
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
-        title="Détails de l'échéancier"
+        title="Détails de l&apos;échéancier"
         footer={
           <div className="flex items-center justify-end w-full">
-            <button onClick={() => setIsManageModalOpen(false)} className="px-6 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl shadow-lg hover:bg-gray-800 transition-all active:scale-95">Terminer</button>
+            <button onClick={() => setIsManageModalOpen(false)} className="btn-primary text-sm">Terminer</button>
           </div>
         }
       >
@@ -381,7 +386,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
               <button 
                 type="submit"
                 disabled={isPending || !selectedTrancheId || paymentAmount <= 0}
-                className="flex items-center justify-center gap-2 bg-green-500 text-white rounded-xl py-2.5 px-4 font-black text-sm shadow-md hover:bg-green-600 transition-all active:scale-95 disabled:opacity-50"
+                className="btn-primary flex items-center justify-center gap-2 py-2.5 px-4 disabled:opacity-50"
               >
                 {isPending ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                 Valider
@@ -396,7 +401,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
                Échéancier Mensuel (Timeline)
             </h4>
             <div className="space-y-3">
-              {selectedPayment?.tranches?.map((tranche, idx) => (
+              {selectedPayment?.tranches?.map((tranche) => (
                 <div key={tranche.id} className={clsx(
                   "flex items-center gap-4 p-4 rounded-2xl border transition-all",
                   tranche.isPaid ? "bg-green-50/50 border-green-100 opacity-70" : "bg-white border-gray-100 shadow-sm"
@@ -492,9 +497,9 @@ function PaymentCardStyled({ payment, student, onManage }: { payment: Payment, s
 
        <button 
          onClick={() => onManage(payment)}
-         className="w-full mt-4 flex items-center justify-center gap-2 py-3 bg-gray-50 text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 hover:bg-primary-teal hover:text-white hover:border-primary-teal transition-all active:scale-95"
+         className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 py-3 text-xs uppercase tracking-widest"
        >
-         Gérer l'échéancier
+         Gérer l&apos;échéancier
          <ArrowRight size={14} strokeWidth={3} />
        </button>
     </div>

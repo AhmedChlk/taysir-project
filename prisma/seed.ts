@@ -4,44 +4,37 @@ import * as bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Début du seeding...");
+  console.log("🌱 Début du seeding propre...");
 
   // 1. Création de l'établissement par défaut
-  const etablissement = await prisma.etablissement.upsert({
-    where: { slug: "ecole-ruifed" },
-    update: {},
-    create: {
-      name: "Ecole Ruifed",
-      slug: "ecole-ruifed",
-      primaryColor: "#0F515C",
+  // On utilise create ou upsert, mais après un reset, create suffit.
+  const etablissement = await prisma.etablissement.create({
+    data: {
+      name: "Taysir Academy",
+      slug: "taysir-academy",
+      primaryColor: "#1A2F23", // Oasis Green
     },
   });
 
   console.log(`✅ Établissement créé : ${etablissement.name}`);
 
-  // 2. Création de l'administrateur par défaut (Directeur Noreddine Ruifed)
-  const adminEmail = "noreddine@ruifed.dz";
-  const hashedPassword = await bcrypt.hash("Taysir2024!", 12);
+  // 2. Création de l'unique Gérant propre
+  const adminEmail = "admin@taysir.dz";
+  const hashedPassword = await bcrypt.hash("Taysir2026!", 12);
 
-  const admin = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {
-      password: hashedPassword,
-      role: RoleUser.GERANT,
-      etablissementId: etablissement.id,
-    },
-    create: {
+  const manager = await prisma.user.create({
+    data: {
       email: adminEmail,
       password: hashedPassword,
-      firstName: "Noreddine",
-      lastName: "Ruifed",
+      firstName: "Admin",
+      lastName: "Taysir",
       role: RoleUser.GERANT,
       etablissementId: etablissement.id,
       isActive: true,
     },
   });
 
-  console.log(`✅ Administrateur créé : ${admin.email}`);
+  console.log(`✅ Gérant unique créé : ${manager.email}`);
   console.log("✨ Seeding terminé avec succès !");
 }
 

@@ -4,7 +4,8 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  // Désactivation temporaire du mode standalone et des headers complexes pour stabiliser Turbopack en dev
+  output: 'standalone', // Obligatoire pour le déploiement Docker sur VPS client
+  poweredByHeader: false,
 };
 
 export default withNextIntl(nextConfig);

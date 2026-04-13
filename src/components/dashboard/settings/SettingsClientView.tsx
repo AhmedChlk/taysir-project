@@ -8,7 +8,6 @@ import ProfileSettings from "./ProfileSettings";
 import SchoolSettings from "./SchoolSettings";
 import SecuritySettings from "./SecuritySettings";
 import PreferencesSettings from "./PreferencesSettings";
-import { User, Tenant } from "@/types/schema";
 
 interface SettingsClientViewProps {
   user: any; // User type might need to match getCurrentUser select

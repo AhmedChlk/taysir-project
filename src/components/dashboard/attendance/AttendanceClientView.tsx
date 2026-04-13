@@ -85,7 +85,7 @@ export default function AttendanceClientView({
         </div>
         <button 
           onClick={() => alert(t("save_success"))}
-          className="flex items-center gap-2 rounded-lg bg-accent-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal/90 transition-colors"
+          className="btn-primary flex items-center gap-2"
         >
           <Save size={20} />
           {t("save")}

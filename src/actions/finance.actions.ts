@@ -2,11 +2,10 @@
 
 "use server";
 
-import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { PaymentMethod, Tranche, Paiement, PaymentPlan, Prisma } from "@prisma/client";
+import { Tranche, Paiement, PaymentPlan, Prisma } from "@prisma/client";
 import { RegisterPaymentSchema, CreatePaymentPlanSchema } from "@/lib/validations";
 import { revalidateTag } from "next/cache";
 

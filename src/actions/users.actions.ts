@@ -93,7 +93,7 @@ export const resetUserPasswordAction = createSafeAction(
 // Supprimer un utilisateur
 export const deleteUserAction = createSafeAction(
   z.object({ id: z.string().uuid() }),
-  async ({ id }, { tenantId, role }) => {
+  async ({ id }, { tenantId }) => {
     const tenantPrisma = getTenantPrisma(tenantId);
     
     return await tenantPrisma.user.delete({

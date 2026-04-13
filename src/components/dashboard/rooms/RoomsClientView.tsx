@@ -94,7 +94,7 @@ export default function RoomsClientView({ initialRooms = [] }: RoomsClientViewPr
           <span className="max-w-xs truncate text-gray-500">{room.description || "-"}</span>
           <button 
             onClick={(e) => { e.stopPropagation(); handleDelete(room.id); }}
-            className="text-gray-400 hover:text-red-600 transition-colors"
+            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
           >
             <Trash2 size={16} />
           </button>
@@ -116,7 +116,7 @@ export default function RoomsClientView({ initialRooms = [] }: RoomsClientViewPr
             setSelectedRoom(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 rounded-lg bg-accent-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal/90 transition-colors"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} />
           {t("add_room")}
@@ -141,12 +141,18 @@ export default function RoomsClientView({ initialRooms = [] }: RoomsClientViewPr
         title={selectedRoom ? t("edit_room") : t("add_room")}
         footer={
           <>
-            <button disabled={isPending} onClick={() => setIsModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
+            <button 
+              disabled={isPending} 
+              onClick={() => setIsModalOpen(false)} 
+              className="btn-ghost"
+            >
+              {t("cancel")}
+            </button>
             <button 
               form="room-form"
               type="submit"
               disabled={isPending} 
-              className="flex items-center gap-2 rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors"
+              className="btn-primary flex items-center gap-2"
             >
               {isPending && <Loader2 size={16} className="animate-spin" />}
               {selectedRoom ? t("save_changes") : t("add")}

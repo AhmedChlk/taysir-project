@@ -1,3 +1,13 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Fusionne les classes Tailwind de manière conditionnelle et gère les conflits.
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 /**
  * Formatte le nom complet d'un utilisateur ou d'un étudiant.
  */

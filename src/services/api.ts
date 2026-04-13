@@ -6,11 +6,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
+import { cache } from "react";
 
-// Récupération du client prisma avec le bon tenant
-async function getPrisma() {
+/**
+ * RÉCUPÉRATION DU PRISMA MÉMOÏSÉE (PERFORMANCE)
+ * Utilise React Cache pour ne pas appeler getServerSession plusieurs fois par requête.
+ */
+const getPrisma = cache(async () => {
   const session = await getServerSession(authOptions);
   const user = session?.user;
+  
   if (!session || !user) {
     throw new TaysirError("Accès refusé : Session non valide.", ErrorCodes.ERR_UNAUTHORIZED, 401);
   }
@@ -24,10 +29,10 @@ async function getPrisma() {
   }
 
   return getTenantPrisma(user.etablissementId);
-}
+});
 
 // Récupérer les infos de l'école actuelle
-export const getCurrentTenant = async () => {
+export const getCurrentTenant = cache(async () => {
   const session = await getServerSession(authOptions);
   const tenantId = session?.user?.etablissementId;
   
@@ -36,10 +41,10 @@ export const getCurrentTenant = async () => {
   return await prisma.etablissement.findUnique({
     where: { id: tenantId }
   });
-};
+});
 
 // Récupérer l'utilisateur connecté
-export const getCurrentUser = async () => {
+export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
@@ -58,7 +63,7 @@ export const getCurrentUser = async () => {
       etablissementId: true,
     }
   });
-};
+});
 
 // Liste des écoles
 export const getTenants = async () => {
@@ -158,10 +163,10 @@ export const getAttendanceStats = async () => {
   const days = eachDayOfInterval({ start, end });
   
   return days.map(day => {
-    const dayRecords = records.filter(r => isSameDay(r.session.startTime, day));
+    const dayRecords = records.filter((r: { session: { startTime: Date } }) => isSameDay(r.session.startTime, day));
     if (dayRecords.length === 0) return 0;
     
-    const presentCount = dayRecords.filter(r => r.status === "PRESENT" || r.status === "RETARD").length;
+    const presentCount = dayRecords.filter((r: { status: string }) => r.status === "PRESENT" || r.status === "RETARD").length;
     return Math.round((presentCount / dayRecords.length) * 100);
   });
 };

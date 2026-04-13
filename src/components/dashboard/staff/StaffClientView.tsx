@@ -198,7 +198,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
             setSelectedStaff(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 rounded-lg bg-accent-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal/90 transition-colors"
+          className="btn-secondary flex items-center gap-2 text-sm"
         >
           <UserPlus size={20} />
           {t("add_member")}
@@ -210,8 +210,8 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         <button
           onClick={() => setRoleFilter("ALL")}
           className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
-            roleFilter === "ALL" ? "bg-primary-teal text-white border-primary-teal shadow-md" : "bg-white text-gray-600 border-gray-100 hover:border-primary-teal/30"
+            "flex items-center gap-2 text-sm border",
+            roleFilter === "ALL" ? "btn-primary border-taysir-teal" : "btn-ghost border-transparent hover:border-taysir-teal/20"
           )}
         >
           <Filter size={16} />
@@ -222,8 +222,8 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
             key={role}
             onClick={() => setRoleFilter(role)}
             className={clsx(
-              "px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
-              roleFilter === role ? "bg-primary-teal text-white border-primary-teal shadow-md" : "bg-white text-gray-600 border-gray-100 hover:border-primary-teal/30"
+              "text-sm border",
+              roleFilter === role ? "btn-primary border-taysir-teal" : "btn-ghost border-transparent hover:border-taysir-teal/20"
             )}
           >
             {role === UserRole.GERANT ? t("manager") : role === UserRole.SECRETAIRE ? t("secretary") : t("teacher")}
@@ -245,11 +245,11 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         title="Réinitialiser le mot de passe"
         footer={
           <>
-            <button disabled={isPending} onClick={() => setIsResetModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
+            <button disabled={isPending} onClick={() => setIsResetModalOpen(false)} className="btn-ghost text-sm">{t("cancel")}</button>
             <button 
               onClick={handleResetPassword}
               disabled={isPending || newPassword.length < 8} 
-              className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition-colors disabled:opacity-50"
+              className="btn-secondary flex items-center gap-2 text-sm disabled:opacity-50"
             >
               {isPending && <Loader2 size={16} className="animate-spin" />}
               {t("change_password")}
@@ -281,12 +281,12 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         title={selectedStaff ? t("edit_member") : t("add_staff_title")}
         footer={
           <>
-            <button disabled={isPending} onClick={() => setIsModalOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">{t("cancel")}</button>
+            <button disabled={isPending} onClick={() => setIsModalOpen(false)} className="btn-ghost text-sm">{t("cancel")}</button>
             <button 
               form="staff-form"
               type="submit"
               disabled={isPending} 
-              className="flex items-center gap-2 rounded-lg bg-primary-teal px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-teal/90 transition-colors disabled:opacity-50"
+              className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
             >
               {isPending && <Loader2 size={16} className="animate-spin" />}
               {selectedStaff ? t("save_changes") : t("add")}

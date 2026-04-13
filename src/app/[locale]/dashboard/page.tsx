@@ -1,33 +1,23 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import DashboardClientView from "@/components/dashboard/DashboardClientView";
-import { 
-  getStudents, 
-  getActivities, 
-  getRooms, 
-  getSessions, 
-  getAttendanceStats,
-  getPayments 
-} from "@/services/api";
+import DashboardSPA from "@/components/dashboard/DashboardSPA";
+import StatsWidget from "@/components/dashboard/widgets/StatsWidget";
+import SessionsWidget from "@/components/dashboard/widgets/SessionsWidget";
+import PaymentsWidget from "@/components/dashboard/widgets/PaymentsWidget";
 
-export default async function DashboardPage() {
-  const [students, activities, rooms, sessions, attendanceStats, payments] = await Promise.all([
-    getStudents(),
-    getActivities(),
-    getRooms(),
-    getSessions(),
-    getAttendanceStats(),
-    getPayments()
-  ]);
+interface PageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function DashboardPage({ params }: PageProps) {
+  const { locale } = await params;
 
   return (
     <DashboardLayout>
-      <DashboardClientView 
-        students={students}
-        activities={activities}
-        rooms={rooms}
-        sessions={sessions}
-        attendanceStats={attendanceStats}
-        payments={payments}
+      <DashboardSPA 
+        locale={locale}
+        stats={<StatsWidget />}
+        sessions={<SessionsWidget />}
+        payments={<PaymentsWidget />}
       />
     </DashboardLayout>
   );

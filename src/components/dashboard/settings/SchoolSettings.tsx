@@ -73,7 +73,7 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
             <button 
               type="submit"
               disabled={isPending}
-              className="flex items-center gap-2 rounded-lg bg-primary-teal px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal transition-all active:scale-[0.98] disabled:opacity-50"
+              className="btn-primary flex items-center gap-2 disabled:opacity-50"
             >
               {isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               {t("save")}

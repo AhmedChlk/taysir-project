@@ -6,7 +6,7 @@ import Modal from "@/components/ui/Modal";
 import { Select, Input } from "@/components/ui/FormInput";
 import { Toggle } from "@/components/ui/Toggle";
 import { Session, Room, User as UserType, Activity, Group, UserRole } from "@/types/schema";
-import { Filter, Users, MapPin, Plus, Loader2, Calendar as CalendarIcon, Info, Repeat } from "lucide-react";
+import { Users, MapPin, Plus, Loader2, Calendar as CalendarIcon, Info, Repeat } from "lucide-react";
 import { Views, View } from "react-big-calendar";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
@@ -147,7 +147,7 @@ export default function ScheduleClientView({
             setIsModalOpen(true);
             if (navigator.vibrate) navigator.vibrate(50);
           }}
-          className="flex items-center gap-2 rounded-xl bg-primary-teal px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-teal/30 hover:bg-primary-teal/90 hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} strokeWidth={2.5} />
           Planifier une séance
@@ -230,7 +230,7 @@ export default function ScheduleClientView({
             <button 
               disabled={isPending} 
               onClick={() => setIsModalOpen(false)} 
-              className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all"
+              className="btn-ghost"
             >
               Annuler
             </button>
@@ -238,7 +238,7 @@ export default function ScheduleClientView({
               form="session-form"
               type="submit"
               disabled={isPending} 
-              className="flex items-center gap-2 px-6 py-2.5 bg-primary-teal text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-teal/20 hover:bg-primary-teal/90 transition-all active:scale-95 disabled:opacity-50"
+              className="btn-primary flex items-center gap-2"
             >
               {isPending && <Loader2 size={18} className="animate-spin" />}
               Enregistrer la séance
@@ -322,7 +322,7 @@ export default function ScheduleClientView({
           <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
              <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
              <p className="text-xs text-blue-700 font-medium leading-relaxed">
-               La durée de la séance sera automatiquement calculée en fonction du type d'activité sélectionné.
+               La durée de la séance sera automatiquement calculée en fonction du type d&apos;activité sélectionné.
              </p>
           </div>
         </form>

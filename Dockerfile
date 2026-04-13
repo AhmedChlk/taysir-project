@@ -1,46 +1,43 @@
-# --- Étape 1 : Installation des Dépendances ---
-FROM node:20-alpine AS deps
+# Stage 1: Install dependencies
+FROM node:24-alpine AS base
+
+FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Copie uniquement les fichiers de dépendances pour optimiser le cache de couche Docker
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 RUN npm ci
 
-# --- Étape 2 : Construction de l'Application (Builder) ---
-FROM node:20-alpine AS builder
+# Stage 2: Build the source code
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npx prisma generate && npm run build
 
-# Génération du client Prisma (Crucial pour le multi-tenancy)
-# On désactive la télémétrie Next.js pendant le build
-ENV NEXT_TELEMETRY_DISABLED 1
-RUN npx prisma generate
-RUN npm run build
-
-# --- Étape 3 : Exécution de l'Application (Runner) ---
-FROM node:20-alpine AS runner
+# Stage 3: Runner
+FROM base AS runner
 WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# Création d'un utilisateur non-privilégié pour la sécurité
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copie des fichiers nécessaires depuis le builder (Standalone)
+# Utilisation du mode standalone de Next.js (Optimization VPS)
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Copie de l'outil CLI Prisma pour exécuter les migrations en production
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
-
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-ENV PORT 3000
-# On utilise localhost par défaut si non spécifié via docker-compose
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"]
+# Exécution automatique des migrations au démarrage
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

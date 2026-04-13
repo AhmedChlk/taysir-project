@@ -43,7 +43,7 @@ export default function SecuritySettings() {
           </div>
 
           <div className="flex justify-end pt-4">
-            <button className="flex items-center gap-2 rounded-lg bg-primary-teal px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-teal transition-all active:scale-[0.98]">
+            <button className="btn-primary flex items-center gap-2">
               <Save size={18} />
               {t("save")}
             </button>

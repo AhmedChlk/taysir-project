@@ -1,75 +1,85 @@
-// Configuration de Prisma et gestion du multi-tenant
+import { PrismaClient } from '@prisma/client';
 
-import { PrismaClient } from "@prisma/client";
-
-// On crée une seule instance de Prisma
+/**
+ * Singleton Prisma optimisé pour VPS (Long-running process)
+ * Empêche la saturation du pool de connexions lors des rechargements (HMR).
+ */
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
 };
 
 declare global {
   var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
+  var tenantClients: Map<string, any> | undefined;
 }
 
 export const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
 
-if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma;
+if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma;
 
-// Fonction pour filtrer les données par école automatiquement
+// Cache global pour les clients étendus par tenant
+if (!globalThis.tenantClients) {
+  globalThis.tenantClients = new Map();
+}
+
+/**
+ * Extension Multi-tenant de Haute Précision - MÉMOÏSÉE
+ * Empêche la création répétée d'extensions qui dégradent les performances.
+ */
 export function getTenantPrisma(etablissementId: string) {
-  return prisma.$extends({
+  if (!etablissementId) {
+    throw new Error('Tentative d accès aux données sans ID d établissement valide.');
+  }
+
+  // Retourne le client du cache s'il existe
+  if (globalThis.tenantClients?.has(etablissementId)) {
+    return globalThis.tenantClients.get(etablissementId);
+  }
+
+  const extendedClient = prisma.$extends({
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          // Modèles globaux sans isolation par établissement
-          const skipModels = ["Etablissement"];
-          if (skipModels.includes(model)) {
+          // Modèles globaux exclus de l'isolation
+          const globalModels = ['Etablissement'];
+          if (globalModels.includes(model)) {
             return query(args);
           }
 
-          // Gestion des findUnique qui deviennent des findFirst avec le tenantId
-          if (operation === "findUnique" || operation === "findUniqueOrThrow") {
-            const newOp = operation === "findUnique" ? "findFirst" : "findFirstOrThrow";
-            return (prisma as any)[model][newOp]({
-              ...args,
-              where: {
-                ...args.where,
-                etablissementId,
-              },
-            });
-          }
-
-          // On ajoute le etablissementId partout pour la sécurité
-          const filterOperations = [
-            "findMany", "findFirst", "findFirstOrThrow",
-            "update", "updateMany", "delete", "deleteMany", 
-            "count", "aggregate", "groupBy",
+          // Sécurisation chirurgicale des filtres
+          const filterOps = [
+            'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
+            'update', 'updateMany', 'delete', 'deleteMany', 'count', 'aggregate', 'groupBy'
           ];
 
-          if (filterOperations.includes(operation)) {
-            (args as any).where = {
-              ...((args as any).where || {}),
-              etablissementId,
+          if (filterOps.includes(operation)) {
+            const finalArgs = {
+              ...(args as any),
+              where: {
+                ...((args as any).where || {}),
+                etablissementId,
+              },
             };
+            return query(finalArgs);
           }
 
-          // Injection pour les créations
-          if (operation === "create") {
-            (args as any).data = { ...(args as any).data, etablissementId };
+          // Injection forcée lors des mutations (Create/Upsert)
+          if (operation === 'create') {
+            (args as any).data = { ...((args as any).data || {}), etablissementId };
           }
 
-          if (operation === "createMany") {
+          if (operation === 'createMany') {
             if (Array.isArray((args as any).data)) {
               (args as any).data = (args as any).data.map((item: any) => ({ ...item, etablissementId }));
-            } else if ((args as any).data) {
-              (args as any).data = { ...(args as any).data, etablissementId };
             }
           }
-          
-          if (operation === "upsert") {
-            (args as any).where = { ...(args as any).where, etablissementId };
-            (args as any).create = { ...(args as any).create, etablissementId };
-            (args as any).update = { ...(args as any).update, etablissementId };
+
+          if (operation === 'upsert') {
+            (args as any).create = { ...((args as any).create || {}), etablissementId };
+            (args as any).update = { ...((args as any).update || {}), etablissementId };
+            (args as any).where = { ...((args as any).where || {}), etablissementId };
           }
 
           return query(args);
@@ -77,6 +87,11 @@ export function getTenantPrisma(etablissementId: string) {
       },
     },
   });
+
+  // Mise en cache du client pour ce tenant
+  globalThis.tenantClients?.set(etablissementId, extendedClient);
+  
+  return extendedClient;
 }
 
 export type TenantPrismaClient = ReturnType<typeof getTenantPrisma>;

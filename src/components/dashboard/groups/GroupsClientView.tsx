@@ -5,7 +5,7 @@ import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
 import { Group, Activity, User as UserType, Student } from "@/types/schema";
-import { Plus, Users, Trash2, Loader2, UserMinus, Search, Inbox, CheckCircle2, TrendingUp } from "lucide-react";
+import { Plus, Users, Trash2, Loader2, UserMinus, Inbox, CheckCircle2, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createGroupAction, updateGroupAction, deleteGroupAction } from "@/actions/logistics.actions";
 import { removeStudentFromGroupAction, addStudentToGroupAction } from "@/actions/students.actions";
@@ -19,7 +19,12 @@ interface GroupsClientViewProps {
   students: Student[];
 }
 
-export default function GroupsClientView({ initialGroups = [], activities = [], staff = [], students = [] }: GroupsClientViewProps) {
+export default function GroupsClientView({ 
+  initialGroups = [], 
+  activities: _activities = [], 
+  staff: _staff = [], 
+  students = [] 
+}: GroupsClientViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -176,7 +181,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
         <div className="flex items-center justify-end gap-2">
           <button 
             onClick={(e) => { e.stopPropagation(); handleDelete(group.id); }}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-red-500/20"
+            className="p-2 bg-red-600 text-white rounded-xl transition-all duration-300 ease-out shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20"
             title="Supprimer ce groupe"
           >
             <Trash2 size={18} />
@@ -200,7 +205,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
             setIsModalOpen(true);
             if (navigator.vibrate) navigator.vibrate(50);
           }}
-          className="flex items-center gap-2 rounded-xl bg-primary-teal px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary-teal/30 hover:bg-primary-teal/90 hover:-translate-y-0.5 transition-all duration-300 ease-out active:scale-95"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus size={20} strokeWidth={2.5} />
           {t("add_group")}
@@ -273,7 +278,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
             <button 
               disabled={isPending} 
               onClick={() => setIsModalOpen(false)} 
-              className="rounded-xl px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-all duration-300"
+              className="btn-ghost"
             >
               {t("cancel")}
             </button>
@@ -281,7 +286,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
               form="group-form"
               type="submit"
               disabled={isPending} 
-              className="flex items-center gap-2 rounded-xl bg-primary-teal px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary-teal/90 hover:shadow-lg transition-all duration-300 active:scale-95"
+              className="btn-primary flex items-center gap-2"
             >
               {isPending && <Loader2 size={18} className="animate-spin" />}
               {selectedGroup ? t("save_changes") : t("add")}
@@ -340,7 +345,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
                     handleAddStudent();
                   }}
                   disabled={isPending || !selectedStudentToAdd}
-                  className="mb-1.5 flex items-center gap-2 px-5 py-2.5 bg-accent-teal text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-accent-teal/90 shadow-sm transition-all active:scale-95"
+                  className="btn-secondary mb-1.5 flex items-center gap-2"
                 >
                   <Plus size={18} />
                   Ajouter
@@ -391,7 +396,7 @@ export default function GroupsClientView({ initialGroups = [], activities = [], 
                             handleRemoveStudent(student.id, selectedGroup.id);
                           }}
                           disabled={isPending}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                          className="p-2 bg-red-600 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
                           title="Retirer du groupe"
                         >
                           <UserMinus size={18} />

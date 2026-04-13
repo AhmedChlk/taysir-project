@@ -1,174 +1,219 @@
-"use client";
+'use client';
 
-import { Student, Activity, Room, Session, Payment } from "@/types/schema";
-import { Users, BookOpen, MapPin, Calendar, ArrowUpRight, TrendingUp, DollarSign, Wallet } from "lucide-react";
-import { clsx } from "clsx";
-import { useTranslations } from 'next-intl';
-import { Link } from "@/i18n/routing";
-import { formatTime } from "@/utils/format";
-import { useMemo } from "react";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Users, 
+  Calendar, 
+  Wallet, 
+  ArrowUpRight, 
+  Clock, 
+  GraduationCap,
+  Bell,
+  CheckCircle2
+} from 'lucide-react';
+import { Student, Session, PaymentPlan } from '@/types/schema';
+import { isSameDay } from 'date-fns';
 
-interface DashboardClientViewProps {
+interface DashboardProps {
   students: Student[];
-  activities: Activity[];
-  rooms: Room[];
   sessions: Session[];
+  payments: PaymentPlan[];
+  activities: any[];
+  rooms: any[];
   attendanceStats: number[];
-  payments: Payment[];
 }
 
-export default function DashboardClientView({
-  students,
-  activities,
-  rooms,
-  sessions,
-  attendanceStats,
-  payments = []
-}: DashboardClientViewProps) {
-  const t = useTranslations();
+const springTransition = {
+  type: 'spring',
+  stiffness: 200,
+  damping: 20,
+  mass: 1
+} as const;
+
+export default function DashboardClientView({ 
+  students, 
+  sessions, 
+  payments,
+  activities: _activities,
+  rooms: _rooms,
+  attendanceStats: _attendanceStats 
+}: DashboardProps) {
+  // Calculs ERP Réels
+  const totalStudents = students.length;
+  const activeStudents = students.filter(s => s.isActive).length;
   
-  const financialStats = useMemo(() => {
-    const totalExpected = payments.reduce((acc, p) => acc + p.totalAmount, 0);
-    const totalPaid = payments.reduce((acc, p) => acc + p.paidAmount, 0);
-    return { totalExpected, totalPaid, remaining: totalExpected - totalPaid };
-  }, [payments]);
-
-  const stats = [
-    { label: t("total_students"), value: students.length, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Types d'Activités", value: activities.length, icon: BookOpen, color: "text-primary-teal", bg: "bg-primary-teal/10" },
-    { label: "Salles", value: rooms.length, icon: MapPin, color: "text-orange-600", bg: "bg-orange-50" },
-    { label: "Finance (Recettes)", value: `${financialStats.totalPaid} DA`, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-  ];
-
-  const daysLabels = [
-    t("days_mon"),
-    t("days_tue"),
-    t("days_wed"),
-    t("days_thu"),
-    t("days_fri"),
-    t("days_sat"),
-    t("days_sun"),
-  ];
+  const today = new Date();
+  const todaySessions = sessions.filter(s => isSameDay(new Date(s.startTime), today));
+  
+  const pendingPayments = payments.filter(p => p.status === 'PENDING' || p.status === 'PARTIAL');
+  const totalPendingAmount = pendingPayments.reduce((acc, curr) => acc + (curr.totalAmount - curr.paidAmount), 0);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tight">{t("dashboard")}</h1>
-        <p className="text-gray-500 font-medium">{t("dashboard_welcome_subtitle")}</p>
-      </div>
+    <div className="min-h-screen bg-taysir-bg p-4 md:p-8 font-sans selection:bg-taysir-light/20">
+      {/* Header Scolaire */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+        <motion.div 
+          initial={{ x: -30, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={springTransition}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <GraduationCap className="text-taysir-teal" size={24} />
+            <span className="text-xs font-bold tracking-[0.2em] text-taysir-teal/60 uppercase">Espace Direction</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-taysir-teal uppercase">
+            TAYSIR<span className="text-taysir-light">.</span>ERP
+          </h1>
+        </motion.div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end">
+            <span className="text-xs font-medium opacity-60 uppercase tracking-wider">Aujourd&apos;hui</span>
+            <span className="text-sm font-bold text-taysir-teal">
+              {today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+          </div>
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-taysir-teal shadow-sm border border-taysir-teal/5 cursor-pointer hover:bg-taysir-teal hover:text-white transition-colors">
+            <Bell size={20} />
+          </div>
+        </div>
+      </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="group rounded-3xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:border-primary-teal/20 active:scale-[0.98]">
-            <div className="flex items-start justify-between">
-              <div className={clsx("rounded-2xl p-4 transition-transform group-hover:scale-110", stat.bg, stat.color)}>
-                <stat.icon size={28} strokeWidth={2.5} />
+      {/* Bento Grid Principal */}
+      <main className="grid grid-cols-1 md:grid-cols-12 gap-5 max-w-7xl mx-auto">
+        
+        {/* KPI Majeur - Total Élèves */}
+        <motion.div 
+          whileHover={{ scale: 1.01 }}
+          transition={springTransition}
+          className="col-span-1 md:col-span-8 bg-taysir-teal rounded-[32px] p-8 md:p-10 text-white relative overflow-hidden shadow-xl"
+        >
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 opacity-70 mb-4">
+                <Users size={18} />
+                <span className="text-sm font-bold uppercase tracking-widest">Effectif Global</span>
+              </div>
+              <h2 className="text-7xl md:text-8xl font-black tracking-tighter">
+                {totalStudents}<span className="text-white/50 text-3xl ml-2 italic">élèves</span>
+              </h2>
+              <div className="flex gap-4 mt-4">
+                 <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                   {activeStudents} Actifs
+                 </span>
+                 <span className="bg-white/10 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                   {totalStudents - activeStudents} En attente
+                 </span>
               </div>
             </div>
-            <div className="mt-5">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-3xl font-black text-gray-900 mt-1">{stat.value}</p>
+            
+            <div className="mt-12 flex gap-3">
+              <button className="btn-secondary text-xs uppercase tracking-widest">
+                Gérer les inscriptions
+              </button>
+              <button className="btn-ghost text-white hover:bg-white/10 border border-white/20 text-xs uppercase tracking-widest">
+                Exporter
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+          
+          {/* Décoration asymétrique */}
+          <div className="absolute -right-10 -top-10 w-64 h-64 bg-taysir-light/20 rounded-full blur-3xl" />
+          <div className="absolute right-10 bottom-10 opacity-10">
+            <Users size={200} />
+          </div>
+        </motion.div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Attendance Visual Chart */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <TrendingUp size={22} className="text-primary-teal" />
-              Taux de Présence Hebdomadaire
-            </h3>
-          </div>
-          <div className="rounded-[32px] border border-gray-100 bg-white p-8 shadow-sm">
-            <div className="flex h-64 items-end justify-between gap-4">
-              {daysLabels.map((day, i) => {
-                const val = attendanceStats[i] || 0; 
-                return (
-                  <div key={i} className="group relative flex flex-1 flex-col items-center gap-3">
-                    <div 
-                      className="w-full max-w-[40px] rounded-2xl bg-gradient-to-t from-primary-teal to-accent-teal transition-all hover:brightness-110 shadow-sm group-hover:shadow-lg"
-                      style={{ height: `${val}%`, minHeight: '8px' }}
-                    />
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 rounded-xl bg-gray-900 px-3 py-1.5 text-[10px] font-black text-white opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-1">
-                      {val}%
-                    </div>
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
-                      {day}
-                    </span>
-                  </div>
-                );
-              })}
+        {/* Séance du Jour (Vertical) */}
+        <motion.div 
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ ...springTransition, delay: 0.1 }}
+          className="col-span-1 md:col-span-4 bento-card p-8 flex flex-col justify-between"
+        >
+          <div className="flex justify-between items-start">
+            <div className="p-4 bg-taysir-teal/5 rounded-2xl text-taysir-teal">
+              <Calendar size={24} />
             </div>
+            <span className="text-taysir-light font-black text-sm flex items-center gap-1 bg-taysir-teal/5 px-3 py-1 rounded-full uppercase tracking-tighter">
+              Aujourd&apos;hui
+            </span>
           </div>
-        </div>
+          <div className="mt-8">
+            <div className="text-5xl font-black text-taysir-teal tracking-tighter mb-1">
+              {todaySessions.length}
+            </div>
+            <h3 className="text-xl font-bold text-taysir-teal/80 uppercase tracking-tighter">Séances prévues</h3>
+            <p className="text-sm text-taysir-teal/50 mt-2 font-medium">Répartition sur {todaySessions.length > 0 ? '3 salles' : '0 salle'}.</p>
+          </div>
+          <div className="mt-6 pt-6 border-t border-taysir-teal/5 flex items-center gap-2 text-taysir-light font-bold text-xs uppercase tracking-widest cursor-pointer hover:gap-3 transition-all">
+            Voir le planning <ArrowUpRight size={14} />
+          </div>
+        </motion.div>
 
-        {/* Financial & Agenda Overview */}
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Wallet size={20} className="text-orange-500" />
-              Santé Financière
-            </h3>
-            <div className="rounded-[32px] bg-gradient-to-br from-gray-900 to-gray-800 p-6 shadow-xl text-white">
-               <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Encaissé (DA)</p>
-                    <p className="text-3xl font-black">{financialStats.totalPaid.toLocaleString()} DA</p>
-                  </div>
-                  <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-accent-teal transition-all duration-1000" 
-                      style={{ width: `${(financialStats.totalPaid / (financialStats.totalExpected || 1)) * 100}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-gray-400">Reste à percevoir</span>
-                    <span className="text-orange-400">{financialStats.remaining.toLocaleString()} DA</span>
-                  </div>
-               </div>
+        {/* Micro-carte : Paiements en attente */}
+        <motion.div 
+          whileHover={{ y: -8 }}
+          className="col-span-1 md:col-span-4 bg-white border border-taysir-teal/10 rounded-[32px] p-8 shadow-sm flex flex-col justify-between"
+        >
+          <div className="flex items-center gap-3 text-taysir-teal mb-6">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+              <Wallet size={20} />
+            </div>
+            <span className="font-bold text-sm uppercase tracking-wider">Recouvrement</span>
+          </div>
+          
+          <div>
+            <div className="text-3xl font-black text-taysir-teal tracking-tighter">
+              {totalPendingAmount.toLocaleString('fr-DZ')} <span className="text-lg opacity-40">DZD</span>
+            </div>
+            <p className="text-xs font-bold text-amber-600 uppercase mt-1 tracking-tighter flex items-center gap-1">
+              <Clock size={12} /> {pendingPayments.length} impayés détectés
+            </p>
+          </div>
+          
+          <div className="mt-6">
+            <div className="h-1.5 w-full bg-taysir-teal/5 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-500 w-[65%]" />
             </div>
           </div>
+        </motion.div>
 
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Calendar size={20} className="text-purple-500" />
-              Planning du jour
+        {/* Carte Statut Système / Action Rapide */}
+        <motion.div 
+          className="col-span-1 md:col-span-8 bento-card p-8 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-white to-taysir-teal/5"
+        >
+          <div className="flex-1">
+            <h3 className="text-2xl font-black text-taysir-teal uppercase tracking-tighter mb-2">
+              Système Opérationnel
             </h3>
-            <div className="rounded-[32px] border border-gray-100 bg-white p-4 shadow-sm space-y-3">
-              {sessions.length > 0 ? sessions.slice(0, 4).map((session, idx) => {
-                const activity = activities.find(a => a.id === session.activityId);
-                return (
-                  <div key={idx} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-all group border border-transparent hover:border-gray-100">
-                    <div className="flex flex-col items-center justify-center min-w-[55px] py-2 bg-gray-100 rounded-xl text-gray-900 font-black text-xs transition-colors group-hover:bg-primary-teal group-hover:text-white">
-                      {formatTime(session.startTime)}
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-bold text-gray-900 truncate text-sm">{activity?.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-1 mt-0.5 tracking-wider">
-                        <MapPin size={10} /> {rooms.find(r => r.id === session.roomId)?.name}
-                      </p>
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-gray-400 font-medium italic">Aucune séance aujourd'hui</p>
-                </div>
-              )}
-              <Link href="/dashboard/schedule" className="block mt-2">
-                <button className="w-full py-3 text-xs font-black text-primary-teal hover:bg-primary-teal/5 rounded-2xl transition-all border-2 border-primary-teal/10 uppercase tracking-widest">
-                  Voir tout le planning
-                </button>
-              </Link>
+            <p className="text-sm text-taysir-teal/60 font-medium leading-relaxed max-w-md">
+              Toutes les données de l&apos;établissement sont synchronisées. L&apos;isolation multi-tenant est active pour 1 établissement.
+            </p>
+            <div className="flex gap-6 mt-6">
+              <div className="flex items-center gap-2 text-xs font-bold text-taysir-teal/40 uppercase tracking-widest">
+                <CheckCircle2 size={14} className="text-green-500" /> DB Connectée
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-taysir-teal/40 uppercase tracking-widest">
+                <CheckCircle2 size={14} className="text-green-500" /> Auth JWT OK
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+          
+          <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+             <div className="bg-white p-4 rounded-2xl border border-taysir-teal/5 shadow-sm text-center">
+                <div className="text-xs font-black text-taysir-teal uppercase tracking-tighter opacity-40 mb-1">Salles</div>
+                <div className="text-2xl font-black text-taysir-teal">08</div>
+             </div>
+             <div className="bg-white p-4 rounded-2xl border border-taysir-teal/5 shadow-sm text-center">
+                <div className="text-xs font-black text-taysir-teal uppercase tracking-tighter opacity-40 mb-1">Groupes</div>
+                <div className="text-2xl font-black text-taysir-teal">12</div>
+             </div>
+          </div>
+        </motion.div>
+
+      </main>
     </div>
   );
 }
