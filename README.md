@@ -51,7 +51,13 @@ Le projet est 100% prêt pour Docker. Les migrations Prisma s'exécutent automat
 ```bash
 docker compose up -d --build
 ```
+### Initialisation de la Base 
+Si les tables ne sont pas créées automatiquement, exécutez :
 
+```bash
+docker exec -it taysir-app npx prisma db push
+docker exec -it taysir-app npx prisma db seed
+```
 ### Configuration Docker Compose
 Le fichier `docker-compose.yml` est configuré pour isoler la base de données (non accessible depuis l'extérieur) et utiliser un réseau interne pour une sécurité maximale.
 
