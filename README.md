@@ -69,4 +69,4 @@ Le fichier `docker-compose.yml` est configuré pour isoler la base de données (
 - **i18n** : `next-intl` (Support FR/AR avec RTL).
 
 ---
-*Projet stabilisé, optimisé et documenté par @taysir-fixer.*
+
