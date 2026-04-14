@@ -4,8 +4,8 @@ import { useState, useMemo, useTransition } from "react";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
 import EmptyState from "@/components/ui/EmptyState";
-import { Payment, Student, PaymentMethod } from "@/types/schema";
-import { Search, Plus, Wallet, Calendar, CheckCircle2, AlertCircle, ArrowRight, Loader2, TrendingUp, DollarSign } from "lucide-react";
+import { Payment, Student, PaymentMethod, Activity } from "@/types/schema";
+import { Search, Plus, Wallet, Calendar, CheckCircle2, AlertCircle, ArrowRight, Loader2, TrendingUp, DollarSign, Clock, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
 import { createPaymentPlanAction, registerPaymentAction } from "@/actions/finance.actions";
@@ -15,9 +15,10 @@ import { clsx } from "clsx";
 interface PaymentsClientViewProps {
   initialPayments: Payment[];
   students: Student[];
+  activities: Activity[];
 }
 
-export default function PaymentsClientView({ initialPayments = [], students = [] }: PaymentsClientViewProps) {
+export default function PaymentsClientView({ initialPayments = [], students = [], activities = [] }: PaymentsClientViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -35,6 +36,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
 
   // --- States for NEW Payment Plan ---
   const [newPlanStudentId, setNewPlanStudentId] = useState("");
+  const [newPlanActivityId, setNewPlanActivityId] = useState("");
   const [newPlanTotal, setNewPlanTotal] = useState(0);
   const [tranchesCount, setTranchesCount] = useState(1);
 
@@ -70,7 +72,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
 
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPlanStudentId || newPlanTotal <= 0) return;
+    if (!newPlanStudentId || !newPlanActivityId || newPlanTotal <= 0) return;
 
     // Create simple tranches automatically
     const trancheAmount = Math.floor(newPlanTotal / tranchesCount);
@@ -86,6 +88,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
     startTransition(async () => {
       const result = await createPaymentPlanAction({
         studentId: newPlanStudentId,
+        activityId: newPlanActivityId,
         totalAmount: newPlanTotal,
         currency: "DZD",
         tranches
@@ -94,6 +97,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
       if (result.success) {
         setIsAddModalOpen(false);
         setNewPlanStudentId("");
+        setNewPlanActivityId("");
         setNewPlanTotal(0);
         setTranchesCount(1);
         router.refresh();
@@ -120,13 +124,10 @@ export default function PaymentsClientView({ initialPayments = [], students = []
       });
 
       if (result.success) {
-        // Find the payment plan again in initialPayments to update the local view if needed
-        // but router.refresh() should handle it.
         setPaymentAmount(0);
         setSelectedTrancheId("");
         router.refresh();
         
-        // Update selected payment locally for immediate feedback in the modal
         if (selectedPayment) {
           const updatedTranches = selectedPayment.tranches?.map(t => {
              if (t.id === selectedTrancheId) {
@@ -153,6 +154,37 @@ export default function PaymentsClientView({ initialPayments = [], students = []
     return { total, paid, remaining: total - paid };
   }, [initialPayments]);
 
+  const exportToCSV = () => {
+    const headers = ["Élève", "Activité", "Montant Total", "Montant Payé", "Reste", "Statut"];
+    const rows = filteredPayments.map(p => {
+      const student = studentsMap[p.studentId];
+      const studentName = student ? formatFullName(student.firstName, student.lastName) : "Inconnu";
+      return [
+        `"${studentName}"`,
+        `"${p.activity?.name || "N/A"}"`,
+        p.totalAmount,
+        p.paidAmount,
+        p.totalAmount - p.paidAmount,
+        p.status
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `paiements_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -166,13 +198,22 @@ export default function PaymentsClientView({ initialPayments = [], students = []
             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Gestion Financière & Échéanciers</p>
           </div>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="btn-primary flex items-center gap-2 text-sm"
-        >
-          <Plus size={20} strokeWidth={2.5} />
-          Nouveau Plan Financier
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={exportToCSV}
+            className="flex items-center gap-2 bg-white text-taysir-teal border border-taysir-teal/20 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-taysir-teal/5 transition-all shadow-sm"
+          >
+            <Download size={18} />
+            Exporter CSV
+          </button>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="btn-primary flex items-center gap-2 text-sm py-2.5"
+          >
+            <Plus size={20} strokeWidth={2.5} />
+            Nouveau Plan Financier
+          </button>
+        </div>
       </div>
 
       {/* Stats Summary */}
@@ -274,7 +315,7 @@ export default function PaymentsClientView({ initialPayments = [], students = []
             <button 
               form="add-plan-form"
               type="submit"
-              disabled={isPending || !newPlanStudentId || newPlanTotal <= 0}
+              disabled={isPending || !newPlanStudentId || !newPlanActivityId || newPlanTotal <= 0}
               className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
             >
               {isPending && <Loader2 size={18} className="animate-spin" />}
@@ -292,6 +333,16 @@ export default function PaymentsClientView({ initialPayments = [], students = []
                 options={[
                   { label: "Sélectionner un élève...", value: "" },
                   ...students.map(s => ({ label: formatFullName(s.firstName, s.lastName), value: s.id }))
+                ]} 
+                required
+              />
+              <Select 
+                label="Activité associée" 
+                value={newPlanActivityId}
+                onChange={(e) => setNewPlanActivityId(e.target.value)}
+                options={[
+                  { label: "Sélectionner une activité...", value: "" },
+                  ...activities.map(a => ({ label: a.name, value: a.id }))
                 ]} 
                 required
               />
@@ -454,6 +505,11 @@ function PaymentCardStyled({ payment, student, onManage }: { payment: Payment, s
                 <div className="flex flex-col">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{student.email ? student.email.split('@')[0] : 'Élève'}</p>
                   <p className="text-[10px] font-bold text-primary-teal/70 uppercase tracking-tight mt-0.5">{paidTranches}/{totalTranches} mois réglés</p>
+                  {payment.activity && (
+                    <p className="text-[9px] font-bold bg-primary-teal/5 text-primary-teal px-1.5 py-0.5 rounded-md mt-1 self-start">
+                      {payment.activity.name}
+                    </p>
+                  )}
                 </div>
              </div>
           </div>
@@ -510,15 +566,6 @@ function FilterIcon({ size, className }: { size: number, className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-    </svg>
-  );
-}
-
-function Clock({ size, className }: { size: number, className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
     </svg>
   );
 }

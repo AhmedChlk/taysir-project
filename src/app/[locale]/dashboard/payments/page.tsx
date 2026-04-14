@@ -1,11 +1,12 @@
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import PaymentsClientView from "@/components/dashboard/payments/PaymentsClientView";
-import { getPayments, getStudents } from "@/services/api";
+import { getPayments, getStudents, getActivities } from "@/services/api";
 
 export default async function PaymentsPage() {
-  const [payments, students] = await Promise.all([
+  const [payments, students, activities] = await Promise.all([
     getPayments(),
-    getStudents()
+    getStudents(),
+    getActivities()
   ]);
 
   return (
@@ -13,6 +14,7 @@ export default async function PaymentsPage() {
       <PaymentsClientView 
         initialPayments={payments}
         students={students}
+        activities={activities}
       />
     </DashboardLayout>
   );

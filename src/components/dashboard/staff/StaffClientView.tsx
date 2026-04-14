@@ -6,37 +6,37 @@ import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import { Input, Select } from "@/components/ui/FormInput";
 import { Toggle } from "@/components/ui/Toggle";
-import { User, UserRole } from "@/types/schema";
-import { UserPlus, Mail, ShieldCheck, Trash2, Loader2, Key, Filter, CheckCircle2, XCircle } from "lucide-react";
+import { User as StaffMember, UserRole } from "@/types/schema";
+import { UserPlus, Mail, ShieldCheck, Trash2, Loader2, Key, Filter, CheckCircle2, XCircle, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFullName } from "@/utils/format";
 import { createUserAction, updateUserAction, deleteUserAction, resetUserPasswordAction } from "@/actions/users.actions";
 import { useRouter } from "@/i18n/routing";
 
 interface StaffClientViewProps {
-  initialStaff: User[];
+  initialStaff: StaffMember[];
 }
 
 export default function StaffClientView({ initialStaff = [] }: StaffClientViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<User | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [newPassword, setNewPassword] = useState("");
   const [isPending, startTransition] = useTransition();
   const t = useTranslations();
   const router = useRouter();
 
-  const handleAction = (u: User) => {
+  const handleAction = (u: StaffMember) => {
     setSelectedStaff(u);
     setIsModalOpen(true);
   };
 
-  const handleToggleStatus = async (user: User) => {
+  const handleToggleStatus = async (user: StaffMember) => {
     startTransition(async () => {
       const result = await updateUserAction({ 
         id: user.id, 
-        isActive: !user.isActive 
+        status: user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' 
       });
       if (result.success) {
         router.refresh();
@@ -108,7 +108,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
   const columns = [
     {
       header: t("full_name"),
-      accessor: (u: User) => (
+      accessor: (u: StaffMember) => (
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-primary-teal/10 flex items-center justify-center text-primary-teal font-bold">
             {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
@@ -119,7 +119,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
     },
     {
       header: t("email"),
-      accessor: (u: User) => (
+      accessor: (u: StaffMember) => (
         <div className="flex items-center gap-2 text-gray-600">
           <Mail size={16} className="text-gray-400" />
           <span>{u.email}</span>
@@ -128,7 +128,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
     },
     {
       header: t("role_header"),
-      accessor: (u: User) => {
+      accessor: (u: StaffMember) => {
         const roleLabel = u.role === UserRole.GERANT ? t("manager") : u.role === UserRole.SECRETAIRE ? t("secretary") : t("teacher");
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
@@ -140,24 +140,24 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
     },
     {
       header: t("status_header"),
-      accessor: (u: User) => (
+      accessor: (u: StaffMember) => (
         <div className="flex items-center gap-3">
           <Toggle 
-            enabled={u.isActive} 
+            enabled={u.status === 'ACTIVE'} 
             onChange={() => handleToggleStatus(u)} 
           />
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-            u.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            u.status === 'ACTIVE' ? "bg-green-100 text-green-700" : u.status === 'ON_LEAVE' ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
           }`}>
-            {u.isActive ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
-            {u.isActive ? t("active") : t("inactive")}
+            {u.status === 'ACTIVE' ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
+            {u.status === 'ACTIVE' ? t("active") : u.status === 'ON_LEAVE' ? t("on_leave") : t("inactive")}
           </span>
         </div>
       ),
     },
     {
       header: t("actions"),
-      accessor: (u: User) => (
+      accessor: (u: StaffMember) => (
         <div className="flex items-center justify-end gap-2">
           <button 
             onClick={(e) => { 
@@ -166,7 +166,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
               setIsResetModalOpen(true);
             }}
             className="p-2 text-gray-400 hover:text-primary-teal hover:bg-primary-teal/5 rounded-lg transition-all"
-            title="Réinitialiser le mot de passe"
+            title={t("reset_password")}
           >
             <Key size={18} />
           </button>
@@ -205,6 +205,48 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         </button>
       </div>
 
+      {/* Bento Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-500">{t("total_staff")}</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+              <Users size={20} />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-gray-900">{initialStaff.length}</span>
+            <span className="text-xs text-gray-400">{t("members")}</span>
+          </div>
+        </div>
+        
+        <div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-500">{t("active")}</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
+              <CheckCircle2 size={20} />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-gray-900">{initialStaff.filter(s => s.status === 'ACTIVE').length}</span>
+            <span className="text-xs text-green-600 font-medium">{t("online")}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-500">{t("teachers")}</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <ShieldCheck size={20} />
+            </div>
+          </div>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-gray-900">{initialStaff.filter(s => s.role === UserRole.INTERVENANT).length}</span>
+            <span className="text-xs text-blue-600 font-medium">{t("teachers")}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Role Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -215,7 +257,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
           )}
         >
           <Filter size={16} />
-          Tous
+          {t("all_roles")}
         </button>
         {[UserRole.GERANT, UserRole.SECRETAIRE, UserRole.INTERVENANT].map((role) => (
           <button
@@ -242,7 +284,7 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
       <Modal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
-        title="Réinitialiser le mot de passe"
+        title={t("reset_password")}
         footer={
           <>
             <button disabled={isPending} onClick={() => setIsResetModalOpen(false)} className="btn-ghost text-sm">{t("cancel")}</button>
@@ -259,14 +301,14 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Vous réinitialisez le mot de passe de <span className="font-bold text-gray-900">{formatFullName(selectedStaff?.firstName, selectedStaff?.lastName)}</span>.
+            {t("reset_password_desc", { name: formatFullName(selectedStaff?.firstName, selectedStaff?.lastName) })}
           </p>
           <Input 
             label={t("new_password")} 
             type="password" 
             value={newPassword} 
             onChange={(e) => setNewPassword(e.target.value)} 
-            placeholder="Minimum 8 caractères"
+            placeholder={t("min_8_chars_placeholder")}
             required 
           />
         </div>
@@ -295,10 +337,10 @@ export default function StaffClientView({ initialStaff = [] }: StaffClientViewPr
         }
       >
         <form id="staff-form" onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input name="firstName" label={t("first_name")} defaultValue={selectedStaff?.firstName} placeholder="Ex: Karim" required />
-          <Input name="lastName" label={t("last_name")} defaultValue={selectedStaff?.lastName} placeholder="Ex: Zidane" required />
+          <Input name="firstName" label={t("first_name")} defaultValue={selectedStaff?.firstName} placeholder={t("placeholder_first_name")} required />
+          <Input name="lastName" label={t("last_name")} defaultValue={selectedStaff?.lastName} placeholder={t("placeholder_last_name")} required />
           <div className="sm:col-span-2">
-            <Input name="email" label={t("email")} defaultValue={selectedStaff?.email} placeholder="Ex: karim@taysir.dz" type="email" required />
+            <Input name="email" label={t("email")} defaultValue={selectedStaff?.email} placeholder={t("placeholder_email")} type="email" required />
           </div>
           <Select 
             name="role"

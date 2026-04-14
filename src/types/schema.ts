@@ -1,6 +1,6 @@
-import { RoleUser, StatutPresence, StatusSession, StatusPaymentPlan, PaymentMethod } from "@prisma/client";
+import { RoleUser, StatutPresence, StatusSession, StatusPaymentPlan, PaymentMethod, UserStatus, StatusDocument } from "@prisma/client";
 
-export { RoleUser as UserRole, PaymentMethod };
+export { RoleUser as UserRole, PaymentMethod, UserStatus, StatusDocument };
 
 export interface Tenant {
   id: string;
@@ -20,7 +20,8 @@ export interface User {
   lastName: string;
   role: RoleUser;
   avatarUrl?: string | null;
-  isActive: boolean;
+  status: UserStatus;
+  salary?: number | null;
 }
 
 export interface Room {
@@ -38,6 +39,8 @@ export interface Activity {
   description?: string | null;
   duration?: number | null;
   color?: string | null;
+  sessions?: Session[];
+  paymentPlans?: PaymentPlan[];
 }
 
 export interface Group {
@@ -57,7 +60,9 @@ export interface Student {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  address?: string | null;
   isMinor?: boolean;
+  photoUrl?: string | null;
   parentName?: string | null;
   parentPhone?: string | null;
   parentEmail?: string | null;
@@ -67,6 +72,8 @@ export interface Student {
   createdAt?: Date;
   updatedAt?: Date;
   groups?: Group[];
+  documents?: Document[];
+  paymentPlans?: PaymentPlan[];
 }
 
 export interface Session {
@@ -79,18 +86,23 @@ export interface Session {
   startTime: Date;
   endTime: Date;
   status: StatusSession;
+  activity?: Activity;
+  room?: Room;
+  group?: Group;
 }
 
 export interface PaymentPlan {
   id: string;
   etablissementId: string;
   studentId: string;
+  activityId: string;
   totalAmount: number;
   paidAmount: number;
   currency: string;
   status: StatusPaymentPlan;
   tranches?: Tranche[];
   student?: Student;
+  activity?: Activity;
 }
 
 // Alias to avoid breaking existing code that uses 'Payment'
@@ -103,6 +115,7 @@ export interface Tranche {
   isPaid: boolean;
   paymentPlanId: string;
   paiements?: Paiement[];
+  paymentPlan?: PaymentPlan;
 }
 
 export interface Paiement {
@@ -111,8 +124,10 @@ export interface Paiement {
   date: Date;
   method: PaymentMethod;
   reference?: string | null;
+  receiptUrl?: string | null;
   note?: string | null;
   trancheId: string;
+  tranche?: Tranche;
 }
 
 export interface AttendanceRecord {
@@ -122,4 +137,25 @@ export interface AttendanceRecord {
   studentId: string;
   status: StatutPresence;
   note?: string | null;
+}
+
+export interface Document {
+  id: string;
+  etablissementId: string;
+  studentId: string;
+  name: string;
+  url: string;
+  type?: string | null;
+  status: StatusDocument;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Message {
+  id: string;
+  etablissementId: string;
+  content: string;
+  senderId: string;
+  recipientId?: string | null;
+  createdAt: Date;
 }

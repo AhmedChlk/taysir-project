@@ -12,15 +12,15 @@ import {
   Bell,
   CheckCircle2
 } from 'lucide-react';
-import { Student, Session, PaymentPlan } from '@/types/schema';
+import { Student, Session, PaymentPlan, Activity, Room } from '@/types/schema';
 import { isSameDay } from 'date-fns';
 
 interface DashboardProps {
   students: Student[];
   sessions: Session[];
   payments: PaymentPlan[];
-  activities: any[];
-  rooms: any[];
+  activities: Activity[];
+  rooms: Room[];
   attendanceStats: number[];
 }
 
@@ -35,8 +35,8 @@ export default function DashboardClientView({
   students, 
   sessions, 
   payments,
-  activities: _activities,
-  rooms: _rooms,
+  activities,
+  rooms,
   attendanceStats: _attendanceStats 
 }: DashboardProps) {
   // Calculs ERP Réels
@@ -51,7 +51,6 @@ export default function DashboardClientView({
 
   return (
     <div className="min-h-screen bg-taysir-bg p-4 md:p-8 font-sans selection:bg-taysir-light/20">
-      {/* Header Scolaire */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
         <motion.div 
           initial={{ x: -30, opacity: 0 }}
@@ -80,10 +79,8 @@ export default function DashboardClientView({
         </div>
       </header>
 
-      {/* Bento Grid Principal */}
       <main className="grid grid-cols-1 md:grid-cols-12 gap-5 max-w-7xl mx-auto">
         
-        {/* KPI Majeur - Total Élèves */}
         <motion.div 
           whileHover={{ scale: 1.01 }}
           transition={springTransition}
@@ -118,14 +115,12 @@ export default function DashboardClientView({
             </div>
           </div>
           
-          {/* Décoration asymétrique */}
           <div className="absolute -right-10 -top-10 w-64 h-64 bg-taysir-light/20 rounded-full blur-3xl" />
           <div className="absolute right-10 bottom-10 opacity-10">
             <Users size={200} />
           </div>
         </motion.div>
 
-        {/* Séance du Jour (Vertical) */}
         <motion.div 
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -152,7 +147,6 @@ export default function DashboardClientView({
           </div>
         </motion.div>
 
-        {/* Micro-carte : Paiements en attente */}
         <motion.div 
           whileHover={{ y: -8 }}
           className="col-span-1 md:col-span-4 bg-white border border-taysir-teal/10 rounded-[32px] p-8 shadow-sm flex flex-col justify-between"
@@ -180,7 +174,6 @@ export default function DashboardClientView({
           </div>
         </motion.div>
 
-        {/* Carte Statut Système / Action Rapide */}
         <motion.div 
           className="col-span-1 md:col-span-8 bento-card p-8 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-white to-taysir-teal/5"
         >
@@ -204,11 +197,11 @@ export default function DashboardClientView({
           <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
              <div className="bg-white p-4 rounded-2xl border border-taysir-teal/5 shadow-sm text-center">
                 <div className="text-xs font-black text-taysir-teal uppercase tracking-tighter opacity-40 mb-1">Salles</div>
-                <div className="text-2xl font-black text-taysir-teal">08</div>
+                <div className="text-2xl font-black text-taysir-teal">{rooms.length.toString().padStart(2, '0')}</div>
              </div>
              <div className="bg-white p-4 rounded-2xl border border-taysir-teal/5 shadow-sm text-center">
-                <div className="text-xs font-black text-taysir-teal uppercase tracking-tighter opacity-40 mb-1">Groupes</div>
-                <div className="text-2xl font-black text-taysir-teal">12</div>
+                <div className="text-xs font-black text-taysir-teal uppercase tracking-tighter opacity-40 mb-1">Activités</div>
+                <div className="text-2xl font-black text-taysir-teal">{activities.length.toString().padStart(2, '0')}</div>
              </div>
           </div>
         </motion.div>

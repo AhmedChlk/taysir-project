@@ -18,6 +18,7 @@ interface DataTableProps<T> {
   searchPlaceholder?: string;
   pageSize?: number;
   onAction?: (item: T) => void;
+  hideDefaultAction?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   onAdd?: () => void;
@@ -29,6 +30,7 @@ export default function DataTable<T extends { id: string | number }>({
   searchPlaceholder,
   pageSize = 10,
   onAction,
+  hideDefaultAction = false,
   emptyTitle,
   emptyDescription,
   onAdd,
@@ -82,7 +84,7 @@ export default function DataTable<T extends { id: string | number }>({
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-10 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:max-w-md group">
           <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
@@ -110,8 +112,8 @@ export default function DataTable<T extends { id: string | number }>({
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="overflow-x-auto custom-scrollbar rounded-2xl">
           <table className="w-full text-sm text-gray-600 border-collapse">
             <thead>
               <tr className="bg-gray-50/50">
@@ -126,13 +128,15 @@ export default function DataTable<T extends { id: string | number }>({
                     {col.header}
                   </th>
                 ))}
-                <th className="px-6 py-4 text-end text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("actions")}</th>
+                {!hideDefaultAction && (
+                  <th className="px-6 py-4 text-end text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("actions")}</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {paginatedData.length > 0 ? (
                 paginatedData.map((item) => (
-                  <tr key={item.id} className="group hover:bg-gray-50/50 transition-all duration-200">
+                  <tr key={item.id} className="group hover:bg-gray-50/50 transition-all duration-200 relative">
                     {columns.map((col, idx) => (
                       <td
                         key={idx}
@@ -143,14 +147,19 @@ export default function DataTable<T extends { id: string | number }>({
                           : (item[col.accessor] as React.ReactNode)}
                       </td>
                     ))}
-                    <td className="px-6 py-4 text-end">
-                      <button 
-                        onClick={() => onAction ? onAction(item) : undefined}
-                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-accent-teal p-2 rounded-xl hover:bg-white shadow-none hover:shadow-sm border border-transparent hover:border-gray-100 transition-all duration-200"
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-                    </td>
+                    {!hideDefaultAction && (
+                      <td className="px-6 py-4 text-end">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAction ? onAction(item) : undefined;
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-accent-teal p-2 rounded-xl hover:bg-white shadow-none hover:shadow-sm border border-transparent hover:border-gray-100 transition-all duration-200"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (

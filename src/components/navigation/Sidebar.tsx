@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { 
   LayoutDashboard, 
@@ -13,7 +12,6 @@ import {
   LogOut,
   FileText,
   UserCheck,
-  X,
   LucideIcon
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
@@ -30,15 +28,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { labelKey: "dashboard", href: "/", icon: LayoutDashboard, roles: Object.values(UserRole) },
-  { labelKey: "staff", href: "/dashboard/staff", icon: Users, roles: [UserRole.ADMIN, UserRole.GERANT] },
+  { labelKey: "students", href: "/dashboard/students", icon: UserCheck, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
   { labelKey: "planning", href: "/dashboard/schedule", icon: Calendar, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE, UserRole.INTERVENANT] },
+  { labelKey: "attendance", href: "/dashboard/attendance", icon: FileText, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE, UserRole.INTERVENANT] },
+  { labelKey: "payments", href: "/dashboard/payments", icon: Wallet, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
   { labelKey: "groups", href: "/dashboard/groups", icon: Users, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
   { labelKey: "rooms", href: "/dashboard/rooms", icon: MapPin, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
   { labelKey: "activities", href: "/dashboard/activities", icon: BookOpen, roles: [UserRole.ADMIN, UserRole.GERANT] },
-  { labelKey: "payments", href: "/dashboard/payments", icon: Wallet, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
-  { labelKey: "attendance", href: "/dashboard/attendance", icon: FileText, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE, UserRole.INTERVENANT] },
-  { labelKey: "students", href: "/dashboard/students", icon: UserCheck, roles: [UserRole.ADMIN, UserRole.GERANT, UserRole.SECRETAIRE] },
-  { labelKey: "settings", href: "/dashboard/settings", icon: Settings, roles: Object.values(UserRole) },
+  { labelKey: "staff", href: "/dashboard/staff", icon: Users, roles: [UserRole.ADMIN, UserRole.GERANT] },
 ];
 
 interface SidebarProps {
@@ -55,6 +52,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const userRole = session?.user?.role;
 
   const filteredNavItems = navItems.filter(item => userRole && item.roles.includes(userRole));
+  const showSettings = !!userRole;
 
   return (
     <>
@@ -66,35 +64,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside className={clsx(
-        "fixed inset-y-0 start-0 z-50 flex w-72 flex-col bg-taysir-teal text-white shadow-2xl transition-transform duration-300 ease-in-out border-e border-white/5 md:relative md:translate-x-0 md:shadow-xl",
+        "fixed inset-y-0 start-0 z-50 flex w-72 h-screen flex-col bg-taysir-teal text-white shadow-2xl transition-transform duration-300 ease-in-out border-e border-white/5 md:relative md:translate-x-0 md:shadow-xl",
         isOpen ? "translate-x-0" : isRtl ? "translate-x-full" : "-translate-x-full"
       )}>
-        <div className="flex h-24 items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10">
-              <Image 
-                src="/logo.png" 
-                alt={t("brand_name")} 
-                fill 
-                className="object-contain brightness-0 invert"
-                sizes="40px"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tighter uppercase leading-none">TAYSIR</span>
-              <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase mt-1">Scolaire</span>
-            </div>
-          </div>
-
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-white/10 md:hidden transition-colors"
-          >
-            <X size={20} />
-          </button>
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
+          <img src="/logo.png" alt="Taysir" className="w-14 h-14 object-contain brightness-0 invert" />
+          <span className="text-2xl font-black tracking-tight text-white">
+            Taysir<span className="text-taysir-accent">.</span>
+          </span>
         </div>
 
-        <nav className="flex-1 space-y-1.5 px-4 py-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 space-y-0.5 px-4 py-2 overflow-y-auto custom-scrollbar">
           {filteredNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -103,47 +83,78 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={clsx(
-                  "group flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-bold transition-all duration-200 ease-in-out relative",
+                  "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
                   isActive 
-                    ? "bg-white/10 text-white shadow-sm ring-1 ring-white/10" 
-                    : "text-white/50 hover:bg-white/5 hover:text-white"
+                    ? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1" 
+                    : "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1"
                 )}
               >
                 {isActive && (
-                  <div className="absolute inset-y-3.5 w-1 bg-taysir-light rounded-full start-0" />
+                  <div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
                 )}
                 <item.icon 
-                  size={18} 
+                  size={22} 
+                  strokeWidth={1.5}
                   className={clsx(
-                    "transition-all duration-200",
-                    isActive ? "text-taysir-light scale-110" : "group-hover:text-white group-hover:scale-110",
+                    "transition-all duration-300",
+                    isActive ? "text-taysir-accent scale-110" : "group-hover:text-white group-hover:scale-110",
                     isRtl && (item.icon === LogOut || item.icon === FileText) && "rotate-180"
                   )} 
                 />
-                <span className="truncate uppercase tracking-wider text-[11px]">{t(item.labelKey)}</span>
+                <span className={clsx(
+                  "truncate uppercase tracking-wider text-[11px]",
+                  isActive ? "font-bold" : ""
+                )}>{t(item.labelKey)}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="border-t border-white/5 p-4 bg-black/10">
-          <div className="flex items-center gap-3 px-4 py-4 rounded-2xl mb-3 bg-white/5 border border-white/5">
-            <div className="h-10 w-10 shrink-0 rounded-full bg-taysir-light flex items-center justify-center text-sm font-black text-white shadow-inner">
+        <div className="mt-auto border-t border-white/5 p-4 bg-black/20 space-y-2">
+          {showSettings && (
+            <Link
+              href="/dashboard/settings"
+              onClick={onClose}
+              className={clsx(
+                "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
+                pathname === "/dashboard/settings"
+                  ? "bg-white/10 text-white shadow-lg ring-1 ring-white/20"
+                  : "text-white/50 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              <Settings 
+                size={22} 
+                strokeWidth={1.5}
+                className={clsx(
+                  "transition-all duration-300",
+                  pathname === "/dashboard/settings" ? "text-taysir-accent scale-110" : "group-hover:text-white group-hover:scale-110"
+                )} 
+              />
+              <span className={clsx(
+                "truncate uppercase tracking-wider text-[11px]",
+                pathname === "/dashboard/settings" ? "font-bold" : ""
+              )}>{t("settings")}</span>
+            </Link>
+          )}
+
+          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-taysir-light to-taysir-teal flex items-center justify-center text-sm font-black text-white shadow-xl ring-2 ring-white/10">
               {session?.user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
             <div className="flex flex-col overflow-hidden">
               <span className="truncate text-sm font-black text-white leading-tight">{session?.user?.name}</span>
-              <span className="truncate text-[9px] font-bold text-white/30 uppercase tracking-[0.2em] mt-1">{userRole}</span>
+              <span className="truncate text-[9px] font-bold text-taysir-light/60 uppercase tracking-[0.2em] mt-1">{userRole}</span>
             </div>
           </div>
+          
           <button
             onClick={() => {
               onClose?.();
               signOut({ callbackUrl: "/login" });
             }}
-            className="flex w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-xs font-black text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 ease-in-out group uppercase tracking-widest"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black text-white/40 hover:bg-red-500/15 hover:text-red-400 transition-all duration-300 ease-in-out group uppercase tracking-widest"
           >
-            <LogOut size={16} className={clsx("transition-transform group-hover:ms-1", isRtl && "rotate-180")} />
+            <LogOut size={22} strokeWidth={1.5} className={clsx("transition-transform group-hover:ms-1", isRtl && "rotate-180")} />
             {t("logout")}
           </button>
         </div>

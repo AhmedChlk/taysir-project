@@ -1,5 +1,6 @@
-import { Users } from 'lucide-react';
+import { Users, ArrowRight, FileText } from 'lucide-react';
 import { getDashboardStatsAction } from '@/actions/dashboard.actions';
+import Link from 'next/link';
 
 export default async function StatsWidget() {
   const response = await getDashboardStatsAction({});
@@ -14,37 +15,54 @@ export default async function StatsWidget() {
     <div className="col-span-1 md:col-span-8 bg-taysir-teal rounded-[32px] p-8 md:p-10 text-white relative overflow-hidden shadow-xl group">
       <div className="relative z-10 h-full flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-2 opacity-70 mb-4">
-            <Users size={18} />
-            <span className="text-sm font-bold uppercase tracking-widest">Effectif Global</span>
+          <div className="flex items-center gap-2 opacity-70 mb-6">
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Users size={20} />
+            </div>
+            <span className="text-sm font-black uppercase tracking-[0.2em]">Pilotage Effectifs</span>
           </div>
-          <h2 className="text-7xl md:text-8xl font-black tracking-tighter">
-            {total}<span className="text-white/50 text-3xl ml-2 italic font-normal">élèves</span>
-          </h2>
-          <div className="flex gap-4 mt-4">
-             <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
-               {active} Actifs
-             </span>
-             <span className="bg-white/10 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
-               {total - active} En attente
-             </span>
+          
+          <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4">
+            <h2 className="text-8xl md:text-9xl font-black tracking-tighter leading-none">
+              {total.toString().padStart(2, '0')}
+            </h2>
+            <div className="mb-2">
+              <span className="text-white/40 text-2xl md:text-3xl font-black uppercase tracking-tighter block leading-none italic">Inscrits</span>
+              <div className="flex gap-2 mt-2">
+                <div className="flex items-center gap-1.5 bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-emerald-400/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {active} Actifs
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 text-white/60 px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-white/10">
+                  {total - active} Archives
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
-        <div className="mt-12 flex gap-3">
-          <button className="bg-white text-taysir-teal px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95">
-            Gérer les inscriptions
-          </button>
-          <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">
-            Exporter
-          </button>
+        <div className="mt-16 flex flex-wrap gap-3">
+          <Link 
+            href="/dashboard/students"
+            className="bg-white text-taysir-teal px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-white/10 hover:scale-[1.02] active:scale-95 flex items-center gap-2"
+          >
+            <span>Base de données élèves</span>
+            <ArrowRight size={16} />
+          </Link>
+          <Link 
+            href="/dashboard/attendance"
+            className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all backdrop-blur-sm border border-white/10 flex items-center gap-2"
+          >
+            <FileText size={16} />
+            <span>Feuilles d&apos;appel</span>
+          </Link>
         </div>
       </div>
       
-      {/* Décoration asymétrique */}
-      <div className="absolute -right-10 -top-10 w-64 h-64 bg-taysir-light/20 rounded-full blur-3xl group-hover:bg-taysir-accent/20 transition-colors duration-700" />
-      <div className="absolute right-10 bottom-10 opacity-10 group-hover:opacity-20 transition-opacity">
-        <Users size={200} />
+      {/* Décoration de fond premium */}
+      <div className="absolute -right-20 -top-20 w-96 h-96 bg-taysir-accent/30 rounded-full blur-[100px] opacity-50 group-hover:opacity-80 transition-opacity duration-1000" />
+      <div className="absolute right-12 bottom-12 opacity-5 scale-150 pointer-events-none group-hover:opacity-10 transition-opacity duration-1000">
+        <Users size={300} strokeWidth={1} />
       </div>
     </div>
   );
