@@ -16,7 +16,6 @@ interface DashboardSPAProps {
   roster: React.ReactNode;
   alerts: React.ReactNode;
   locale: string;
-  formData: any;
 }
 
 const springTransition = {
@@ -26,7 +25,7 @@ const springTransition = {
   mass: 1
 } as const;
 
-export default function DashboardSPA({ stats, sessions, payments, kpis, roster, alerts, locale, formData }: DashboardSPAProps) {
+export default function DashboardSPA({ stats, sessions, payments, kpis, roster, alerts, locale }: DashboardSPAProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeDrawer = searchParams.get('drawer');
@@ -144,17 +143,6 @@ export default function DashboardSPA({ stats, sessions, payments, kpis, roster, 
           </div>
         </section>
       </main>
-
-      {/* Systèmes de Tiroirs (SPA Drawers) */}
-      <AnimatePresence>
-        {activeDrawer && (
-          <Drawer 
-            type={activeDrawer} 
-            onClose={closeDrawer} 
-            formData={formData}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

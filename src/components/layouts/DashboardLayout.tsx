@@ -12,7 +12,7 @@ import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import Drawer from "@/components/ui/Drawer";
-import { getRooms, getStaff, getActivities, getGroups } from "@/services/api";
+import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
 
 export default function DashboardLayout({
   children,
@@ -32,14 +32,11 @@ export default function DashboardLayout({
   const [formData, setFormData] = useState<any>(null);
 
   useEffect(() => {
-    if (activeDrawer === 'new-session') {
-      Promise.all([
-        getRooms(),
-        getStaff(),
-        getActivities(),
-        getGroups()
-      ]).then(([rooms, staff, activities, groups]) => {
-        setFormData({ rooms, staff, activities, groups });
+    if (activeDrawer) {
+      getDashboardFormDataAction({}).then((res) => {
+        if (res?.success) {
+          setFormData(res.data);
+        }
       });
     }
   }, [activeDrawer]);
