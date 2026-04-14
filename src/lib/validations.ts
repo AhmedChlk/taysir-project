@@ -1,12 +1,9 @@
-// Schémas de validation avec Zod
-
 import { z } from "zod";
-import { RoleUser, PaymentMethod, StatutPresence } from "@prisma/client";
+import { RoleUser, PaymentMethod, StatutPresence, UserStatus } from "@prisma/client";
 
-// Les rôles autorisés
 export const UserRoleSchema = z.nativeEnum(RoleUser);
+export const UserStatusSchema = z.nativeEnum(UserStatus);
 
-// Validation pour la création d'utilisateur
 export const CreateUserSchema = z.object({
   email: z.string().email("Format d'email invalide."),
   firstName: z.string().min(2, "Le prénom doit avoir au moins 2 caractères."),
@@ -16,25 +13,24 @@ export const CreateUserSchema = z.object({
   avatarUrl: z.string().url().optional(),
 });
 
-// Validation pour la modification d'utilisateur
 export const UpdateUserSchema = z.object({
   id: z.string().uuid("ID utilisateur invalide."),
   email: z.string().email("Format d'email invalide.").optional(),
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
   role: z.nativeEnum(RoleUser).optional(),
-  isActive: z.boolean().optional(),
+  status: UserStatusSchema.optional(),
+  salary: z.number().nonnegative("Le salaire doit être positif.").optional().nullable(),
   avatarUrl: z.string().url().optional(),
 });
 
-// Filtres pour la liste des utilisateurs
 export const ListUsersSchema = z.object({
   role: z.nativeEnum(RoleUser).optional(),
 });
 
-// Validation des plans de paiement
 export const CreatePaymentPlanSchema = z.object({
   studentId: z.string().uuid(),
+  activityId: z.string().uuid("L'activité est requise."),
   totalAmount: z.number().positive(),
   currency: z.string().length(3).default("DZD"),
   tranches: z.array(z.object({
@@ -43,7 +39,6 @@ export const CreatePaymentPlanSchema = z.object({
   })).min(1),
 });
 
-// Validation des paiements
 export const RegisterPaymentSchema = z.object({
   trancheId: z.string().uuid("ID de tranche invalide."),
   montant_paye: z.number().positive("Le montant doit être supérieur à zéro."),
@@ -52,7 +47,6 @@ export const RegisterPaymentSchema = z.object({
   note: z.string().optional(),
 });
 
-// Validation de la présence
 export const MarkPresenceSchema = z.object({
   seanceId: z.string().uuid("ID de séance invalide."),
   participantId: z.string().uuid("ID de participant invalide."),
@@ -61,7 +55,6 @@ export const MarkPresenceSchema = z.object({
   note: z.string().optional(),
 });
 
-// Validation des salles
 export const RoomSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(2, "Nom trop court."),
@@ -69,7 +62,6 @@ export const RoomSchema = z.object({
   description: z.string().optional().nullable(),
 });
 
-// Validation des activités
 export const ActivitySchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(2),
@@ -78,7 +70,6 @@ export const ActivitySchema = z.object({
   color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable(),
 });
 
-// Schémas de base pour la base de données
 export const TenantSchema = z.object({
   id: z.string(),
   name: z.string().min(2),
@@ -97,10 +88,10 @@ export const UserSchema = z.object({
   lastName: z.string().min(2),
   role: UserRoleSchema,
   avatarUrl: z.string().url().optional().nullable(),
-  isActive: z.boolean(),
+  status: UserStatusSchema,
+  salary: z.number().nonnegative().optional().nullable(),
 });
 
-// Validation pour les groupes
 export const CreateGroupSchema = z.object({
   name: z.string().min(2, "Nom trop court."),
 });
@@ -122,16 +113,19 @@ export const CreateStudentSchema = z.object({
   lastName: z.string().min(2, "Nom trop court."),
   email: z.string().email("Email invalide").optional().nullable().or(z.literal("")),
   phone: z.string().optional().nullable().or(z.literal("")),
+  address: z.string().optional().nullable(),
+  photoUrl: z.string().url("Une photo est obligatoire pour l'inscription."),
   isMinor: z.boolean().default(false),
   parentName: z.string().optional().nullable(),
   parentPhone: z.string().optional().nullable(),
   parentEmail: z.string().optional().nullable(),
-  groupId: z.string().uuid().optional().nullable(),
+  groupIds: z.array(z.string().uuid()).optional().default([]),
 });
 
 export const UpdateStudentSchema = CreateStudentSchema.extend({
   id: z.string().uuid(),
   isActive: z.boolean().optional(),
+  photoUrl: z.string().url().optional().nullable(),
 });
 
 export const StudentSchema = z.object({
@@ -149,13 +143,25 @@ export const StudentSchema = z.object({
 export const SessionSchema = z.object({
   id: z.string(),
   etablissementId: z.string(),
-  activityId: z.string(),
-  roomId: z.string(),
-  instructorId: z.string(),
-  groupId: z.string().optional().nullable(),
+  activityId: z.string().uuid(),
+  roomId: z.string().uuid(),
+  instructorId: z.string().uuid(),
+  groupId: z.string().uuid(),
   startTime: z.date(),
   endTime: z.date(),
   status: z.enum(['SCHEDULED', 'CANCELLED', 'COMPLETED']),
+});
+
+export const CreateSessionSchema = z.object({
+  activityId: z.string().uuid("Activité invalide."),
+  roomId: z.string().uuid("Salle invalide."),
+  instructorId: z.string().uuid("Intervenant invalide."),
+  groupId: z.string().uuid("Groupe invalide."),
+  startTime: z.date(),
+  endTime: z.date(),
+}).refine(data => data.endTime > data.startTime, {
+  message: "L'heure de fin doit être après l'heure de début.",
+  path: ["endTime"]
 });
 
 export const PaymentSchema = z.object({
@@ -175,4 +181,21 @@ export const AttendanceRecordSchema = z.object({
   studentId: z.string(),
   status: z.enum(['PRESENT', 'ABSENT', 'RETARD', 'JUSTIFIE']),
   note: z.string().optional().nullable(),
+});
+
+export const SendMessageSchema = z.object({
+  recipientId: z.string().uuid("ID destinataire invalide.").optional().nullable(),
+  content: z.string().min(1, "Le message ne peut pas être vide."),
+});
+
+export const CreateDocumentSchema = z.object({
+  studentId: z.string().uuid(),
+  name: z.string().min(2, "Le nom du document est requis."),
+  url: z.string().url("URL du document invalide."),
+  type: z.string().optional().nullable(),
+});
+
+export const UpdateDocumentStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
 });

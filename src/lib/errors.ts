@@ -1,6 +1,3 @@
-// Gestion des erreurs de l'application
-
-// Codes d'erreurs pour le frontend
 export const ErrorCodes = {
   ERR_UNAUTHORIZED: "AUTH_REQUIRED",
   ERR_FORBIDDEN: "FORBIDDEN_ACCESS",
@@ -13,7 +10,6 @@ export const ErrorCodes = {
 
 export type TaysirErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
-// Classe personnalisée pour nos erreurs
 export class TaysirError extends Error {
   public code: TaysirErrorCode;
   public status: number;
@@ -26,11 +22,9 @@ export class TaysirError extends Error {
     this.status = status;
     this.details = details;
 
-    // Assure la compatibilité de instanceof dans les environnements compilés
     Object.setPrototypeOf(this, TaysirError.prototype);
   }
 
-  // Pour envoyer l'erreur au client proprement
   toJSON() {
     return {
       error: true,
