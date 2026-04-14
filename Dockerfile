@@ -23,7 +23,6 @@ RUN apk add --no-cache openssl libc6-compat
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# On copie tout node_modules pour éviter les erreurs "Module Not Found"
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
@@ -38,5 +37,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Utilisation directe du binaire pour éviter les problèmes de PATH
 CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]

@@ -122,6 +122,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement>, Bas
 }
 
 export function Select({ label, error, helperText, options = [], className, ...props }: SelectProps) {
+  const safeOptions = Array.isArray(options) ? options : [];
   return (
     <div className="w-full space-y-1.5 group">
       <label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
@@ -137,7 +138,7 @@ export function Select({ label, error, helperText, options = [], className, ...p
         )}
         {...(props as any)}
       >
-        {(options || []).map((opt) => (
+        {safeOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

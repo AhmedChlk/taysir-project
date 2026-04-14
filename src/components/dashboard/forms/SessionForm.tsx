@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, AlertCircle } from 'lucide-react';
 import { Input, Select } from '@/components/ui/FormInput';
 import { createSessionAction } from '@/actions/schedule.actions';
@@ -20,15 +20,20 @@ interface SessionFormProps {
 
 export default function SessionForm({ onSuccess, rooms = [], activities = [], staff = [], groups = [] }: SessionFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const initialDate = searchParams.get('date') 
+    ? new Date(searchParams.get('date')!).toISOString().split('T')[0] 
+    : new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
     activityId: '',
     roomId: '',
     instructorId: '',
     groupId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: initialDate,
     startTime: '08:00',
     endTime: '10:00',
   });
