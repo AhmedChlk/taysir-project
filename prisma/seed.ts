@@ -30,7 +30,7 @@ async function main() {
       lastName: "Taysir",
       role: RoleUser.GERANT,
       etablissementId: etablissement.id,
-      isActive: true,
+      status: 'ACTIVE',
     },
   });
 

@@ -14,7 +14,6 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            console.warn("[AUTH]: Tentative de connexion sans identifiants.");
             return null;
           }
 
@@ -23,20 +22,13 @@ export const authOptions: NextAuthOptions = {
             include: { etablissement: true }
           });
 
-          if (!user) {
-            console.warn(`[AUTH]: Utilisateur non trouvé pour l'email: ${credentials.email}`);
-            return null;
-          }
-
-          if (!user.isActive) {
-            console.warn(`[AUTH]: Compte désactivé pour: ${credentials.email}`);
+          if (!user || user.status !== "ACTIVE") {
             return null;
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
           if (!isPasswordValid) {
-            console.warn(`[AUTH]: Mot de passe invalide pour: ${credentials.email}`);
             return null;
           }
 
@@ -48,7 +40,7 @@ export const authOptions: NextAuthOptions = {
             etablissementId: user.etablissementId || undefined,
           };
         } catch (error) {
-          console.error("[AUTH_CRITICAL_ERROR]:", error);
+          console.error("[AUTH_ERROR]:", error);
           return null;
         }
       }

@@ -47,6 +47,7 @@ export const getCurrentTenant = cache(async () => {
 export const getCurrentUser = cache(async () => {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
+  const userRole = (session?.user as any)?.role;
 
   if (!userId) return null;
 
@@ -59,7 +60,8 @@ export const getCurrentUser = cache(async () => {
       lastName: true,
       role: true,
       avatarUrl: true,
-      isActive: true,
+      status: true,
+      salary: userRole === "GERANT",
       etablissementId: true,
     }
   });
@@ -73,8 +75,23 @@ export const getTenants = async () => {
 // Liste du staff
 export const getStaff = async () => {
   const client = await getPrisma();
+  const session = await getServerSession(authOptions);
+  const userRole = (session?.user as any)?.role;
+
   return await client.user.findMany({
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      avatarUrl: true,
+      status: true,
+      salary: userRole === "GERANT",
+      createdAt: true,
+      updatedAt: true,
+    }
   });
 };
 
@@ -120,6 +137,7 @@ export const getPayments = async () => {
   return await client.paymentPlan.findMany({
     include: { 
       student: true,
+      activity: true, // Inclure l'activité suite au mandat de structure
       tranches: {
         include: { paiements: true },
         orderBy: { dueDate: "asc" }

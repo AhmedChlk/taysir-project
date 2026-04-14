@@ -1,73 +1,136 @@
-// Actions pour la planification des séances
-"use server";
+'use server';
 
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
-import { revalidateTag } from "next/cache";
-import { addMinutes } from "date-fns";
+import { revalidatePath } from "next/cache";
+import { CreateSessionSchema } from "@/lib/validations";
+import { TaysirError, ErrorCodes } from "@/lib/errors";
 
-const CreateSessionSchema = z.object({
-  activityId: z.string().uuid(),
-  roomId: z.string().uuid(),
-  instructorId: z.string().uuid(),
-  groupId: z.string().uuid().optional().nullable(),
-  date: z.string(), // ISO date string (YYYY-MM-DD)
-  startTime: z.string(), // HH:mm
-  isWeekly: z.boolean().optional(),
-  weeksCount: z.number().min(1).max(52).optional().default(1),
-});
-
-export const createSessionAction = createSafeAction(CreateSessionSchema, async (data, { tenantId }) => {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  
-  const activity = await tenantPrisma.activity.findUnique({
-    where: { id: data.activityId }
-  });
-
-  if (!activity) {
-    throw new Error("Activité introuvable");
-  }
-
-  const baseStart = new Date(`${data.date}T${data.startTime}:00`);
-  const duration = activity.duration || 60;
-  
-  const count = data.isWeekly ? (data.weeksCount || 1) : 1;
-  const sessionsCreated = [];
-
-  for (let i = 0; i < count; i++) {
-    const start = new Date(baseStart.getTime());
-    start.setDate(start.getDate() + (i * 7));
+export const getWeeklySessionsAction = createSafeAction(
+  z.object({
+    start: z.date(),
+    end: z.date(),
+    roomId: z.string().uuid().optional(),
+    instructorId: z.string().uuid().optional(),
+    groupId: z.string().uuid().optional(),
+  }),
+  async (filters, { tenantId }) => {
+    const client = getTenantPrisma(tenantId);
     
-    const end = addMinutes(start, duration);
-
-    const session = await tenantPrisma.session.create({
-      data: {
-        activityId: data.activityId,
-        roomId: data.roomId,
-        instructorId: data.instructorId,
-        groupId: data.groupId as string,
-        startTime: start,
-        endTime: end,
-        status: "SCHEDULED",
+    return await client.session.findMany({
+      where: {
         etablissementId: tenantId,
+        startTime: { gte: filters.start },
+        endTime: { lte: filters.end },
+        ...(filters.roomId ? { roomId: filters.roomId } : {}),
+        ...(filters.instructorId ? { instructorId: filters.instructorId } : {}),
+        ...(filters.groupId ? { groupId: filters.groupId } : {}),
+      },
+      include: {
+        room: { select: { name: true, capacity: true } },
+        activity: { select: { name: true, color: true } },
+        group: { select: { name: true } },
+        instructor: { select: { firstName: true, lastName: true, avatarUrl: true } },
+      },
+      orderBy: { startTime: 'asc' }
+    });
+  }
+);
+
+export const createSessionAction = createSafeAction(
+  CreateSessionSchema,
+  async (data, { tenantId }) => {
+    const client = getTenantPrisma(tenantId);
+
+    const roomConflict = await client.session.findFirst({
+      where: {
+        roomId: data.roomId,
+        status: 'SCHEDULED',
+        OR: [
+          { startTime: { lt: data.endTime }, endTime: { gt: data.startTime } }
+        ]
+      },
+      include: { room: true, group: true }
+    });
+
+    if (roomConflict) {
+      throw new TaysirError(
+        `Conflit Salle : La salle "${roomConflict.room.name}" est déjà occupée par le groupe "${roomConflict.group.name}" sur ce créneau.`,
+        ErrorCodes.ERR_INVALID_DATA,
+        409
+      );
+    }
+
+    const instructorConflict = await client.session.findFirst({
+      where: {
+        instructorId: data.instructorId,
+        status: 'SCHEDULED',
+        OR: [
+          { startTime: { lt: data.endTime }, endTime: { gt: data.startTime } }
+        ]
+      },
+      include: { instructor: true }
+    });
+
+    if (instructorConflict) {
+      throw new TaysirError(
+        `Conflit Professeur : M. ${instructorConflict.instructor.lastName} a déjà un cours programmé sur ce créneau.`,
+        ErrorCodes.ERR_INVALID_DATA,
+        409
+      );
+    }
+
+    const groupConflict = await client.session.findFirst({
+      where: {
+        groupId: data.groupId,
+        status: 'SCHEDULED',
+        OR: [
+          { startTime: { lt: data.endTime }, endTime: { gt: data.startTime } }
+        ]
+      },
+      include: { group: true }
+    });
+
+    if (groupConflict) {
+      throw new TaysirError(
+        `Conflit Groupe : Le groupe "${groupConflict.group.name}" est déjà en séance sur ce créneau.`,
+        ErrorCodes.ERR_INVALID_DATA,
+        409
+      );
+    }
+
+    const session = await client.session.create({
+      data: {
+        ...data,
+        etablissementId: tenantId,
+        status: 'SCHEDULED',
+      },
+      include: {
+        room: true,
+        activity: true,
+        group: true,
+        instructor: true,
       }
     });
-    sessionsCreated.push(session);
-  }
 
-  revalidateTag(`sessions-${tenantId}`, "max");
-  return sessionsCreated;
-});
+    revalidatePath('/[locale]/dashboard/schedule', 'page');
+    revalidatePath('/[locale]/dashboard', 'page');
+
+    return session;
+  }
+);
 
 export const deleteSessionAction = createSafeAction(
   z.object({ id: z.string().uuid() }),
   async ({ id }, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
-    const result = await tenantPrisma.session.delete({ 
+    const client = getTenantPrisma(tenantId);
+    
+    const result = await client.session.delete({ 
       where: { id, etablissementId: tenantId } 
     });
-    revalidateTag(`sessions-${tenantId}`, "max");
+
+    revalidatePath('/[locale]/dashboard/schedule', 'page');
     return result;
   }
 );

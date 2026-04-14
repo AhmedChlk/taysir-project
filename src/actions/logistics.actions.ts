@@ -1,4 +1,3 @@
-// Actions pour la logistique (salles, activités, groupes)
 "use server";
 
 import { z } from "zod";
@@ -13,8 +12,6 @@ import {
   UpdateGroupSchema
 } from "@/lib/validations";
 import { revalidateTag } from "next/cache";
-
-// --- GROUPES ---
 
 export const createGroupAction = createSafeAction(CreateGroupSchema, async (data, { tenantId }) => {
   const tenantPrisma = getTenantPrisma(tenantId);
@@ -42,8 +39,6 @@ export const deleteGroupAction = createSafeAction(z.object({ id: z.string().uuid
   return result;
 });
 
-// --- SALLES ---
-
 export const createRoomAction = createSafeAction(RoomSchema, async (data, { tenantId }) => {
   const tenantPrisma = getTenantPrisma(tenantId);
   const result = await tenantPrisma.room.create({ 
@@ -70,8 +65,6 @@ export const deleteRoomAction = createSafeAction(z.object({ id: z.string().uuid(
   return result;
 });
 
-// --- ACTIVITÉS ---
-
 export const createActivityAction = createSafeAction(ActivitySchema, async (data, { tenantId }) => {
   const tenantPrisma = getTenantPrisma(tenantId);
   const result = await tenantPrisma.activity.create({ 
@@ -97,8 +90,6 @@ export const deleteActivityAction = createSafeAction(z.object({ id: z.string().u
   revalidateTag(`activities-${tenantId}`, "max");
   return result;
 });
-
-// --- PRÉSENCES ---
 
 export const markPresenceAction = createSafeAction(
   MarkPresenceSchema,
