@@ -2,17 +2,32 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BaseProps {
   label: string;
   error?: string;
   helperText?: string;
+  success?: boolean;
 }
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement>, BaseProps {}
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement>, BaseProps {
+  suffix?: string;
+}
 
-export function Input({ label, error, helperText, className, type, ...props }: InputProps) {
+interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement>, BaseProps {}
+
+export function Input({ 
+  label, 
+  error, 
+  helperText, 
+  success,
+  className, 
+  type, 
+  suffix,
+  ...props 
+}: InputProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
 
@@ -23,36 +38,81 @@ export function Input({ label, error, helperText, className, type, ...props }: I
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
 
   return (
-    <div className="w-full space-y-1.5">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
+    <div className="w-full space-y-1.5 group">
+      <label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+        {label}
+      </label>
       <div className="relative">
-        <input
+        <motion.input
+          whileFocus={{ scale: 1.01 }}
           type={inputType}
           className={clsx(
-            "block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 transition-all focus:outline-none focus:ring-2",
+            "block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
             error 
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" 
-              : "border-gray-200 focus:border-accent-teal focus:ring-accent-teal/20",
-            isPassword && "pe-10",
+              ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10" 
+              : success
+                ? "border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10"
+                : "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
+            (isPassword || suffix || error || success) && "pe-12",
             className
           )}
-          {...props}
+          {...(props as any)}
         />
-        {isPassword && (
-          <button
-            type="button"
-            onClick={togglePassword}
-            className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
+        
+        {/* Adornments */}
+        <div className="absolute end-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400">
+          {success && !error && <CheckCircle2 size={18} className="text-emerald-500" />}
+          {error && <AlertCircle size={18} className="text-rose-500" />}
+          
+          {isPassword && (
+            <button
+              type="button"
+              onClick={togglePassword}
+              className="hover:text-taysir-teal transition-colors focus:outline-none"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          )}
+          
+          {suffix && <span className="text-xs font-bold text-gray-400 select-none">{suffix}</span>}
+        </div>
       </div>
-      {(error || helperText) && (
-        <p className={clsx("text-xs", error ? "text-red-500" : "text-gray-500")}>
-          {error || helperText}
-        </p>
-      )}
+
+      <AnimatePresence mode="wait">
+        {error ? (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="text-xs font-medium text-rose-600 flex items-center gap-1"
+          >
+            {error}
+          </motion.p>
+        ) : helperText ? (
+          <p className="text-xs text-gray-500 italic">
+            {helperText}
+          </p>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function FormSection({ title, description, children, className }: { 
+  title: string; 
+  description?: string; 
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={clsx("space-y-4", className)}>
+      <div className="border-s-4 border-taysir-teal/20 ps-4">
+        <h3 className="text-lg font-bold text-taysir-teal leading-tight">{title}</h3>
+        {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+        {children}
+      </div>
     </div>
   );
 }
@@ -63,17 +123,19 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement>, Bas
 
 export function Select({ label, error, helperText, options = [], className, ...props }: SelectProps) {
   return (
-    <div className="w-full space-y-1.5">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
+    <div className="w-full space-y-1.5 group">
+      <label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+        {label}
+      </label>
       <select
         className={clsx(
-          "block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 transition-all focus:outline-none focus:ring-2",
+          "block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
           error 
-            ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" 
-            : "border-gray-200 focus:border-accent-teal focus:ring-accent-teal/20",
+            ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10" 
+            : "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
           className
         )}
-        {...props}
+        {...(props as any)}
       >
         {(options || []).map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -81,37 +143,29 @@ export function Select({ label, error, helperText, options = [], className, ...p
           </option>
         ))}
       </select>
-      {(error || helperText) && (
-        <p className={clsx("text-xs", error ? "text-red-500" : "text-gray-500")}>
-          {error || helperText}
-        </p>
-      )}
+      {error && <p className="text-xs font-medium text-rose-600 mt-1">{error}</p>}
     </div>
   );
 }
 
-interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement>, BaseProps {}
-
 export function TextArea({ label, error, helperText, className, ...props }: TextAreaProps) {
   return (
-    <div className="w-full space-y-1.5">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
+    <div className="w-full space-y-1.5 group">
+      <label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+        {label}
+      </label>
       <textarea
         className={clsx(
-          "block w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 transition-all focus:outline-none focus:ring-2",
+          "block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
           error 
-            ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" 
-            : "border-gray-200 focus:border-accent-teal focus:ring-accent-teal/20",
+            ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10" 
+            : "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
           className
         )}
         rows={3}
-        {...props}
+        {...(props as any)}
       />
-      {(error || helperText) && (
-        <p className={clsx("text-xs", error ? "text-red-500" : "text-gray-500")}>
-          {error || helperText}
-        </p>
-      )}
+      {error && <p className="text-xs font-medium text-rose-600 mt-1">{error}</p>}
     </div>
   );
 }

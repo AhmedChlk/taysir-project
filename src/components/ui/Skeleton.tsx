@@ -17,9 +17,9 @@ export function Skeleton({ className }: SkeletonProps) {
   );
 }
 
-export function WidgetSkeleton() {
+export function WidgetSkeleton({ className }: { className?: string }) {
   return (
-    <div className="bento-card p-8 h-full min-h-[200px] flex flex-col justify-between">
+    <div className={cn("bento-card p-8 h-full min-h-[200px] flex flex-col justify-between", className)}>
       <div className="flex justify-between items-start">
         <Skeleton className="w-12 h-12 rounded-2xl" />
         <Skeleton className="w-24 h-6 rounded-full" />

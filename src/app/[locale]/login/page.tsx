@@ -39,7 +39,7 @@ export default function LoginPage() {
         // Si on est sur /fr/login, router.push("/dashboard") devrait mener à /fr/dashboard.
         router.push("/dashboard");
       }
-    } catch (_err) {
+    } catch {
       setError(t("error_generic"));
     } finally {
       setLoading(false);

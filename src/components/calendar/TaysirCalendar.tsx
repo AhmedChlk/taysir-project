@@ -1,99 +1,101 @@
-"use client";
+'use client';
 
-import { Calendar, dateFnsLocalizer, View, Views } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
-import { fr, ar } from "date-fns/locale";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import "./calendar-overrides.css";
+import React from 'react';
+import { Calendar, dateFnsLocalizer, View, Views } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import './calendar-overrides.css';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const locales = {
-  fr: fr,
-  ar: ar,
+  'fr': fr,
 };
 
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek,
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   getDay,
   locales,
 });
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-  resource?: {
-    color?: string | null;
-    [key: string]: unknown;
-  };
-}
-
 interface TaysirCalendarProps {
-  events: CalendarEvent[];
-  view?: View;
-  onView?: (view: View) => void;
-  rtl?: boolean;
-  onSelectEvent?: (event: CalendarEvent) => void;
+  sessions: any[];
+  currentDate: Date;
 }
 
-export default function TaysirCalendar({
-  events,
-  view = Views.WEEK,
-  onView,
-  rtl: propsRtl,
-  onSelectEvent,
-}: TaysirCalendarProps) {
-  // Use prop if provided, otherwise detect from document
-  const isRtl = propsRtl !== undefined ? propsRtl : (typeof document !== 'undefined' && document.dir === 'rtl');
-  
-  const messages = isRtl 
-    ? {
-        next: "التالي",
-        previous: "السابق",
-        today: "اليوم",
-        month: "شهر",
-        week: "أسبوع",
-        day: "يوم",
-        agenda: "جدول أعمال",
-        allDay: "طوال اليوم",
-        date: "تاريخ",
-        time: "وقت",
-        event: "حدث",
-        noEventsInRange: "لا توجد أحداث في هذا النطاق",
+export default function TaysirCalendar({ sessions, currentDate }: TaysirCalendarProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const events = sessions.map(s => ({
+    id: s.id,
+    title: `${s.activity.name} - ${s.group.name}`,
+    start: new Date(s.startTime),
+    end: new Date(s.endTime),
+    resource: s,
+  }));
+
+  const handleSelectEvent = (event: any) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('drawer', 'view-session');
+    params.set('id', event.id);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleSelectSlot = ({ start }: any) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('drawer', 'new-session');
+    params.set('start', start.toISOString());
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const eventPropGetter = (event: any) => {
+    return {
+      style: {
+        backgroundColor: event.resource.activity.color || '#0F515C',
+        borderRadius: '12px',
+        border: 'none',
+        color: 'white',
+        fontSize: '11px',
+        fontWeight: 'bold',
+        padding: '4px 8px',
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
       }
-    : {
-        next: "Suivant",
-        previous: "Précédent",
-        today: "Aujourd'hui",
-        month: "Mois",
-        week: "Semaine",
-        day: "Jour",
-        agenda: "Agenda",
-      };
+    };
+  };
 
   return (
-    <div className="h-full bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="h-full min-h-[700px] p-4 bg-white rounded-[32px]">
       <Calendar
         localizer={localizer}
         events={events}
         startAccessor="start"
         endAccessor="end"
-        view={view}
-        onView={onView}
-        culture={isRtl ? "ar" : "fr"}
-        rtl={isRtl}
-        onSelectEvent={onSelectEvent}
-        messages={messages}
-        eventPropGetter={(event: CalendarEvent) => ({
-          className: "taysir-event",
-          style: {
-            backgroundColor: event.resource?.color || "#0F515C",
-            borderLeft: isRtl ? "none" : "4px solid rgba(0,0,0,0.1)",
-            borderRight: isRtl ? "4px solid rgba(0,0,0,0.1)" : "none",
-          },
-        })}
+        date={currentDate}
+        onNavigate={(date) => {
+           const params = new URLSearchParams(searchParams.toString());
+           params.set('date', date.toISOString());
+           router.push(`?${params.toString()}`, { scroll: false });
+        }}
+        onSelectEvent={handleSelectEvent}
+        onSelectSlot={handleSelectSlot}
+        selectable
+        views={['month', 'week', 'day']}
+        defaultView={Views.WEEK}
+        eventPropGetter={eventPropGetter}
+        messages={{
+          next: "Suivant",
+          previous: "Précédent",
+          today: "Aujourd'hui",
+          month: "Mois",
+          week: "Semaine",
+          day: "Jour",
+          agenda: "Agenda",
+        }}
+        culture="fr"
+        className="taysir-calendar-override"
       />
     </div>
   );
