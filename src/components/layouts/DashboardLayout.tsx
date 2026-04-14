@@ -3,12 +3,16 @@
 import { useSession, signOut } from "next-auth/react";
 import { Link } from "@/i18n/routing";
 import Sidebar from "@/components/navigation/Sidebar";
-import { useState } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { Loader2, Bell, ChevronDown, User, LogOut, Settings, Menu } from "lucide-react";
 import { useTranslations, useLocale } from 'next-intl';
 import { clsx } from "clsx";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Image from "next/image";
+import { useSearchParams, useRouter } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
+import Drawer from "@/components/ui/Drawer";
+import { getRooms, getStaff, getActivities, getGroups } from "@/services/api";
 
 export default function DashboardLayout({
   children,
@@ -21,6 +25,31 @@ export default function DashboardLayout({
   const isRtl = locale === 'ar';
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeDrawer = searchParams.get('drawer');
+  const [formData, setFormData] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeDrawer === 'new-session') {
+      Promise.all([
+        getRooms(),
+        getStaff(),
+        getActivities(),
+        getGroups()
+      ]).then(([rooms, staff, activities, groups]) => {
+        setFormData({ rooms, staff, activities, groups });
+      });
+    }
+  }, [activeDrawer]);
+
+  const closeDrawer = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('drawer');
+    params.delete('id');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   if (status === "loading") {
     return (
@@ -144,6 +173,18 @@ export default function DashboardLayout({
           </div>
         </div>
       </main>
+
+      <AnimatePresence>
+        {activeDrawer && (
+          <Suspense fallback={null}>
+            <Drawer 
+              type={activeDrawer} 
+              onClose={closeDrawer} 
+              formData={formData}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
