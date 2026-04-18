@@ -1,0 +1,247 @@
+# TAYSIR — AUDIT COMPLET & TODO REFACTORING
+> Audit réalisé le 2026-04-18 | 87 fichiers analysés | Biome: 256 erreurs | Vitest: 0 tests
+
+---
+
+## STATISTIQUES
+
+| Sévérité | Problèmes |
+|----------|-----------|
+| 🔴 CRITIQUE | 7 |
+| 🟠 MAJEUR | 22 |
+| 🟡 MINEUR | 4 |
+
+---
+
+## PHASE 1 — SÉCURITÉ CRITIQUE (Blocker MVP)
+
+### SEC-01 — SQL Injection potentielle
+- [ ] **`src/actions/finance.actions.ts:73`** — Remplacer `$executeRawUnsafe` par `$executeRaw` tagged template
+  ```ts
+  // AVANT (dangereux)
+  await tx.$executeRawUnsafe(`SELECT 1 FROM "Tranche" WHERE id = '${data.trancheId}' FOR UPDATE`);
+  // APRÈS (sûr)
+  await tx.$executeRaw`SELECT 1 FROM "Tranche" WHERE id = ${data.trancheId}::uuid FOR UPDATE`;
+  ```
+
+### SEC-02 — tenantId fourni par le client (IDOR)
+- [x] **`src/actions/documents.actions.ts:26-36`** — CORRIGE (2026-04-18) : `getStudentDocuments` converti en `getStudentDocumentsAction` via `createSafeAction`. `tenantId` extrait de `getServerSession()` uniquement. Filtre `etablissementId: tenantId` ajoute dans `findMany` et `update`. `revalidatePath` remplace par `revalidateTag`. 3 tests unitaires ajoutés dans `src/__tests__/actions/documents.test.ts`.
+
+### SEC-03 — Absence de contrainte d'ownership dans updateProfileAction
+- [ ] **`src/actions/settings.actions.ts:29`** — Remplacer `where: { id: userId }` par `where: { id_etablissementId: { id: userId, etablissementId: tenantId } }`
+
+### SEC-04 — Conflit de planning cross-tenant
+- [ ] **`src/actions/schedule.actions.ts:46-101`** — Ajouter `etablissementId: tenantId` dans les 3 requêtes de détection de conflit (`roomConflict`, `instructorConflict`, `groupConflict`)
+
+### SEC-05 — Protection des routes au niveau middleware
+- [ ] **`src/proxy.ts`** — Combiner le middleware `next-intl` avec une vérification NextAuth pour les routes `/[locale]/dashboard/*`
+  ```ts
+  // Bloquer avant même le rendu des composants
+  if (pathname.startsWith('/dashboard')) {
+    const token = await getToken({ req });
+    if (!token) return NextResponse.redirect(new URL('/login', req.url));
+  }
+  ```
+
+### SEC-06 — Protection du compte GERANT unique
+- [ ] **`src/actions/settings.actions.ts:70-79`** — `deleteAccountAction` : vérifier qu'un autre GERANT/ADMIN actif existe avant suppression
+
+### SEC-07 — Lien externe sans rel="noopener noreferrer"
+- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx:213`** — Ajouter `rel="noopener noreferrer"` sur le `<a target="_blank">`
+
+---
+
+## PHASE 2 — MULTI-TENANCY & TYPE SAFETY
+
+### MT-01 — Filtres etablissementId manquants dans dashboard.actions.ts
+- [ ] **`src/actions/dashboard.actions.ts`** — Ajouter `where: { etablissementId: tenantId }` explicitement dans les 8 actions :
+  - `getDashboardStatsAction` (lignes 13-14)
+  - `getTodaySessionsAction` (ligne 33)
+  - `getPendingPaymentsAction` (ligne 56)
+  - `getAttendanceStatsAction` (ligne 82)
+  - `getRoomOccupancyAction` (ligne 123)
+  - `getDailyAttendanceRatioAction` (ligne 148)
+  - `getUpcomingStaffAlertsAction` (ligne 181)
+  - `getFinancialKPIsAction` (ligne 205)
+
+### MT-02 — Validation des groupes sans etablissementId
+- [ ] **`src/actions/students.actions.ts:29-32` et `64-70`** — Ajouter `etablissementId: tenantId` dans le `where` de validation des `groupIds`
+
+### MT-03 — deleteStudentAction utilise le client admin pour le premier findUnique
+- [ ] **`src/actions/students.actions.ts:103-117`** — Utiliser `tenantPrisma` dès le premier `findUnique`
+
+### TS-01 — Types `any` dans prisma.ts (16 occurrences)
+- [ ] **`src/lib/prisma.ts:9-13` et `$allOperations`** — Remplacer les `(args as any)` par les types Prisma appropriés (`Prisma.TypeMapCbDef`, etc.)
+
+### TS-02 — Casts `as any` inutiles dans auth.ts
+- [ ] **`src/lib/auth.ts:60-62`** — Supprimer les `(session.user as any)` — les types sont déjà augmentés dans `next-auth.d.ts`
+
+### TS-03 — Types `any` dans les composants
+- [ ] **`src/components/dashboard/schedule/ScheduleClientView.tsx:23`** — Typer `initialSessions: Session[]` avec le type Prisma
+- [ ] **`src/components/ui/Drawer.tsx:15,69,107,126`** — Remplacer `type: string` et `formData?: any` par un union type strict
+  ```ts
+  type DrawerType = 'new-session' | 'payments' | 'new-finance' | 'edit-staff' | 'sessions';
+  ```
+- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx`** — Corriger les 6 occurrences de `any` (lignes 60, 148, 167, 200, 213, 246)
+- [ ] **`src/app/[locale]/layout.tsx:30`** — Supprimer `(session?.user as any)?.role`
+- [ ] **`src/services/api.ts:51,80`** — Supprimer les casts `as any`
+
+---
+
+## PHASE 3 — ARCHITECTURE & CLEAN CODE
+
+### ARCH-01 — Duplication de logique (DRY Violation)
+- [ ] **`src/services/api.ts` + `src/actions/dashboard.actions.ts`** — Fusionner `getAttendanceStats` et `getPendingPayments` (logique dupliquée identique) dans un service partagé `src/lib/queries/`
+
+### ARCH-02 — revalidateTag avec second argument invalide
+- [ ] **14 occurrences dans `logistics.actions.ts`, `students.actions.ts`, `finance.actions.ts`** — Supprimer le second argument `"max"` de tous les appels `revalidateTag`
+
+### ARCH-03 — revalidatePath avec patterns [locale] invalides
+- [ ] **`src/actions/students.actions.ts`, `messages.actions.ts`, `settings.actions.ts`** — Remplacer `revalidatePath('/[locale]/...')` par `revalidateTag(...)` (indépendant du locale)
+
+### ARCH-04 — DashboardLayout Client Component avec 7 requêtes Prisma dans useEffect
+- [ ] **`src/components/layouts/DashboardLayout.tsx:32-43`** — Extraire `getDashboardFormDataAction` vers un Server Component avec `unstable_cache`; le layout ne doit contenir que la navigation et les providers UI
+
+### ARCH-05 — DashboardClientView.tsx (composant mort avec logique métier)
+- [ ] **`src/components/dashboard/DashboardClientView.tsx`** — Supprimer ce composant (remplacé par les widgets) ou le convertir en Server Component pur
+
+### ARCH-06 — PDF côté client dans StudentsClientView.tsx
+- [ ] **`src/components/dashboard/StudentsClientView.tsx:157-267`** — Extraire `handleDownloadPDF` dans `src/lib/pdf-generators/student-profile.ts` (shared utility), et invoquer depuis une Server Action
+
+### ARCH-07 — Génération PDF dans une transaction Prisma (finance.actions.ts)
+- [ ] **`src/actions/finance.actions.ts:162-233`** — Séparer la génération de reçu PDF en action dédiée `generateReceiptAction`, déclenchée après confirmation de paiement (hors transaction)
+
+### ARCH-08 — Cache Prisma multi-tenant sans TTL ni invalidation
+- [ ] **`src/lib/prisma.ts:24-91`** — Remplacer la `Map` globale `tenantClients` par une map avec TTL ou supprimer le cache (le `$extends` est léger)
+
+### ARCH-09 — DashboardLayout importé dans les pages (doit être dans layout.tsx)
+- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx:38`** — Déplacer `DashboardLayout` au niveau du `layout.tsx` de la route dashboard
+
+### ARCH-10 — upload.actions.ts : fallback base64 en base de données
+- [ ] **`src/actions/upload.actions.ts:32-44`** — Supprimer le fallback base64 ; retourner une erreur explicite si `BLOB_READ_WRITE_TOKEN` est absent
+
+---
+
+## PHASE 4 — FRONTEND & UX
+
+### UI-01 — Zéro useOptimistic (UX bloquante)
+- [ ] **`StudentsClientView.tsx`, `PaymentsClientView.tsx`, `GroupsClientView.tsx`** — Implémenter `useOptimistic` pour les mutations fréquentes (create, delete, update)
+
+### UI-02 — Zéro Suspense boundaries / Skeletons sur les pages
+- [ ] **`src/app/[locale]/dashboard/page.tsx` et toutes les pages dashboard** — Envelopper chaque widget dans `<Suspense fallback={<SkeletonWidget />}>`
+  > Note: `src/components/ui/Skeleton.tsx` existe mais n'est jamais utilisé dans les pages
+
+### UI-03 — Textes hardcodés (violation I18n massive)
+Tous ces fichiers doivent utiliser `useTranslations` / `getTranslations` :
+- [ ] **`src/components/dashboard/DashboardClientView.tsx`** — 13 occurrences (lignes 63,71,92,97,100,105,109,112,142,144,162,183,186)
+- [ ] **`src/components/dashboard/students/StudentsClientView.tsx`** — 9 occurrences (lignes 110,119,287,345,347,348,380,382,432)
+- [ ] **`src/components/dashboard/payments/PaymentsClientView.tsx`** — 15 occurrences (lignes 199,203,213,215,224,229,233,237,241,245,257,263-271)
+- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx`** — 10 occurrences (lignes 51,55,85,86,128,142,163,175,193,232)
+- [ ] **`src/components/navigation/Sidebar.tsx:72`** — `Taysir.` hardcodé
+
+### UI-04 — Accessibilité (violations Biome a11y)
+- [ ] **Boutons sans `type="button"`** — Ajouter `type="button"` sur tous les `<button>` non-submit dans: `DashboardClientView.tsx`, `DashboardSPA.tsx`, `DataTable.tsx`, `Drawer.tsx`, `EmptyState.tsx`, `Modal.tsx`, `PaymentCard.tsx` (17+ occurrences)
+- [ ] **Labels sans contrôle associé** — Corriger dans `FormInput.tsx:42,128,155`, `MultiSelect.tsx:52`, `AttendanceClientView.tsx:97`
+- [ ] **Divs clickables sans keyboard handler** — Ajouter `onKeyDown`/`role="button"` sur `Sidebar.tsx:60`, `DropdownMenu.tsx:84`, `Modal.tsx:48`, `MultiSelect.tsx:54,91`
+- [ ] **`<img>` natif** — Remplacer `<img>` par `next/image` dans `Sidebar.tsx:71`
+
+### UI-05 — Variables inutilisées dans DashboardSPA.tsx
+- [ ] **`src/components/dashboard/DashboardSPA.tsx:3,4,6,8,31,34`** — Supprimer imports et variables `session`, `isPending` non utilisés
+
+---
+
+## PHASE 5 — TESTS (Pipeline obligatoire)
+
+### TEST-01 — Créer vitest.setup.ts
+- [ ] Créer `vitest.setup.ts` à la racine (référencé mais manquant dans `vitest.config.ts:9`)
+  ```ts
+  import '@testing-library/jest-dom';
+  ```
+
+### TEST-02 — Tests unitaires Vitest (priorité haute)
+- [ ] **`src/__tests__/lib/validations.test.ts`** — Tester tous les schémas Zod (cas valides + invalides)
+- [ ] **`src/__tests__/lib/safe-action.test.ts`** — Tester `createSafeAction` (succès, échec auth, échec validation)
+- [ ] **`src/__tests__/utils/format.test.ts`** — Tester `formatFullName`, `formatCurrency`, `formatDate`
+- [ ] **`src/__tests__/actions/students.test.ts`** — Tester `createStudentAction`, `deleteStudentAction` avec MSW
+
+### TEST-03 — Configurer MSW
+- [ ] Créer `src/mocks/handlers.ts` avec les handlers pour les Server Actions
+- [ ] Créer `src/mocks/server.ts` pour l'environnement Node (Vitest)
+
+### TEST-04 — Tests E2E Playwright (parcours vitaux)
+- [ ] Créer le répertoire `tests/`
+- [ ] **`tests/auth.spec.ts`** — Login, logout, redirection si non authentifié
+- [ ] **`tests/students.spec.ts`** — Création, modification, suppression d'un élève
+- [ ] **`tests/payments.spec.ts`** — Enregistrement d'un paiement, génération du reçu
+- [ ] **`tests/attendance.spec.ts`** — Marquage des présences
+
+---
+
+## PHASE 6 — QUALITÉ (Biome — 256 erreurs à corriger)
+
+### QUAL-01 — Lancer Biome et corriger les erreurs restantes
+- [ ] `npx @biomejs/biome check ./src --write` (auto-fix)
+- [ ] Corriger manuellement les erreurs non-fixables automatiquement
+- [ ] Cibler zéro erreur Biome avant merge
+
+### QUAL-02 — Zod : améliorer les validations de devise
+- [ ] **`src/lib/validations.ts:35`** — Remplacer `z.string().length(3)` par `z.enum(["DZD", "EUR", "USD"])`
+
+### QUAL-03 — Biome security rules
+- [ ] **`biome.json`** — Activer `security/noDangerouslySetInnerHtml` et règles de sécurité supplémentaires
+
+---
+
+## PROBLEMES DECOUVERTS LORS DE SEC-02 (2026-04-18)
+
+### DOC-01 — Codes d'erreur trompeurs dans ErrorCodes
+- [ ] **`src/lib/errors.ts:2-8`** — Les cles de `ErrorCodes` (ex: `ERR_UNAUTHORIZED`) ne correspondent pas aux valeurs string retournees (`"AUTH_REQUIRED"`). Tout code qui compare via la cle au lieu de la valeur produit une assertion silencieusement fausse. Renommer les valeurs pour qu'elles correspondent aux cles (`ERR_UNAUTHORIZED`, `ERR_INVALID_DATA`, etc.) ou documenter explicitement la convention.
+  **Severite** : MAJEUR | **Type** : Qualite / Maintenabilite
+
+### DOC-02 — Fallback SUPERADMIN_ACCESS non garde dans safe-action.ts
+- [ ] **`src/lib/actions/safe-action.ts:65`** — `tenantId: tenantId || "SUPERADMIN_ACCESS"` passe la chaine litterale `"SUPERADMIN_ACCESS"` a `getTenantPrisma` quand l'utilisateur est SUPER_ADMIN sans etablissementId. Si `getTenantPrisma` utilise cet identifiant comme filtre Prisma, toutes les requetes SUPER_ADMIN retournent un resultat vide (tenant inexistant). Ajouter un guard explicite avant d'appeler le handler : si le role est SUPER_ADMIN, passer `null` ou utiliser le client Prisma global.
+  **Severite** : MAJEUR | **Type** : Architecture / Securite
+
+### DOC-03 — revalidateTag second argument non standard
+- [ ] **`src/actions/documents.actions.ts:27`** (et 14+ occurrences dans le projet) — Le second argument `"max"` passe TypeScript grace a la signature `(tag: string, profile: string | CacheLifeConfig)` de Next.js 16, mais `"max"` n'est pas un profil de cache defini dans la documentation. En production, ce comportement est indetermine. Utiliser un profil valide (`"default"`, `"pages"`) ou verifier la documentation Next.js 16 sur les profils de cache personnalises.
+  **Severite** : MINEUR | **Type** : Architecture
+
+### DOC-04 — Dead code vulnerable non detecte avant audit (getStudentDocuments)
+- [ ] **`src/actions/documents.actions.ts:26-36`** (etat avant correctif SEC-02) — La fonction `getStudentDocuments` etait du dead code deployable avec un `tenantId` arbitraire en parametre public. Confirmer que l'ancienne signature n'est referencee dans aucune branche de fonctionnalite en cours via `git log --all --oneline -- src/actions/documents.actions.ts`. Mettre en place une regle Biome/ESLint pour detecter les fonctions `async` exportees sans `createSafeAction`.
+  **Severite** : MINEUR | **Type** : Securite / Qualite
+
+---
+
+## RÉCAPITULATIF ORDONNÉ PAR PRIORITÉ
+
+```
+🔴 BLOCKERS (avant tout déploiement)
+├── SEC-01  SQL Injection finance.actions.ts
+├── SEC-02  IDOR documents.actions.ts
+├── SEC-03  Ownership bypass settings.actions.ts
+├── SEC-04  Cross-tenant conflict schedule.actions.ts
+├── SEC-05  Middleware auth manquant
+├── MT-01   Filtres tenantId manquants dashboard.actions.ts (8 actions)
+└── TEST-01 Zéro tests dans le projet
+
+🟠 IMPORTANTS (stabilisation MVP)
+├── MT-02/03  Multi-tenancy students.actions.ts
+├── TS-01/02/03  Éradication des `any`
+├── ARCH-01/02/03  DRY + revalidation correcte
+├── ARCH-04   DashboardLayout refactoring
+├── UI-01     useOptimistic
+├── UI-02     Suspense + Skeletons
+├── UI-03     I18n (textes hardcodés)
+└── TEST-02/03/04  Pipeline de tests
+
+🟡 QUALITÉ (maintenabilité long terme)
+├── UI-04     Accessibilité (a11y)
+├── QUAL-01   Biome zéro erreur
+├── ARCH-05/06/07/08/09/10  Refactoring architecture
+└── QUAL-02/03  Zod + Biome config
+```
+
+---
+
+*Document généré automatiquement par l'agent taysir-clean-qa-architect*
+*À mettre à jour après chaque tâche complétée*

@@ -1,36 +1,44 @@
 "use server";
 
-import { getTenantPrisma } from "@/lib/prisma";
+import { revalidateTag } from "next/cache";
 import { createSafeAction } from "@/lib/actions/safe-action";
-import { UpdateDocumentStatusSchema } from "@/lib/validations";
-import { revalidatePath } from "next/cache";
+import { getTenantPrisma } from "@/lib/prisma";
+import {
+	GetStudentDocumentsSchema,
+	UpdateDocumentStatusSchema,
+} from "@/lib/validations";
 
 export const updateDocumentStatusAction = createSafeAction(
-  UpdateDocumentStatusSchema,
-  async (data, { tenantId }) => {
-    const tenantPrisma = getTenantPrisma(tenantId);
-    const document = await tenantPrisma.document.update({
-      where: {
-        id: data.id,
-      },
-      data: {
-        status: data.status,
-      },
-    });
+	UpdateDocumentStatusSchema,
+	async (data, { tenantId }) => {
+		const tenantPrisma = getTenantPrisma(tenantId);
+		const document = await tenantPrisma.document.update({
+			where: {
+				id_etablissementId: {
+					id: data.id,
+					etablissementId: tenantId,
+				},
+			},
+			data: {
+				status: data.status,
+			},
+		});
 
-    revalidatePath("/dashboard/students");
-    return document;
-  }
+		revalidateTag(`etab_${tenantId}_students`, "max");
+		return document;
+	},
 );
 
-export async function getStudentDocuments(studentId: string, tenantId: string) {
-  const tenantPrisma = getTenantPrisma(tenantId);
-  return await tenantPrisma.document.findMany({
-    where: {
-      studentId: studentId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-}
+export const getStudentDocumentsAction = createSafeAction(
+	GetStudentDocumentsSchema,
+	async (data, { tenantId }) => {
+		const tenantPrisma = getTenantPrisma(tenantId);
+		return tenantPrisma.document.findMany({
+			where: {
+				studentId: data.studentId,
+				etablissementId: tenantId,
+			},
+			orderBy: { createdAt: "desc" },
+		});
+	},
+);
