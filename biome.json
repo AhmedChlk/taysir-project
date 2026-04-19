@@ -15,7 +15,30 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"a11y": {
+				"noLabelWithoutControl": "warn",
+				"noInteractiveElementToNoninteractiveRole": "warn",
+				"useKeyWithClickEvents": "warn",
+				"useAltText": "warn",
+				"useButtonType": "warn",
+				"noStaticElementInteractions": "warn",
+				"noSvgWithoutTitle": "warn"
+			},
+			"suspicious": {
+				"noExplicitAny": "warn",
+				"noImplicitAnyLet": "warn",
+				"noArrayIndexKey": "warn"
+			},
+			"correctness": {
+				"noUnusedVariables": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "warn"
+			},
+			"performance": {
+				"noAccumulatingSpread": "warn"
+			}
 		}
 	},
 	"javascript": {

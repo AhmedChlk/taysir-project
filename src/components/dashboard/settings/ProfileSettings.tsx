@@ -139,6 +139,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 						{t("delete_account_desc")}
 					</p>
 					<button
+						type="button"
 						onClick={handleDeleteAccount}
 						disabled={isPending}
 						className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-red-700 active:scale-95 shadow-sm disabled:opacity-50"

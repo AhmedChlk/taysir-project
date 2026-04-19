@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/next", () => ({
 	getServerSession: vi.fn(),
@@ -21,11 +21,11 @@ vi.mock("next/cache", () => ({
 }));
 
 import { getServerSession } from "next-auth/next";
-import { getTenantPrisma, prisma } from "@/lib/prisma";
 import {
-	updateProfileAction,
 	deleteAccountAction,
+	updateProfileAction,
 } from "@/actions/settings.actions";
+import { getTenantPrisma, prisma } from "@/lib/prisma";
 
 const makeSession = (override: Record<string, unknown> = {}) => ({
 	user: {
@@ -66,7 +66,9 @@ describe("updateProfileAction — SEC-03 ownership", () => {
 		vi.mocked(getTenantPrisma).mockReturnValue({
 			user: { update: mockUpdate },
 		} as never);
-		vi.mocked(prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+		vi.mocked(
+			prisma.user.findUnique as ReturnType<typeof vi.fn>,
+		).mockResolvedValue(null);
 
 		const result = await updateProfileAction({
 			firstName: "Ahmed",

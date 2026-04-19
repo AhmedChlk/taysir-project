@@ -39,7 +39,7 @@ export const updateProfileAction = createSafeAction(
 			},
 		});
 
-		revalidateTag(`etab_${tenantId}_settings`);
+		revalidateTag(`etab_${tenantId}_settings`, "max");
 		return updatedUser;
 	},
 );
@@ -74,7 +74,7 @@ export const updateSchoolAction = createSafeAction(
 			},
 		});
 
-		revalidateTag(`etab_${tenantId}_settings`);
+		revalidateTag(`etab_${tenantId}_settings`, "max");
 		return updatedSchool;
 	},
 );
