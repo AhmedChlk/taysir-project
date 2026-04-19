@@ -1,7 +1,6 @@
 import { endOfWeek, startOfWeek } from "date-fns";
 import { getWeeklySessionsAction } from "@/actions/schedule.actions";
 import ScheduleClientView from "@/components/dashboard/schedule/ScheduleClientView";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { getActivities, getGroups, getRooms, getStaff } from "@/services/api";
 
 interface PageProps {
@@ -20,7 +19,6 @@ export default async function SchedulePage({ searchParams }: PageProps) {
 	const start = startOfWeek(currentDate, { weekStartsOn: 1 });
 	const end = endOfWeek(currentDate, { weekStartsOn: 1 });
 
-	// Récupération asynchrone des sessions avec filtres
 	const sessionsResponse = await getWeeklySessionsAction({
 		start,
 		end,
@@ -37,15 +35,13 @@ export default async function SchedulePage({ searchParams }: PageProps) {
 	]);
 
 	return (
-		<DashboardLayout>
-			<ScheduleClientView
-				initialSessions={sessionsResponse.success ? sessionsResponse.data : []}
-				rooms={rooms}
-				staff={staff}
-				activities={activities}
-				groups={groups}
-				currentDate={currentDate}
-			/>
-		</DashboardLayout>
+		<ScheduleClientView
+			initialSessions={sessionsResponse.success ? sessionsResponse.data : []}
+			rooms={rooms}
+			staff={staff}
+			activities={activities}
+			groups={groups}
+			currentDate={currentDate}
+		/>
 	);
 }

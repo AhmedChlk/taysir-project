@@ -1,5 +1,4 @@
 import PaymentsClientView from "@/components/dashboard/payments/PaymentsClientView";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { getActivities, getPayments, getStudents } from "@/services/api";
 
 export default async function PaymentsPage() {
@@ -10,12 +9,10 @@ export default async function PaymentsPage() {
 	]);
 
 	return (
-		<DashboardLayout>
-			<PaymentsClientView
-				initialPayments={payments}
-				students={students}
-				activities={activities}
-			/>
-		</DashboardLayout>
+		<PaymentsClientView
+			initialPayments={payments}
+			students={students}
+			activities={activities}
+		/>
 	);
 }

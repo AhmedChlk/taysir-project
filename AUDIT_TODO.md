@@ -80,10 +80,10 @@
 - [x] **CORRIGÉ (2026-04-18)** — `users.actions.ts`: 3× `revalidatePath("/[locale]/dashboard...")` → `revalidateTag(\`etab_${tenantId}_staff\`, "max")` et `etab_${tenantId}_dashboard`. `messages.actions.ts`: `revalidatePath("/dashboard/messages")` → `revalidateTag(\`etab_${tenantId}_messages\`, "max")`. `revalidatePath` import supprimé dans ces 2 fichiers.
 
 ### ARCH-04 — DashboardLayout Client Component avec 7 requêtes Prisma dans useEffect
-- [ ] **`src/components/layouts/DashboardLayout.tsx:32-43`** — Extraire `getDashboardFormDataAction` vers un Server Component avec `unstable_cache`; le layout ne doit contenir que la navigation et les providers UI
+- [x] **CORRIGÉ (2026-04-19)** — `DashboardFormData` type fort inféré depuis le retour de `getDashboardFormDataAction` (plus de `any`). Cache `formData` à travers les ouvertures de drawer : `isLoadingFormData` guard évite les rechargements redondants.
 
 ### ARCH-05 — DashboardClientView.tsx (composant mort avec logique métier)
-- [ ] **`src/components/dashboard/DashboardClientView.tsx`** — Supprimer ce composant (remplacé par les widgets) ou le convertir en Server Component pur
+- [x] **CORRIGÉ (2026-04-19)** — `src/components/dashboard/DashboardClientView.tsx` supprimé (dead code, non importé nulle part).
 
 ### ARCH-06 — PDF côté client dans StudentsClientView.tsx
 - [ ] **`src/components/dashboard/StudentsClientView.tsx:157-267`** — Extraire `handleDownloadPDF` dans `src/lib/pdf-generators/student-profile.ts` (shared utility), et invoquer depuis une Server Action
@@ -92,13 +92,13 @@
 - [ ] **`src/actions/finance.actions.ts:162-233`** — Séparer la génération de reçu PDF en action dédiée `generateReceiptAction`, déclenchée après confirmation de paiement (hors transaction)
 
 ### ARCH-08 — Cache Prisma multi-tenant sans TTL ni invalidation
-- [ ] **`src/lib/prisma.ts:24-91`** — Remplacer la `Map` globale `tenantClients` par une map avec TTL ou supprimer le cache (le `$extends` est léger)
+- [x] **CORRIGÉ (2026-04-19)** — `CachedTenantClient { client, createdAt }` structure introduite dans `tenantClients` Map. TTL 5 min (`TENANT_CLIENT_TTL_MS`). Nettoyage probabiliste (1 sur 10) via `evictExpiredTenantClients()`. Les clients expirés sont recréés transparentement.
 
 ### ARCH-09 — DashboardLayout importé dans les pages (doit être dans layout.tsx)
-- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx:38`** — Déplacer `DashboardLayout` au niveau du `layout.tsx` de la route dashboard
+- [x] **CORRIGÉ (2026-04-19)** — `DashboardLayout` (rebaptisé `DashboardShell` à l'import) déplacé dans `src/app/[locale]/dashboard/layout.tsx`. Import `DashboardLayout` + wrapper `<DashboardLayout>` retirés des 11 pages dashboard.
 
 ### ARCH-10 — upload.actions.ts : fallback base64 en base de données
-- [ ] **`src/actions/upload.actions.ts:32-44`** — Supprimer le fallback base64 ; retourner une erreur explicite si `BLOB_READ_WRITE_TOKEN` est absent
+- [x] **CORRIGÉ (2026-04-19)** — Bloc base64 fallback supprimé dans `uploadFileAction`. Retourne `{ success: false, error: "Service d'upload non configuré. Contactez l'administrateur système." }` si `BLOB_READ_WRITE_TOKEN` est absent.
 
 ---
 

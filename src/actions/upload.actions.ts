@@ -32,17 +32,10 @@ export async function uploadFileAction(formData: FormData) {
 		const filename = `${tenantId}/${Date.now()}-${file.name}`;
 
 		if (!process.env.BLOB_READ_WRITE_TOKEN) {
-			const arrayBuffer = await file.arrayBuffer();
-			const base64 = Buffer.from(arrayBuffer).toString("base64");
-			const dataUri = `data:${file.type};base64,${base64}`;
-
 			return {
-				success: true,
-				data: {
-					url: dataUri,
-					pathname: filename,
-					contentType: file.type,
-				},
+				success: false,
+				error:
+					"Service d'upload non configuré. Contactez l'administrateur système.",
 			};
 		}
 

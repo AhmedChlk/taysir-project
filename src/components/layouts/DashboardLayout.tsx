@@ -37,17 +37,24 @@ export default function DashboardLayout({
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const activeDrawer = searchParams.get("drawer");
-	const [formData, setFormData] = useState<any>(null);
+
+	type DashboardFormData = Extract<
+		Awaited<ReturnType<typeof getDashboardFormDataAction>>,
+		{ success: true }
+	>["data"];
+
+	const [formData, setFormData] = useState<DashboardFormData | null>(null);
+	const [isLoadingFormData, setIsLoadingFormData] = useState(false);
 
 	useEffect(() => {
-		if (activeDrawer) {
+		if (activeDrawer && !formData && !isLoadingFormData) {
+			setIsLoadingFormData(true);
 			getDashboardFormDataAction({}).then((res) => {
-				if (res?.success) {
-					setFormData(res.data);
-				}
+				if (res?.success) setFormData(res.data);
+				setIsLoadingFormData(false);
 			});
 		}
-	}, [activeDrawer]);
+	}, [activeDrawer, formData, isLoadingFormData]);
 
 	const closeDrawer = () => {
 		const params = new URLSearchParams(searchParams.toString());
@@ -199,7 +206,7 @@ export default function DashboardLayout({
 						<Drawer
 							type={activeDrawer}
 							onClose={closeDrawer}
-							formData={formData}
+							{...(formData ? { formData } : {})}
 						/>
 					</Suspense>
 				)}

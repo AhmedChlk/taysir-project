@@ -1,5 +1,4 @@
 import AttendanceClientView from "@/components/dashboard/attendance/AttendanceClientView";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
 	getAttendance,
 	getGroups,
@@ -16,13 +15,11 @@ export default async function AttendancePage() {
 	]);
 
 	return (
-		<DashboardLayout>
-			<AttendanceClientView
-				sessions={sessions}
-				students={students}
-				groups={groups}
-				initialAttendance={attendance}
-			/>
-		</DashboardLayout>
+		<AttendanceClientView
+			sessions={sessions}
+			students={students}
+			groups={groups}
+			initialAttendance={attendance}
+		/>
 	);
 }

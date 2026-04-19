@@ -1,5 +1,4 @@
 import GroupsClientView from "@/components/dashboard/groups/GroupsClientView";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import {
 	getActivities,
 	getGroups,
@@ -16,13 +15,11 @@ export default async function GroupsPage() {
 	]);
 
 	return (
-		<DashboardLayout>
-			<GroupsClientView
-				initialGroups={groups}
-				activities={activities}
-				staff={staff}
-				students={students}
-			/>
-		</DashboardLayout>
+		<GroupsClientView
+			initialGroups={groups}
+			activities={activities}
+			staff={staff}
+			students={students}
+		/>
 	);
 }

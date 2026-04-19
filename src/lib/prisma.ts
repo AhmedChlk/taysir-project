@@ -6,10 +6,18 @@ const prismaClientSingleton = () => {
 	});
 };
 
+const TENANT_CLIENT_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type TenantExtension = ReturnType<typeof buildTenantExtension>;
+
+interface CachedTenantClient {
+	client: TenantExtension;
+	createdAt: number;
+}
+
 declare global {
 	var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
-	// biome-ignore lint/suspicious/noExplicitAny: PrismaClient extensions are not statically typeable without circular references
-	var tenantClients: Map<string, any> | undefined;
+	var tenantClients: Map<string, CachedTenantClient> | undefined;
 }
 
 export const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
@@ -20,31 +28,8 @@ if (!globalThis.tenantClients) {
 	globalThis.tenantClients = new Map();
 }
 
-/**
- * Returns a tenant-scoped Prisma client that automatically injects
- * `etablissementId` into all read/write operations for multi-tenant isolation.
- *
- * The returned type is `PrismaClient` to maintain call-site type safety.
- * The underlying client is a `$extends`-enhanced instance that enforces
- * tenant isolation at the query middleware level.
- */
-export function getTenantPrisma(etablissementId: string): PrismaClient {
-	if (!etablissementId) {
-		throw new Error(
-			"Tentative d accès aux données sans ID d établissement valide.",
-		);
-	}
-
-	if (etablissementId === "SUPERADMIN_ACCESS") {
-		return prisma;
-	}
-
-	const cached = globalThis.tenantClients?.get(etablissementId);
-	if (cached) {
-		return cached as PrismaClient;
-	}
-
-	const extendedClient = prisma.$extends({
+function buildTenantExtension(etablissementId: string) {
+	return prisma.$extends({
 		query: {
 			$allModels: {
 				async $allOperations({ model, operation, args, query }) {
@@ -120,8 +105,57 @@ export function getTenantPrisma(etablissementId: string): PrismaClient {
 			},
 		},
 	});
+}
 
-	globalThis.tenantClients?.set(etablissementId, extendedClient);
+function evictExpiredTenantClients(): void {
+	const now = Date.now();
+	for (const [key, cached] of globalThis.tenantClients!.entries()) {
+		if (now - cached.createdAt > TENANT_CLIENT_TTL_MS) {
+			globalThis.tenantClients!.delete(key);
+		}
+	}
+}
+
+/**
+ * Returns a tenant-scoped Prisma client that automatically injects
+ * `etablissementId` into all read/write operations for multi-tenant isolation.
+ *
+ * The returned type is `PrismaClient` to maintain call-site type safety.
+ * The underlying client is a `$extends`-enhanced instance that enforces
+ * tenant isolation at the query middleware level.
+ *
+ * Cached entries are evicted after TENANT_CLIENT_TTL_MS (5 minutes).
+ * A probabilistic cleanup (1 in 10 calls) evicts all expired entries.
+ */
+export function getTenantPrisma(etablissementId: string): PrismaClient {
+	if (!etablissementId) {
+		throw new Error(
+			"Tentative d accès aux données sans ID d établissement valide.",
+		);
+	}
+
+	if (etablissementId === "SUPERADMIN_ACCESS") {
+		return prisma;
+	}
+
+	// Probabilistic cleanup: 1 chance in 10 to evict expired entries
+	if (Math.random() < 0.1) {
+		evictExpiredTenantClients();
+	}
+
+	const now = Date.now();
+	const cached = globalThis.tenantClients?.get(etablissementId);
+
+	if (cached && now - cached.createdAt <= TENANT_CLIENT_TTL_MS) {
+		return cached.client as unknown as PrismaClient;
+	}
+
+	const extendedClient = buildTenantExtension(etablissementId);
+
+	globalThis.tenantClients?.set(etablissementId, {
+		client: extendedClient,
+		createdAt: now,
+	});
 
 	// Cast to PrismaClient for consistent call-site typing.
 	// The runtime implementation is the extended client above which enforces tenancy.

@@ -5,7 +5,6 @@ import PerformanceKPIsWidget from "@/components/dashboard/widgets/PerformanceKPI
 import SessionsWidget from "@/components/dashboard/widgets/SessionsWidget";
 import StaffAlertsWidget from "@/components/dashboard/widgets/StaffAlertsWidget";
 import StatsWidget from "@/components/dashboard/widgets/StatsWidget";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 interface PageProps {
 	params: Promise<{ locale: string }>;
@@ -15,16 +14,14 @@ export default async function DashboardPage({ params }: PageProps) {
 	const { locale } = await params;
 
 	return (
-		<DashboardLayout>
-			<DashboardSPA
-				locale={locale}
-				stats={<StatsWidget />}
-				sessions={<SessionsWidget />}
-				payments={<PaymentsWidget />}
-				kpis={<PerformanceKPIsWidget />}
-				roster={<LiveRosterWidget />}
-				alerts={<StaffAlertsWidget />}
-			/>
-		</DashboardLayout>
+		<DashboardSPA
+			locale={locale}
+			stats={<StatsWidget />}
+			sessions={<SessionsWidget />}
+			payments={<PaymentsWidget />}
+			kpis={<PerformanceKPIsWidget />}
+			roster={<LiveRosterWidget />}
+			alerts={<StaffAlertsWidget />}
+		/>
 	);
 }
