@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
@@ -47,6 +47,7 @@ export const createSessionAction = createSafeAction(
 
 		const roomConflict = await client.session.findFirst({
 			where: {
+				etablissementId: tenantId,
 				roomId: data.roomId,
 				status: "SCHEDULED",
 				OR: [
@@ -66,6 +67,7 @@ export const createSessionAction = createSafeAction(
 
 		const instructorConflict = await client.session.findFirst({
 			where: {
+				etablissementId: tenantId,
 				instructorId: data.instructorId,
 				status: "SCHEDULED",
 				OR: [
@@ -85,6 +87,7 @@ export const createSessionAction = createSafeAction(
 
 		const groupConflict = await client.session.findFirst({
 			where: {
+				etablissementId: tenantId,
 				groupId: data.groupId,
 				status: "SCHEDULED",
 				OR: [
@@ -116,8 +119,8 @@ export const createSessionAction = createSafeAction(
 			},
 		});
 
-		revalidatePath("/[locale]/dashboard/schedule", "page");
-		revalidatePath("/[locale]/dashboard", "page");
+		revalidateTag(`etab_${tenantId}_schedule`, "max");
+		revalidateTag(`etab_${tenantId}_dashboard`, "max");
 
 		return session;
 	},
@@ -132,7 +135,7 @@ export const deleteSessionAction = createSafeAction(
 			where: { id, etablissementId: tenantId },
 		});
 
-		revalidatePath("/[locale]/dashboard/schedule", "page");
+		revalidateTag(`etab_${tenantId}_schedule`, "max");
 		return result;
 	},
 );

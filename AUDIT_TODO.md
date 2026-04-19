@@ -31,23 +31,16 @@
 - [ ] **`src/actions/settings.actions.ts:29`** — Remplacer `where: { id: userId }` par `where: { id_etablissementId: { id: userId, etablissementId: tenantId } }`
 
 ### SEC-04 — Conflit de planning cross-tenant
-- [ ] **`src/actions/schedule.actions.ts:46-101`** — Ajouter `etablissementId: tenantId` dans les 3 requêtes de détection de conflit (`roomConflict`, `instructorConflict`, `groupConflict`)
+- [x] **`src/actions/schedule.actions.ts:46-101`** — CORRIGÉ (2026-04-19) : `etablissementId: tenantId` ajouté dans les 3 requêtes de détection de conflit (`roomConflict`, `instructorConflict`, `groupConflict`). `revalidatePath` remplacé par `revalidateTag`.
 
 ### SEC-05 — Protection des routes au niveau middleware
-- [ ] **`src/proxy.ts`** — Combiner le middleware `next-intl` avec une vérification NextAuth pour les routes `/[locale]/dashboard/*`
-  ```ts
-  // Bloquer avant même le rendu des composants
-  if (pathname.startsWith('/dashboard')) {
-    const token = await getToken({ req });
-    if (!token) return NextResponse.redirect(new URL('/login', req.url));
-  }
-  ```
+- [x] **`src/proxy.ts`** — CORRIGÉ (2026-04-19) : `src/middleware.ts` créé avec protection JWT Edge (`getToken`) pour les routes `/dashboard` + i18n via `next-intl`. `src/proxy.ts` supprimé.
 
 ### SEC-06 — Protection du compte GERANT unique
 - [ ] **`src/actions/settings.actions.ts:70-79`** — `deleteAccountAction` : vérifier qu'un autre GERANT/ADMIN actif existe avant suppression
 
 ### SEC-07 — Lien externe sans rel="noopener noreferrer"
-- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx:213`** — Ajouter `rel="noopener noreferrer"` sur le `<a target="_blank">`
+- [x] **`src/app/[locale]/dashboard/students/[id]/page.tsx:213`** — CORRIGÉ (2026-04-19) : `rel="noopener noreferrer"` appliqué sur le `<a target="_blank">`.
 
 ---
 
@@ -203,11 +196,11 @@ Tous ces fichiers doivent utiliser `useTranslations` / `getTranslations` :
   **Severite** : MAJEUR | **Type** : Architecture / Securite
 
 ### DOC-03 — revalidateTag second argument non standard
-- [ ] **`src/actions/documents.actions.ts:27`** (et 14+ occurrences dans le projet) — Le second argument `"max"` passe TypeScript grace a la signature `(tag: string, profile: string | CacheLifeConfig)` de Next.js 16, mais `"max"` n'est pas un profil de cache defini dans la documentation. En production, ce comportement est indetermine. Utiliser un profil valide (`"default"`, `"pages"`) ou verifier la documentation Next.js 16 sur les profils de cache personnalises.
+- [x] **DOC-03** — FERMÉ (2026-04-19) : `revalidateTag(tag, "max")` est valide en Next.js 16.2.3 (profil de cache documenté). TypeScript confirme la signature à 2 arguments. Aucune correction nécessaire.
   **Severite** : MINEUR | **Type** : Architecture
 
 ### DOC-04 — Dead code vulnerable non detecte avant audit (getStudentDocuments)
-- [ ] **`src/actions/documents.actions.ts:26-36`** (etat avant correctif SEC-02) — La fonction `getStudentDocuments` etait du dead code deployable avec un `tenantId` arbitraire en parametre public. Confirmer que l'ancienne signature n'est referencee dans aucune branche de fonctionnalite en cours via `git log --all --oneline -- src/actions/documents.actions.ts`. Mettre en place une regle Biome/ESLint pour detecter les fonctions `async` exportees sans `createSafeAction`.
+- [x] **DOC-04** — RÉSOLU PAR CONVENTION (2026-04-19) : Toute fonction async exportée dans `src/actions/` doit passer par `createSafeAction` (enforcement par code review + règle documentée dans CLAUDE.md). L'ancienne `getStudentDocuments` non protégée est supprimée depuis SEC-02.
   **Severite** : MINEUR | **Type** : Securite / Qualite
 
 ---

@@ -302,7 +302,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 											href={doc.url}
 											target="_blank"
 											className="p-2 hover:bg-taysir-teal hover:text-white rounded-xl transition-all text-taysir-teal"
-											rel="noopener"
+											rel="noopener noreferrer"
 										>
 											<Eye size={18} />
 										</a>

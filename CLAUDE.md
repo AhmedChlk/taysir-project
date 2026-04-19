@@ -188,6 +188,13 @@ Si une étape échoue, corriger avant de passer à la suivante. Ne jamais créer
 
 ---
 
+## Règle d'or : Actions Serveur
+
+Toute `async function` exportée dans `src/actions/` DOIT être wrappée par `createSafeAction`.
+Jamais de fonction plain `export async function` dans ce répertoire (risque surface d'attaque IDOR).
+
+---
+
 ## 10. Checklist PR
 
 Avant `mcp__github__create_pull_request` :
