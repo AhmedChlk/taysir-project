@@ -86,10 +86,10 @@
 - [x] **CORRIGÉ (2026-04-19)** — `src/components/dashboard/DashboardClientView.tsx` supprimé (dead code, non importé nulle part).
 
 ### ARCH-06 — PDF côté client dans StudentsClientView.tsx
-- [ ] **`src/components/dashboard/StudentsClientView.tsx:157-267`** — Extraire `handleDownloadPDF` dans `src/lib/pdf-generators/student-profile.ts` (shared utility), et invoquer depuis une Server Action
+- [x] **ARCH-06 — CORRIGÉ (2026-04-19)**: logique PDF extraite dans `src/lib/pdf-generators/student-profile.ts`. `alert()` remplacé par état d'erreur React (`useState<string | null>`). Import `jsPDF` supprimé du composant.
 
 ### ARCH-07 — Génération PDF dans une transaction Prisma (finance.actions.ts)
-- [ ] **`src/actions/finance.actions.ts:162-233`** — Séparer la génération de reçu PDF en action dédiée `generateReceiptAction`, déclenchée après confirmation de paiement (hors transaction)
+- [x] **ARCH-07 — CORRIGÉ (2026-04-19)**: génération PDF retirée de `registerPaymentAction`. `getPaymentReceiptDataAction` créée pour permettre la génération côté client. `jsPDF` + `@vercel/blob` supprimés de la Server Action. `src/lib/pdf-generators/payment-receipt.ts` créé.
 
 ### ARCH-08 — Cache Prisma multi-tenant sans TTL ni invalidation
 - [x] **CORRIGÉ (2026-04-19)** — `CachedTenantClient { client, createdAt }` structure introduite dans `tenantClients` Map. TTL 5 min (`TENANT_CLIENT_TTL_MS`). Nettoyage probabiliste (1 sur 10) via `evictExpiredTenantClients()`. Les clients expirés sont recréés transparentement.

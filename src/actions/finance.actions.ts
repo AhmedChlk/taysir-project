@@ -1,9 +1,8 @@
 "use server";
 
 import type { Paiement, PaymentPlan, Prisma, Tranche } from "@prisma/client";
-import { put } from "@vercel/blob";
-import { jsPDF } from "jspdf";
 import { revalidateTag } from "next/cache";
+import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
@@ -186,96 +185,59 @@ export const registerPaymentAction = createSafeAction(
 			},
 		);
 
-		try {
-			const paymentWithDetails = await tenantPrisma.paiement.findUnique({
-				where: {
-					id_etablissementId: {
-						id: transactionResult.paiement.id,
-						etablissementId: tenantId,
-					},
-				},
-				include: {
-					tranche: {
-						include: {
-							paymentPlan: {
-								include: {
-									student: true,
-									etablissement: true,
-								},
+		revalidateTag(`finance-${tenantId}`, "max");
+		return transactionResult;
+	},
+);
+
+export const getPaymentReceiptDataAction = createSafeAction(
+	z.object({ paiementId: z.string().uuid() }),
+	async ({ paiementId }, { tenantId }) => {
+		const tenantPrisma = getTenantPrisma(tenantId);
+
+		const payment = await tenantPrisma.paiement.findUnique({
+			where: {
+				id_etablissementId: { id: paiementId, etablissementId: tenantId },
+			},
+			include: {
+				tranche: {
+					include: {
+						paiements: true,
+						paymentPlan: {
+							include: {
+								student: { select: { firstName: true, lastName: true } },
+								etablissement: { select: { name: true } },
 							},
 						},
 					},
 				},
-			});
+			},
+		});
 
-			if (paymentWithDetails) {
-				const doc = new jsPDF();
-				const school = paymentWithDetails.tranche.paymentPlan.etablissement;
-				const student = paymentWithDetails.tranche.paymentPlan.student;
-
-				doc.setFontSize(22);
-				doc.setTextColor(15, 81, 92);
-				doc.text(school.name, 105, 20, { align: "center" });
-				doc.setDrawColor(15, 81, 92);
-				doc.line(20, 25, 190, 25);
-
-				doc.setFontSize(16);
-				doc.setTextColor(0, 0, 0);
-				doc.text("REÇU DE PAIEMENT", 105, 40, { align: "center" });
-
-				doc.setFontSize(12);
-				doc.text(
-					`Reçu N° : ${(paymentWithDetails.id.split("-")[0] ?? "").toUpperCase()}`,
-					20,
-					60,
-				);
-				doc.text(
-					`Date : ${new Date(paymentWithDetails.date).toLocaleDateString("fr-FR")}`,
-					20,
-					70,
-				);
-
-				doc.text(`Élève : ${student.firstName} ${student.lastName}`, 20, 90);
-				doc.text(`Montant payé : ${paymentWithDetails.amount} DZD`, 20, 100);
-				doc.text(`Méthode : ${paymentWithDetails.method}`, 20, 110);
-
-				if (paymentWithDetails.reference) {
-					doc.text(`Référence : ${paymentWithDetails.reference}`, 20, 120);
-				}
-
-				doc.text(
-					`Reste à payer : ${transactionResult.resteSurTranche} DZD`,
-					20,
-					140,
-				);
-
-				const pdfOutput = doc.output("arraybuffer");
-				const { url } = await put(
-					`receipts/${tenantId}/${paymentWithDetails.id}.pdf`,
-					pdfOutput,
-					{
-						access: "public",
-						contentType: "application/pdf",
-					},
-				);
-
-				await tenantPrisma.paiement.update({
-					where: {
-						id_etablissementId: {
-							id: paymentWithDetails.id,
-							etablissementId: tenantId,
-						},
-					},
-					data: { receiptUrl: url },
-				});
-
-				transactionResult.paiement.receiptUrl = url;
-			}
-		} catch (e) {
-			console.error("PDF generation failed", e);
+		if (!payment) {
+			throw new TaysirError(
+				"Paiement introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
 		}
 
-		revalidateTag(`finance-${tenantId}`, "max");
-		return transactionResult;
+		const totalDejaPaye = payment.tranche.paiements.reduce(
+			(sum, p) => sum + p.amount,
+			0,
+		);
+		const resteSurTranche = Math.max(0, payment.tranche.amount - totalDejaPaye);
+
+		return {
+			paiementId: payment.id,
+			paiementDate: payment.date,
+			amount: payment.amount,
+			method: payment.method,
+			reference: payment.reference,
+			resteSurTranche,
+			studentFirstName: payment.tranche.paymentPlan.student.firstName,
+			studentLastName: payment.tranche.paymentPlan.student.lastName,
+			schoolName: payment.tranche.paymentPlan.etablissement.name,
+		};
 	},
 );
