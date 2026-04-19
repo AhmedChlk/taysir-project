@@ -1,7 +1,7 @@
 "use server";
 
 import type { Prisma } from "@prisma/client";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
@@ -23,7 +23,7 @@ export const addDocumentToStudentAction = createSafeAction(
 				status: "APPROVED",
 			},
 		});
-		revalidatePath("/[locale]/dashboard/students/[id]", "page");
+		revalidateTag(`etab_${tenantId}_students`, "max");
 		return document;
 	},
 );
@@ -36,7 +36,7 @@ export const createStudentAction = createSafeAction(
 
 		if (groupIds && groupIds.length > 0) {
 			const validGroups = await tenantPrisma.groupe.findMany({
-				where: { id: { in: groupIds } },
+				where: { id: { in: groupIds }, etablissementId: tenantId },
 			});
 			if (validGroups.length !== groupIds.length) {
 				throw new TaysirError(
@@ -68,8 +68,8 @@ export const createStudentAction = createSafeAction(
 		});
 
 		revalidateTag(`students-${tenantId}`, "max");
-		revalidatePath("/[locale]/dashboard", "page");
-		revalidatePath("/[locale]/dashboard/students", "page");
+		revalidateTag(`etab_${tenantId}_dashboard`, "max");
+		revalidateTag(`etab_${tenantId}_students`, "max");
 		return student;
 	},
 );
@@ -81,7 +81,7 @@ export const updateStudentAction = createSafeAction(
 
 		if (groupIds && groupIds.length > 0) {
 			const validGroups = await tenantPrisma.groupe.findMany({
-				where: { id: { in: groupIds } },
+				where: { id: { in: groupIds }, etablissementId: tenantId },
 			});
 			if (validGroups.length !== groupIds.length) {
 				throw new TaysirError(
@@ -103,7 +103,7 @@ export const updateStudentAction = createSafeAction(
 		};
 
 		const result = await tenantPrisma.student.update({
-			where: { id },
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
 			data: {
 				...cleanedData,
 				groups: {
@@ -113,8 +113,8 @@ export const updateStudentAction = createSafeAction(
 		});
 
 		revalidateTag(`students-${tenantId}`, "max");
-		revalidatePath("/[locale]/dashboard", "page");
-		revalidatePath("/[locale]/dashboard/students", "page");
+		revalidateTag(`etab_${tenantId}_dashboard`, "max");
+		revalidateTag(`etab_${tenantId}_students`, "max");
 		return result;
 	},
 );
@@ -124,34 +124,22 @@ export const deleteStudentAction = createSafeAction(
 	async ({ id }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
 
+		// 1. Vérifier que l'élève appartient à ce tenant avant toute transaction
+		const student = await tenantPrisma.student.findUnique({
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
+		});
+
+		if (!student) {
+			throw new TaysirError(
+				"Élève introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
 		const result = await tenantPrisma.$transaction(
 			async (tx: Prisma.TransactionClient) => {
-				// 1. Vérifier si l'élève existe (sans filtre d'établissement pour trouver l'ID unique)
-				const student = await tx.student.findUnique({
-					where: { id },
-				});
-
-				if (!student) {
-					throw new TaysirError(
-						"Élève introuvable.",
-						ErrorCodes.ERR_NOT_FOUND,
-						404,
-					);
-				}
-
-				// 2. Sécurité : vérifier que l'admin appartient au même établissement ou est superadmin
-				if (
-					tenantId !== "SUPERADMIN_ACCESS" &&
-					student.etablissementId !== tenantId
-				) {
-					throw new TaysirError(
-						"Accès refusé : Vous ne pouvez pas supprimer un élève d'un autre établissement.",
-						ErrorCodes.ERR_UNAUTHORIZED,
-						403,
-					);
-				}
-
-				// 3. Nettoyage des relations (Bottom-up pour éviter les erreurs de clés étrangères)
+				// 2. Nettoyage des relations (Bottom-up pour éviter les erreurs de clés étrangères)
 				const paymentPlans = await tx.paymentPlan.findMany({
 					where: { studentId: id },
 					select: { id: true },
@@ -196,11 +184,9 @@ export const deleteStudentAction = createSafeAction(
 		);
 
 		// 5. Revalidation forcée du cache
-		const revalTenantId =
-			tenantId === "SUPERADMIN_ACCESS" ? result.etablissementId : tenantId;
-		revalidateTag(`students-${revalTenantId}`, "max");
-		revalidatePath("/[locale]/dashboard", "page");
-		revalidatePath("/[locale]/dashboard/students", "page");
+		revalidateTag(`students-${tenantId}`, "max");
+		revalidateTag(`etab_${tenantId}_dashboard`, "max");
+		revalidateTag(`etab_${tenantId}_students`, "max");
 
 		return result;
 	},
@@ -214,7 +200,7 @@ export const addStudentToGroupAction = createSafeAction(
 			where: { id: groupId, etablissementId: tenantId },
 			data: { students: { connect: { id: studentId } } },
 		});
-		revalidatePath("/[locale]/dashboard/groups", "page");
+		revalidateTag(`etab_${tenantId}_groups`, "max");
 		return result;
 	},
 );
@@ -227,7 +213,7 @@ export const removeStudentFromGroupAction = createSafeAction(
 			where: { id: groupId, etablissementId: tenantId },
 			data: { students: { disconnect: { id: studentId } } },
 		});
-		revalidatePath("/[locale]/dashboard/groups", "page");
+		revalidateTag(`etab_${tenantId}_groups`, "max");
 		return result;
 	},
 );

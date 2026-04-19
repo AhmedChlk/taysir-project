@@ -47,21 +47,13 @@
 ## PHASE 2 — MULTI-TENANCY & TYPE SAFETY
 
 ### MT-01 — Filtres etablissementId manquants dans dashboard.actions.ts
-- [ ] **`src/actions/dashboard.actions.ts`** — Ajouter `where: { etablissementId: tenantId }` explicitement dans les 8 actions :
-  - `getDashboardStatsAction` (lignes 13-14)
-  - `getTodaySessionsAction` (ligne 33)
-  - `getPendingPaymentsAction` (ligne 56)
-  - `getAttendanceStatsAction` (ligne 82)
-  - `getRoomOccupancyAction` (ligne 123)
-  - `getDailyAttendanceRatioAction` (ligne 148)
-  - `getUpcomingStaffAlertsAction` (ligne 181)
-  - `getFinancialKPIsAction` (ligne 205)
+- [x] **MT-01** — CORRIGE (2026-04-19) : `etablissementId: tenantId` ajouté explicitement dans toutes les requêtes des 8 actions dashboard (`getDashboardStatsAction`, `getTodaySessionsAction`, `getPendingPaymentsAction`, `getAttendanceStatsAction`, `getRoomOccupancyAction`, `getDailyAttendanceRatioAction`, `getUpcomingStaffAlertsAction`, `getFinancialKPIsAction`) + toutes les 7 requêtes parallèles de `getDashboardFormDataAction`. Tests unitaires ajoutés dans `src/__tests__/actions/dashboard.test.ts`.
 
 ### MT-02 — Validation des groupes sans etablissementId
-- [ ] **`src/actions/students.actions.ts:29-32` et `64-70`** — Ajouter `etablissementId: tenantId` dans le `where` de validation des `groupIds`
+- [x] **MT-02** — CORRIGE (2026-04-19) : `etablissementId: tenantId` ajouté dans le `where` de validation des `groupIds` dans `createStudentAction` et `updateStudentAction`.
 
 ### MT-03 — deleteStudentAction utilise le client admin pour le premier findUnique
-- [ ] **`src/actions/students.actions.ts:103-117`** — Utiliser `tenantPrisma` dès le premier `findUnique`
+- [x] **MT-03** — CORRIGE (2026-04-19) : `deleteStudentAction` utilise désormais `tenantPrisma.student.findUnique({ where: { id_etablissementId: { id, etablissementId: tenantId } } })` avant la transaction — le check manuel cross-tenant supprimé. `updateStudentAction` utilise également la clé composite `id_etablissementId`. Tous les `revalidatePath('/[locale]/...')` remplacés par `revalidateTag('etab_${tenantId}_*', "max")` dans `students.actions.ts`.
 
 ### TS-01 — Types `any` dans prisma.ts (16 occurrences)
 - [ ] **`src/lib/prisma.ts:9-13` et `$allOperations`** — Remplacer les `(args as any)` par les types Prisma appropriés (`Prisma.TypeMapCbDef`, etc.)

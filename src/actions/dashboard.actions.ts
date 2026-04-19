@@ -19,8 +19,10 @@ export const getDashboardStatsAction = createSafeAction(
 		const client = getTenantPrisma(tenantId);
 
 		const [totalStudents, activeStudents] = await Promise.all([
-			client.student.count(),
-			client.student.count({ where: { isActive: true } }),
+			client.student.count({ where: { etablissementId: tenantId } }),
+			client.student.count({
+				where: { isActive: true, etablissementId: tenantId },
+			}),
 		]);
 
 		return {
@@ -39,6 +41,7 @@ export const getTodaySessionsAction = createSafeAction(
 
 		return await client.session.findMany({
 			where: {
+				etablissementId: tenantId,
 				startTime: {
 					gte: startOfDay(now),
 					lte: endOfDay(now),
@@ -64,6 +67,7 @@ export const getPendingPaymentsAction = createSafeAction(
 
 		const pendingPlans = await client.paymentPlan.findMany({
 			where: {
+				etablissementId: tenantId,
 				status: { in: ["PENDING", "PARTIAL"] },
 			},
 			include: {
@@ -99,6 +103,7 @@ export const getAttendanceStatsAction = createSafeAction(
 
 		const records = await client.attendanceRecord.findMany({
 			where: {
+				etablissementId: tenantId,
 				session: {
 					startTime: { gte: start, lte: end },
 				},
@@ -134,9 +139,10 @@ export const getRoomOccupancyAction = createSafeAction(
 		const now = new Date();
 
 		const [totalRooms, activeSessions] = await Promise.all([
-			client.room.count(),
+			client.room.count({ where: { etablissementId: tenantId } }),
 			client.session.count({
 				where: {
+					etablissementId: tenantId,
 					startTime: { lte: now },
 					endTime: { gte: now },
 					status: "SCHEDULED",
@@ -161,6 +167,7 @@ export const getDailyAttendanceRatioAction = createSafeAction(
 
 		const sessionsToday = await client.session.findMany({
 			where: {
+				etablissementId: tenantId,
 				startTime: { gte: startOfDay(now), lte: endOfDay(now) },
 			},
 			select: {
@@ -200,6 +207,7 @@ export const getUpcomingStaffAlertsAction = createSafeAction(
 
 		return await client.session.findMany({
 			where: {
+				etablissementId: tenantId,
 				startTime: { gte: now, lte: in30Mins },
 				status: "SCHEDULED",
 			},
@@ -230,6 +238,7 @@ export const getFinancialKPIsAction = createSafeAction(
 
 		const monthlyPayments = await client.paiement.findMany({
 			where: {
+				etablissementId: tenantId,
 				date: {
 					gte: startOfMonth,
 					lte: endOfMonth,
@@ -265,19 +274,32 @@ export const getDashboardFormDataAction = createSafeAction(
 			todaySessions,
 			pendingPayments,
 		] = await Promise.all([
-			client.room.findMany({ orderBy: { name: "asc" } }),
-			client.activity.findMany({ orderBy: { name: "asc" } }),
+			client.room.findMany({
+				where: { etablissementId: tenantId },
+				orderBy: { name: "asc" },
+			}),
+			client.activity.findMany({
+				where: { etablissementId: tenantId },
+				orderBy: { name: "asc" },
+			}),
 			client.user.findMany({
-				where: { role: { in: ["INTERVENANT", "GERANT", "ADMIN"] } },
+				where: {
+					etablissementId: tenantId,
+					role: { in: ["INTERVENANT", "GERANT", "ADMIN"] },
+				},
 				orderBy: { lastName: "asc" },
 			}),
-			client.groupe.findMany({ orderBy: { name: "asc" } }),
+			client.groupe.findMany({
+				where: { etablissementId: tenantId },
+				orderBy: { name: "asc" },
+			}),
 			client.student.findMany({
-				where: { isActive: true },
+				where: { etablissementId: tenantId, isActive: true },
 				orderBy: { lastName: "asc" },
 			}),
 			client.session.findMany({
 				where: {
+					etablissementId: tenantId,
 					startTime: {
 						gte: startOfDay(now),
 						lte: endOfDay(now),
@@ -295,6 +317,7 @@ export const getDashboardFormDataAction = createSafeAction(
 			}),
 			client.paymentPlan.findMany({
 				where: {
+					etablissementId: tenantId,
 					status: { in: ["PENDING", "PARTIAL"] },
 				},
 				include: {
