@@ -1,5 +1,6 @@
 "use client";
 
+import type { Prisma } from "@prisma/client";
 import { addDays, format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -18,8 +19,19 @@ import TaysirAgenda from "@/components/calendar/TaysirCalendar";
 import type { Activity, Group, Room, User as UserType } from "@/types/schema";
 import { cn, formatFullName } from "@/utils/format";
 
+type SessionWithRelations = Prisma.SessionGetPayload<{
+	include: {
+		room: { select: { name: true; capacity: true } };
+		activity: { select: { name: true; color: true } };
+		group: { select: { name: true } };
+		instructor: {
+			select: { firstName: true; lastName: true; avatarUrl: true };
+		};
+	};
+}>;
+
 interface ScheduleClientViewProps {
-	initialSessions: any[];
+	initialSessions: SessionWithRelations[];
 	rooms: Room[];
 	staff: UserType[];
 	activities: Activity[];

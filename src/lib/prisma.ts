@@ -6,20 +6,9 @@ const prismaClientSingleton = () => {
 	});
 };
 
-type ExtendedPrismaClient =
-	ReturnType<typeof prismaClientSingleton> extends PrismaClient<
-		infer T,
-		infer U
-	>
-		? ReturnType<typeof prismaClientSingleton>["$extends"] extends (
-				args: any,
-			) => infer R
-			? R
-			: any
-		: any;
-
 declare global {
 	var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
+	// biome-ignore lint/suspicious/noExplicitAny: PrismaClient extensions are not statically typeable without circular references
 	var tenantClients: Map<string, any> | undefined;
 }
 
@@ -31,7 +20,15 @@ if (!globalThis.tenantClients) {
 	globalThis.tenantClients = new Map();
 }
 
-export function getTenantPrisma(etablissementId: string) {
+/**
+ * Returns a tenant-scoped Prisma client that automatically injects
+ * `etablissementId` into all read/write operations for multi-tenant isolation.
+ *
+ * The returned type is `PrismaClient` to maintain call-site type safety.
+ * The underlying client is a `$extends`-enhanced instance that enforces
+ * tenant isolation at the query middleware level.
+ */
+export function getTenantPrisma(etablissementId: string): PrismaClient {
 	if (!etablissementId) {
 		throw new Error(
 			"Tentative d accès aux données sans ID d établissement valide.",
@@ -42,8 +39,9 @@ export function getTenantPrisma(etablissementId: string) {
 		return prisma;
 	}
 
-	if (globalThis.tenantClients?.has(etablissementId)) {
-		return globalThis.tenantClients.get(etablissementId);
+	const cached = globalThis.tenantClients?.get(etablissementId);
+	if (cached) {
+		return cached as PrismaClient;
 	}
 
 	const extendedClient = prisma.$extends({
@@ -70,46 +68,51 @@ export function getTenantPrisma(etablissementId: string) {
 						"groupBy",
 					];
 
+					// biome-ignore lint/suspicious/noExplicitAny: Prisma extension args require dynamic casting for tenant injection middleware
+					const mutableArgs = args as Record<string, any>;
+
 					if (filterOps.includes(operation)) {
-						const finalArgs = {
-							...(args as any),
-							where: {
-								...((args as any).where || {}),
-								etablissementId,
-							},
+						mutableArgs.where = {
+							...(mutableArgs.where ?? {}),
+							etablissementId,
 						};
-						return query(finalArgs);
+						return query(args);
 					}
 
 					if (operation === "create") {
-						(args as any).data = {
-							...((args as any).data || {}),
+						mutableArgs.data = {
+							...(mutableArgs.data ?? {}),
 							etablissementId,
 						};
+						return query(args);
 					}
 
 					if (operation === "createMany") {
-						if (Array.isArray((args as any).data)) {
-							(args as any).data = (args as any).data.map((item: any) => ({
+						if (Array.isArray(mutableArgs.data)) {
+							mutableArgs.data = (
+								mutableArgs.data as Record<string, unknown>[]
+							).map((item) => ({
 								...item,
 								etablissementId,
 							}));
+							return query(args);
 						}
 					}
 
 					if (operation === "upsert") {
-						(args as any).create = {
-							...((args as any).create || {}),
+						mutableArgs.create = {
+							...(mutableArgs.create ?? {}),
 							etablissementId,
 						};
-						(args as any).update = {
-							...((args as any).update || {}),
+						mutableArgs.update = {
+							...(mutableArgs.update ?? {}),
 							etablissementId,
 						};
-						(args as any).where = {
-							...((args as any).where || {}),
+						mutableArgs.where = {
+							...(mutableArgs.where ?? {}),
 							etablissementId,
 						};
+						return query(args);
 					}
 
 					return query(args);
@@ -120,7 +123,9 @@ export function getTenantPrisma(etablissementId: string) {
 
 	globalThis.tenantClients?.set(etablissementId, extendedClient);
 
-	return extendedClient;
+	// Cast to PrismaClient for consistent call-site typing.
+	// The runtime implementation is the extended client above which enforces tenancy.
+	return extendedClient as unknown as PrismaClient;
 }
 
-export type TenantPrismaClient = ReturnType<typeof getTenantPrisma>;
+export type TenantPrismaClient = PrismaClient;

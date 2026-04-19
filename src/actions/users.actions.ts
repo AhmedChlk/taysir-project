@@ -1,11 +1,12 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma, prisma } from "@/lib/prisma";
+import { stripUndefined } from "@/lib/utils/prisma-helpers";
 import {
 	CreateUserSchema,
 	ListUsersSchema,
@@ -31,7 +32,7 @@ export const createUserAction = createSafeAction(
 
 		const user = await tenantPrisma.user.create({
 			data: {
-				...data,
+				...stripUndefined(data),
 				password: hashedPassword,
 				etablissementId: tenantId,
 			},
@@ -44,7 +45,7 @@ export const createUserAction = createSafeAction(
 			},
 		});
 
-		revalidatePath("/[locale]/dashboard/staff", "page");
+		revalidateTag(`etab_${tenantId}_staff`, "max");
 		return user;
 	},
 );
@@ -115,7 +116,7 @@ export const updateUserAction = createSafeAction(
 					etablissementId: tenantId,
 				},
 			},
-			data: updateData,
+			data: stripUndefined(updateData),
 			select: {
 				id: true,
 				email: true,
@@ -125,8 +126,8 @@ export const updateUserAction = createSafeAction(
 			},
 		});
 
-		revalidatePath("/[locale]/dashboard", "page");
-		revalidatePath("/[locale]/dashboard/staff", "page");
+		revalidateTag(`etab_${tenantId}_dashboard`, "max");
+		revalidateTag(`etab_${tenantId}_staff`, "max");
 
 		return updatedUser;
 	},
@@ -165,7 +166,7 @@ export const deleteUserAction = createSafeAction(
 			},
 		});
 
-		revalidatePath("/[locale]/dashboard/staff", "page");
+		revalidateTag(`etab_${tenantId}_staff`, "max");
 		return user;
 	},
 );

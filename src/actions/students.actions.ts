@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
+import { stripUndefined } from "@/lib/utils/prisma-helpers";
 import {
 	CreateDocumentSchema,
 	CreateStudentSchema,
@@ -18,7 +19,7 @@ export const addDocumentToStudentAction = createSafeAction(
 		const tenantPrisma = getTenantPrisma(tenantId);
 		const document = await tenantPrisma.document.create({
 			data: {
-				...data,
+				...stripUndefined(data),
 				etablissementId: tenantId,
 				status: "APPROVED",
 			},
@@ -59,11 +60,10 @@ export const createStudentAction = createSafeAction(
 
 		const student = await tenantPrisma.student.create({
 			data: {
-				...cleanedData,
-				groups:
-					groupIds && groupIds.length > 0
-						? { connect: groupIds.map((id) => ({ id })) }
-						: undefined,
+				...stripUndefined(cleanedData),
+				...(groupIds && groupIds.length > 0
+					? { groups: { connect: groupIds.map((id) => ({ id })) } }
+					: {}),
 			},
 		});
 
@@ -105,7 +105,7 @@ export const updateStudentAction = createSafeAction(
 		const result = await tenantPrisma.student.update({
 			where: { id_etablissementId: { id, etablissementId: tenantId } },
 			data: {
-				...cleanedData,
+				...stripUndefined(cleanedData),
 				groups: {
 					set: groupIds?.map((id) => ({ id })) || [],
 				},

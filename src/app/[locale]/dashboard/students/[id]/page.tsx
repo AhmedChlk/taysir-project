@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import {
 	ArrowLeft,
 	Calendar,
@@ -14,6 +15,26 @@ import {
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getStudentFullProfileAction } from "@/actions/students.actions";
+import type { Group, Student } from "@/types/schema";
+
+type StudentFullProfile = NonNullable<
+	Prisma.StudentGetPayload<{
+		include: {
+			groups: true;
+			documents: true;
+			attendance: {
+				include: { session: { include: { activity: true } } };
+			};
+			paymentPlans: {
+				include: {
+					activity: true;
+					tranches: { include: { paiements: true } };
+				};
+			};
+		};
+	}>
+>;
+
 import AddDocumentButton from "@/components/dashboard/students/AddDocumentButton";
 import DownloadStudentProfile from "@/components/dashboard/students/DownloadStudentProfile";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -32,7 +53,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 		notFound();
 	}
 
-	const student = response.data;
+	const student = response.data as StudentFullProfile;
 
 	return (
 		<DashboardLayout>
@@ -62,7 +83,9 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						</div>
 					</div>
 
-					<DownloadStudentProfile student={student as any} />
+					<DownloadStudentProfile
+						student={student as unknown as Student & { groups: Group[] }}
+					/>
 				</div>
 
 				{/* Top Section : Bio & Stats */}
@@ -194,7 +217,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<div className="text-4xl font-black text-taysir-teal tracking-tighter leading-none">
 										{student.paymentPlans
 											.reduce(
-												(acc: number, p: any) =>
+												(acc: number, p) =>
 													acc + (p.totalAmount - p.paidAmount),
 												0,
 											)
@@ -224,7 +247,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						</div>
 						<div className="grid grid-cols-1 gap-3">
 							{student.groups.length > 0 ? (
-								student.groups.map((group: any) => (
+								student.groups.map((group) => (
 									<div
 										key={group.id}
 										className="p-5 bg-white rounded-[24px] border border-taysir-teal/5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group"
@@ -274,7 +297,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						</div>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 							{student.documents.length > 0 ? (
-								student.documents.map((doc: any) => (
+								student.documents.map((doc) => (
 									<div
 										key={doc.id}
 										className="p-5 bg-white rounded-[24px] border border-taysir-teal/5 flex items-center justify-between shadow-sm hover:border-taysir-accent/30 transition-all"
@@ -345,7 +368,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-taysir-teal/5">
-									{student.attendance.map((record: any) => (
+									{student.attendance.map((record) => (
 										<tr
 											key={record.id}
 											className="hover:bg-taysir-teal/[0.01] transition-colors group"

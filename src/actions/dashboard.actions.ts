@@ -2,16 +2,15 @@
 
 import {
 	addMinutes,
-	eachDayOfInterval,
 	endOfDay,
 	endOfWeek,
-	isSameDay,
 	startOfDay,
 	startOfWeek,
 } from "date-fns";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
+import { computeWeeklyAttendanceRatios } from "@/lib/queries/attendance";
 
 export const getDashboardStatsAction = createSafeAction(
 	z.object({}),
@@ -97,38 +96,10 @@ export const getAttendanceStatsAction = createSafeAction(
 	z.object({}),
 	async (_, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
-		const now = new Date();
-		const start = startOfWeek(now, { weekStartsOn: 1 });
-		const end = endOfWeek(now, { weekStartsOn: 1 });
-
-		const records = await client.attendanceRecord.findMany({
-			where: {
-				etablissementId: tenantId,
-				session: {
-					startTime: { gte: start, lte: end },
-				},
-			},
-			select: {
-				status: true,
-				session: { select: { startTime: true } },
-			},
-		});
-
-		const days = eachDayOfInterval({ start, end });
-
-		return days.map((day) => {
-			const dayRecords = records.filter((r: { session: { startTime: Date } }) =>
-				isSameDay(r.session.startTime, day),
-			);
-			if (dayRecords.length === 0) return 0;
-
-			const presentCount = dayRecords.filter(
-				(r: { status: string }) =>
-					r.status === "PRESENT" || r.status === "RETARD",
-			).length;
-
-			return Math.round((presentCount / dayRecords.length) * 100);
-		});
+		return computeWeeklyAttendanceRatios(
+			client as Parameters<typeof computeWeeklyAttendanceRatios>[0],
+			tenantId,
+		);
 	},
 );
 

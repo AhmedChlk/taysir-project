@@ -225,7 +225,7 @@ export const registerPaymentAction = createSafeAction(
 
 				doc.setFontSize(12);
 				doc.text(
-					`Reçu N° : ${paymentWithDetails.id.split("-")[0].toUpperCase()}`,
+					`Reçu N° : ${(paymentWithDetails.id.split("-")[0] ?? "").toUpperCase()}`,
 					20,
 					60,
 				);

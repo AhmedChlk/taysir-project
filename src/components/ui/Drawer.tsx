@@ -18,10 +18,56 @@ import PaymentPlanForm from "@/components/dashboard/forms/PaymentPlanForm";
 import SessionForm from "@/components/dashboard/forms/SessionForm";
 import { formatFullName } from "@/utils/format";
 
+type DrawerType =
+	| "new-session"
+	| "payments"
+	| "new-finance"
+	| "edit-staff"
+	| "sessions"
+	| (string & Record<never, never>);
+
+interface TodaySession {
+	id: string;
+	startTime: Date | string;
+	activity: { name: string };
+	group: { name: string };
+	room: { name: string };
+	instructor: { firstName: string; lastName: string };
+}
+
+interface PendingPaymentTranche {
+	id: string;
+	dueDate: Date | string;
+	amount: number;
+}
+
+interface PendingPayment {
+	id: string;
+	totalAmount: number;
+	paidAmount: number;
+	tranches: PendingPaymentTranche[];
+	student: { firstName: string; lastName: string };
+}
+
+interface DrawerFormData {
+	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
+	rooms?: Record<string, unknown>[];
+	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
+	activities?: Record<string, unknown>[];
+	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
+	staff?: Record<string, unknown>[];
+	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
+	groups?: Record<string, unknown>[];
+	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
+	students?: Record<string, unknown>[];
+	todaySessions?: TodaySession[];
+	pendingPayments?: PendingPayment[];
+}
+
 interface DrawerProps {
-	type: string;
+	type: DrawerType;
 	onClose: () => void;
-	formData?: any;
+	formData?: DrawerFormData;
 }
 
 export default function Drawer({ type, onClose, formData }: DrawerProps) {
@@ -69,25 +115,25 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				return (
 					<SessionForm
 						onSuccess={onClose}
-						rooms={formData?.rooms}
-						activities={formData?.activities}
-						staff={formData?.staff}
-						groups={formData?.groups}
+						rooms={formData?.rooms ?? []}
+						activities={formData?.activities ?? []}
+						staff={formData?.staff ?? []}
+						groups={formData?.groups ?? []}
 					/>
 				);
 			case "new-finance":
 				return (
 					<PaymentPlanForm
 						onSuccess={onClose}
-						students={formData?.students}
-						activities={formData?.activities}
+						students={formData?.students ?? []}
+						activities={formData?.activities ?? []}
 					/>
 				);
 			case "sessions":
 				return (
 					<div className="space-y-4">
-						{formData?.todaySessions?.length > 0 ? (
-							formData.todaySessions.map((session: any) => (
+						{(formData?.todaySessions?.length ?? 0) > 0 ? (
+							formData?.todaySessions?.map((session) => (
 								<div
 									key={session.id}
 									className="p-5 rounded-[24px] bg-white border border-taysir-teal/5 shadow-sm hover:shadow-md transition-all group"
@@ -135,8 +181,8 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 			case "payments":
 				return (
 					<div className="space-y-4">
-						{formData?.pendingPayments?.length > 0 ? (
-							formData.pendingPayments.map((plan: any) => (
+						{(formData?.pendingPayments?.length ?? 0) > 0 ? (
+							formData?.pendingPayments?.map((plan) => (
 								<div
 									key={plan.id}
 									className="p-5 rounded-[24px] bg-white border border-taysir-teal/5 shadow-sm hover:shadow-md transition-all"
@@ -164,20 +210,18 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 										</div>
 									</div>
 									<div className="space-y-2">
-										{plan.tranches
-											.slice(0, 2)
-											.map((tranche: any, _idx: number) => (
-												<div
-													key={tranche.id}
-													className="flex items-center justify-between p-2 bg-taysir-bg rounded-xl text-[10px] font-bold uppercase tracking-tight"
-												>
-													<span className="opacity-40">
-														Échéance{" "}
-														{new Date(tranche.dueDate).toLocaleDateString()}
-													</span>
-													<span>{tranche.amount.toLocaleString()} DZD</span>
-												</div>
-											))}
+										{plan.tranches.slice(0, 2).map((tranche, _idx: number) => (
+											<div
+												key={tranche.id}
+												className="flex items-center justify-between p-2 bg-taysir-bg rounded-xl text-[10px] font-bold uppercase tracking-tight"
+											>
+												<span className="opacity-40">
+													Échéance{" "}
+													{new Date(tranche.dueDate).toLocaleDateString()}
+												</span>
+												<span>{tranche.amount.toLocaleString()} DZD</span>
+											</div>
+										))}
 										{plan.tranches.length > 2 && (
 											<div className="text-center text-[8px] font-black text-taysir-teal/20 uppercase tracking-[0.2em] pt-1">
 												+ {plan.tranches.length - 2} autres échéances

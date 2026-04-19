@@ -9,5 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: './vitest.setup.ts', // On préparera les mocks ici
     exclude: ['**/node_modules/**', '**/dist/**', '**/tests/**'],
+    // Mock server-only so server action tests can run in jsdom environment
+    alias: {
+      'server-only': new URL('./src/mocks/server-only.ts', import.meta.url).pathname,
+    },
   },
 })

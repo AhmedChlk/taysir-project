@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
 import { SendMessageSchema } from "@/lib/validations";
@@ -14,6 +14,7 @@ export const sendMessageAction = createSafeAction(
 				content: data.content,
 				senderId: userId,
 				recipientId: data.recipientId || null,
+				etablissementId: tenantId,
 			},
 			include: {
 				sender: {
@@ -25,7 +26,7 @@ export const sendMessageAction = createSafeAction(
 			},
 		});
 
-		revalidatePath("/dashboard/messages");
+		revalidateTag(`etab_${tenantId}_messages`, "max");
 		return message;
 	},
 );

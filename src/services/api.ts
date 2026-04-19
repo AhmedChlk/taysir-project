@@ -1,13 +1,13 @@
 // Fonctions pour récupérer les données (Server Side Only)
 
 import "server-only";
-import { eachDayOfInterval, endOfWeek, isSameDay, startOfWeek } from "date-fns";
 import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { cache } from "react";
 import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma, prisma } from "@/lib/prisma";
+import { computeWeeklyAttendanceRatios } from "@/lib/queries/attendance";
 
 /**
  * RÉCUPÉRATION DU PRISMA MÉMOÏSÉE (PERFORMANCE)
@@ -56,7 +56,7 @@ export const getCurrentTenant = cache(async () => {
 export const getCurrentUser = cache(async () => {
 	const session = await getServerSession(authOptions);
 	const userId = session?.user?.id;
-	const userRole = (session?.user as any)?.role;
+	const userRole = session?.user?.role;
 
 	if (!userId) return null;
 
@@ -85,7 +85,7 @@ export const getTenants = async () => {
 export const getStaff = async () => {
 	const client = await getPrisma();
 	const session = await getServerSession(authOptions);
-	const userRole = (session?.user as any)?.role;
+	const userRole = session?.user?.role;
 
 	return await client.user.findMany({
 		orderBy: { createdAt: "desc" },
@@ -182,42 +182,13 @@ export const getAttendance = async () => {
 };
 
 // Statistiques de présence pour le graphique
+// Délègue au helper partagé src/lib/queries/attendance.ts (ARCH-01)
 export const getAttendanceStats = async () => {
+	const session = await getServerSession(authOptions);
+	const tenantId = session?.user?.etablissementId;
 	const client = await getPrisma();
-	const now = new Date();
-
-	// On définit le début et la fin de la semaine actuelle (Lundi à Dimanche)
-	const start = startOfWeek(now, { weekStartsOn: 1 });
-	const end = endOfWeek(now, { weekStartsOn: 1 });
-
-	const records = await client.attendanceRecord.findMany({
-		where: {
-			session: {
-				startTime: { gte: start, lte: end },
-			},
-		},
-		select: {
-			status: true,
-			session: {
-				select: {
-					startTime: true,
-				},
-			},
-		},
-	});
-
-	const days = eachDayOfInterval({ start, end });
-
-	return days.map((day) => {
-		const dayRecords = records.filter((r: { session: { startTime: Date } }) =>
-			isSameDay(r.session.startTime, day),
-		);
-		if (dayRecords.length === 0) return 0;
-
-		const presentCount = dayRecords.filter(
-			(r: { status: string }) =>
-				r.status === "PRESENT" || r.status === "RETARD",
-		).length;
-		return Math.round((presentCount / dayRecords.length) * 100);
-	});
+	return computeWeeklyAttendanceRatios(
+		client as Parameters<typeof computeWeeklyAttendanceRatios>[0],
+		tenantId,
+	);
 };

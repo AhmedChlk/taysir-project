@@ -56,33 +56,28 @@
 - [x] **MT-03** — CORRIGE (2026-04-19) : `deleteStudentAction` utilise désormais `tenantPrisma.student.findUnique({ where: { id_etablissementId: { id, etablissementId: tenantId } } })` avant la transaction — le check manuel cross-tenant supprimé. `updateStudentAction` utilise également la clé composite `id_etablissementId`. Tous les `revalidatePath('/[locale]/...')` remplacés par `revalidateTag('etab_${tenantId}_*', "max")` dans `students.actions.ts`.
 
 ### TS-01 — Types `any` dans prisma.ts (16 occurrences)
-- [ ] **`src/lib/prisma.ts:9-13` et `$allOperations`** — Remplacer les `(args as any)` par les types Prisma appropriés (`Prisma.TypeMapCbDef`, etc.)
+- [x] **CORRIGÉ (2026-04-18)** — `ExtendedPrismaClient` type circulaire supprimé. `getTenantPrisma` retourne `PrismaClient` pour la type-safety des call-sites. `$allOperations` middleware utilise `Record<string, any>` avec `biome-ignore` justifié (Prisma extension args ne peuvent pas être statiquement typés sans `any`). `tenantClients: Map<string, any>` avec `biome-ignore`. `src/lib/utils/prisma-helpers.ts` créé avec `stripUndefined()` pour résoudre les conflits `exactOptionalPropertyTypes` dans les actions Prisma.
 
 ### TS-02 — Casts `as any` inutiles dans auth.ts
-- [ ] **`src/lib/auth.ts:60-62`** — Supprimer les `(session.user as any)` — les types sont déjà augmentés dans `next-auth.d.ts`
+- [x] **CORRIGÉ (2026-04-18)** — `(session.user as any).id/role/etablissementId` → direct assignment. `(session?.user as any)?.role` → `session?.user?.role` dans `api.ts` (2 occurrences). Types augmentés dans `next-auth.d.ts` utilisés directement.
 
 ### TS-03 — Types `any` dans les composants
-- [ ] **`src/components/dashboard/schedule/ScheduleClientView.tsx:23`** — Typer `initialSessions: Session[]` avec le type Prisma
-- [ ] **`src/components/ui/Drawer.tsx:15,69,107,126`** — Remplacer `type: string` et `formData?: any` par un union type strict
-  ```ts
-  type DrawerType = 'new-session' | 'payments' | 'new-finance' | 'edit-staff' | 'sessions';
-  ```
-- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx`** — Corriger les 6 occurrences de `any` (lignes 60, 148, 167, 200, 213, 246)
-- [ ] **`src/app/[locale]/layout.tsx:30`** — Supprimer `(session?.user as any)?.role`
-- [ ] **`src/services/api.ts:51,80`** — Supprimer les casts `as any`
+- [x] **CORRIGÉ (2026-04-18)** — `ScheduleClientView.tsx`: `initialSessions: any[]` → `SessionWithRelations[]` (type Prisma inféré). `Drawer.tsx`: `DrawerType` union strict + `DrawerFormData` interface typée + maps `.map((s: any))` → `.map((session))` avec types inférés. `students/[id]/page.tsx`: `StudentFullProfile = Prisma.StudentGetPayload<{...}>` — tous les `any` dans `.map((group: any))`, `.map((doc: any))`, `.map((record: any))`, `p: any` remplacés par types inférés. `services/api.ts`: casts `as any` supprimés.
+  - Note: `src/app/[locale]/layout.tsx` n'avait pas de cast `session.user as any` (faux positif dans l'audit).
+  - Reste: `any` intentionnels dans `SessionForm.tsx`, `PaymentPlanForm.tsx`, `TaysirCalendar.tsx` (hors scope TS-03).
 
 ---
 
 ## PHASE 3 — ARCHITECTURE & CLEAN CODE
 
 ### ARCH-01 — Duplication de logique (DRY Violation)
-- [ ] **`src/services/api.ts` + `src/actions/dashboard.actions.ts`** — Fusionner `getAttendanceStats` et `getPendingPayments` (logique dupliquée identique) dans un service partagé `src/lib/queries/`
+- [x] **CORRIGÉ (2026-04-18)** — `src/lib/queries/attendance.ts` créé avec `computeWeeklyAttendanceRatios()`. `dashboard.actions.ts::getAttendanceStatsAction` et `services/api.ts::getAttendanceStats` délèguent tous deux à ce helper partagé. `eachDayOfInterval`/`isSameDay` imports dédupliqués.
 
 ### ARCH-02 — revalidateTag avec second argument invalide
-- [ ] **14 occurrences dans `logistics.actions.ts`, `students.actions.ts`, `finance.actions.ts`** — Supprimer le second argument `"max"` de tous les appels `revalidateTag`
+- [x] **FERMÉ (2026-04-18)** — `revalidateTag(tag, "max")` est valide en Next.js 16.2.3. `npx tsc --noEmit 2>&1 | grep -i "revalidateTag"` retourne 0 erreur. Second argument confirme le cache profile. Aucune correction nécessaire.
 
 ### ARCH-03 — revalidatePath avec patterns [locale] invalides
-- [ ] **`src/actions/students.actions.ts`, `messages.actions.ts`, `settings.actions.ts`** — Remplacer `revalidatePath('/[locale]/...')` par `revalidateTag(...)` (indépendant du locale)
+- [x] **CORRIGÉ (2026-04-18)** — `users.actions.ts`: 3× `revalidatePath("/[locale]/dashboard...")` → `revalidateTag(\`etab_${tenantId}_staff\`, "max")` et `etab_${tenantId}_dashboard`. `messages.actions.ts`: `revalidatePath("/dashboard/messages")` → `revalidateTag(\`etab_${tenantId}_messages\`, "max")`. `revalidatePath` import supprimé dans ces 2 fichiers.
 
 ### ARCH-04 — DashboardLayout Client Component avec 7 requêtes Prisma dans useEffect
 - [ ] **`src/components/layouts/DashboardLayout.tsx:32-43`** — Extraire `getDashboardFormDataAction` vers un Server Component avec `unstable_cache`; le layout ne doit contenir que la navigation et les providers UI

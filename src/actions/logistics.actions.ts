@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
+import { stripUndefined } from "@/lib/utils/prisma-helpers";
 import {
 	ActivitySchema,
 	CreateGroupSchema,
@@ -36,7 +37,7 @@ export const updateGroupAction = createSafeAction(
 					etablissementId: tenantId,
 				},
 			},
-			data: { ...data, etablissementId: tenantId },
+			data: { ...stripUndefined(data), etablissementId: tenantId },
 		});
 		revalidateTag(`groups-${tenantId}`, "max");
 		return result;
@@ -65,7 +66,7 @@ export const createRoomAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
 		const result = await tenantPrisma.room.create({
-			data: { ...data, etablissementId: tenantId },
+			data: { ...stripUndefined(data), etablissementId: tenantId },
 		});
 		revalidateTag(`rooms-${tenantId}`, "max");
 		return result;
@@ -83,7 +84,7 @@ export const updateRoomAction = createSafeAction(
 					etablissementId: tenantId,
 				},
 			},
-			data: { ...data, etablissementId: tenantId },
+			data: { ...stripUndefined(data), etablissementId: tenantId },
 		});
 		revalidateTag(`rooms-${tenantId}`, "max");
 		return result;
@@ -112,7 +113,7 @@ export const createActivityAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
 		const result = await tenantPrisma.activity.create({
-			data: { ...data, etablissementId: tenantId },
+			data: { ...stripUndefined(data), etablissementId: tenantId },
 		});
 		revalidateTag(`activities-${tenantId}`, "max");
 		return result;
@@ -130,7 +131,7 @@ export const updateActivityAction = createSafeAction(
 					etablissementId: tenantId,
 				},
 			},
-			data: { ...data, etablissementId: tenantId },
+			data: { ...stripUndefined(data), etablissementId: tenantId },
 		});
 		revalidateTag(`activities-${tenantId}`, "max");
 		return result;
@@ -185,16 +186,16 @@ export const markPresenceAction = createSafeAction(
 			},
 			create: {
 				status: data.statut,
-				retardMinutes: data.retard || 0,
-				note: data.note,
+				retardMinutes: data.retard ?? 0,
+				...(data.note !== undefined ? { note: data.note } : {}),
 				sessionId: data.seanceId,
 				studentId: data.participantId,
 				etablissementId: tenantId,
 			},
 			update: {
 				status: data.statut,
-				retardMinutes: data.retard || 0,
-				note: data.note,
+				retardMinutes: data.retard ?? 0,
+				...(data.note !== undefined ? { note: data.note } : {}),
 				etablissementId: tenantId,
 			},
 		});
