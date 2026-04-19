@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "nextjs": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"],
+      "env": {}
+    },
+    "browser": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "biome": {
+      "command": "npx",
+      "args": ["@biomejs/biome", "lsp-proxy"],
+      "env": {}
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "REDACTED_DO_NOT_COMMIT"
+      }
+    }
+  }
+}

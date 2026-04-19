@@ -50,6 +50,7 @@ model User {
   sessions         Session[]      @relation("InstructorSessions")
   etablissement    Etablissement? @relation(fields: [etablissementId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
 }
 
@@ -64,6 +65,7 @@ model Room {
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
   sessions        Session[]
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
 }
 
@@ -80,6 +82,7 @@ model Activity {
   sessions        Session[]
   paymentPlans    PaymentPlan[]
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
 }
 
@@ -94,6 +97,7 @@ model Groupe {
   sessions        Session[]
   students        Student[]     @relation("GroupeToStudent")
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
 }
 
@@ -121,6 +125,7 @@ model Student {
   etablissement    Etablissement      @relation(fields: [etablissementId], references: [id])
   groups           Groupe[]           @relation("GroupeToStudent")
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
 }
 
@@ -142,6 +147,7 @@ model PaymentPlan {
   student         Student           @relation(fields: [studentId], references: [id])
   tranches        Tranche[]
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([activityId])
 }
@@ -161,6 +167,7 @@ model Tranche {
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
   paymentPlan     PaymentPlan   @relation(fields: [paymentPlanId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([dueDate])
 }
@@ -182,6 +189,7 @@ model Paiement {
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
   tranche         Tranche       @relation(fields: [trancheId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([date])
 }
@@ -205,6 +213,7 @@ model Session {
   instructor      User               @relation("InstructorSessions", fields: [instructorId], references: [id])
   room            Room               @relation(fields: [roomId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([startTime])
 }
@@ -223,7 +232,8 @@ model AttendanceRecord {
   session         Session        @relation(fields: [sessionId], references: [id])
   student         Student        @relation(fields: [studentId], references: [id])
 
-  @@unique([sessionId, studentId])
+  @@unique([id, etablissementId])
+  @@unique([sessionId, studentId, etablissementId])
   @@index([etablissementId])
 }
 
@@ -240,6 +250,7 @@ model Document {
   etablissement   Etablissement  @relation(fields: [etablissementId], references: [id])
   student         Student        @relation(fields: [studentId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([studentId])
 }
@@ -255,6 +266,7 @@ model Message {
   recipient       User?         @relation("ReceivedMessages", fields: [recipientId], references: [id])
   sender          User          @relation("SentMessages", fields: [senderId], references: [id])
 
+  @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([senderId])
   @@index([recipientId])

@@ -1,72 +1,72 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F8FAFB;
-  --foreground: #004D4A; /* Taysir Teal Darker */
-  --primary: #006A67;    /* Taysir Teal 2026 */
-  --secondary: #008B87;  /* Taysir Teal Light */
-  --accent: #FE7F2D;     /* Accent Corail */
-  --accent-foreground: #FFFFFF;
+	--background: #f8fafb;
+	--foreground: #004d4a; /* Taysir Teal Darker */
+	--primary: #006a67; /* Taysir Teal 2026 */
+	--secondary: #008b87; /* Taysir Teal Light */
+	--accent: #fe7f2d; /* Accent Corail */
+	--accent-foreground: #ffffff;
 }
 
 @theme {
-  --color-taysir-teal: #006A67;
-  --color-taysir-light: #008B87;
-  --color-taysir-accent: #FE7F2D;
-  --color-taysir-bg: #F8FAFB;
-  --color-taysir-white: #FFFFFF;
-  
-  /* Alias pour la compatibilité avec le code existant */
-  --color-primary-teal: #006A67;
-  --color-accent-teal: #008B87;
+	--color-taysir-teal: #006a67;
+	--color-taysir-light: #008b87;
+	--color-taysir-accent: #fe7f2d;
+	--color-taysir-bg: #f8fafb;
+	--color-taysir-white: #ffffff;
+
+	/* Alias pour la compatibilité avec le code existant */
+	--color-primary-teal: #006a67;
+	--color-accent-teal: #008b87;
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-taysir-teal text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
-  }
-  
-  .btn-secondary {
-    @apply bg-taysir-light text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
-  }
-  
-  .btn-ghost {
-    @apply bg-transparent text-taysir-teal px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-taysir-teal/5 active:scale-95;
-  }
+	.btn-primary {
+		@apply bg-taysir-teal text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
+	}
+
+	.btn-secondary {
+		@apply bg-taysir-light text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
+	}
+
+	.btn-ghost {
+		@apply bg-transparent text-taysir-teal px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-taysir-teal/5 active:scale-95;
+	}
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
+	background-color: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-inter), "Helvetica Neue", sans-serif;
+	-webkit-font-smoothing: antialiased;
 }
 
 /* Bento Box ERP Style */
 .bento-card {
-  background-color: white;
-  border-radius: 24px;
-  box-shadow: 0 4px 20px -2px rgba(15, 81, 92, 0.08);
-  border: 1px solid rgba(15, 81, 92, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	background-color: white;
+	border-radius: 24px;
+	box-shadow: 0 4px 20px -2px rgba(15, 81, 92, 0.08);
+	border: 1px solid rgba(15, 81, 92, 0.1);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bento-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px -4px rgba(15, 81, 92, 0.12);
+	transform: translateY(-4px);
+	box-shadow: 0 12px 30px -4px rgba(15, 81, 92, 0.12);
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+	width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(15, 81, 92, 0.1);
-  border-radius: 10px;
+	background: rgba(15, 81, 92, 0.1);
+	border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 81, 92, 0.2);
+	background: rgba(15, 81, 92, 0.2);
 }

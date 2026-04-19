@@ -21,7 +21,6 @@ vi.mock("@/lib/auth", () => ({
 
 import { getServerSession } from "next-auth/next";
 import { getStudentDocumentsAction } from "@/actions/documents.actions";
-import { ErrorCodes } from "@/lib/errors";
 
 const VALID_STUDENT_UUID = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -50,7 +49,7 @@ describe("getStudentDocumentsAction — protection IDOR (SEC-02)", () => {
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.code).toBe(ErrorCodes.ERR_UNAUTHORIZED);
+			expect(result.error.code).toBe("AUTH_REQUIRED");
 		}
 	});
 
@@ -76,7 +75,7 @@ describe("getStudentDocumentsAction — protection IDOR (SEC-02)", () => {
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.code).toBe(ErrorCodes.ERR_INVALID_DATA);
+			expect(result.error.code).toBe("INVALID_DATA_FORMAT");
 		}
 	});
 
@@ -89,7 +88,7 @@ describe("getStudentDocumentsAction — protection IDOR (SEC-02)", () => {
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.code).toBe(ErrorCodes.ERR_INVALID_DATA);
+			expect(result.error.code).toBe("INVALID_DATA_FORMAT");
 		}
 	});
 

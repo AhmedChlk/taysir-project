@@ -1,190 +1,223 @@
 // Fonctions pour récupérer les données (Server Side Only)
 
 import "server-only";
-import { prisma, getTenantPrisma } from "@/lib/prisma";
+import { eachDayOfInterval, endOfWeek, isSameDay, startOfWeek } from "date-fns";
+import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth/next";
+import { cache } from "react";
 import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-import { cache } from "react";
+import { getTenantPrisma, prisma } from "@/lib/prisma";
 
 /**
  * RÉCUPÉRATION DU PRISMA MÉMOÏSÉE (PERFORMANCE)
  * Utilise React Cache pour ne pas appeler getServerSession plusieurs fois par requête.
  */
 const getPrisma = cache(async () => {
-  const session = await getServerSession(authOptions);
-  const user = session?.user;
-  
-  if (!session || !user) {
-    throw new TaysirError("Accès refusé : Session non valide.", ErrorCodes.ERR_UNAUTHORIZED, 401);
-  }
+	const session = await getServerSession(authOptions);
+	const user = session?.user;
 
-  if (user.role === "SUPER_ADMIN") {
-    return prisma;
-  }
+	if (!session || !user) {
+		throw new TaysirError(
+			"Accès refusé : Session non valide.",
+			ErrorCodes.ERR_UNAUTHORIZED,
+			401,
+		);
+	}
 
-  if (!user.etablissementId) {
-    throw new TaysirError("Accès refusé : Aucun établissement rattaché.", ErrorCodes.ERR_UNAUTHORIZED, 401);
-  }
+	if (user.role === "SUPER_ADMIN") {
+		return prisma;
+	}
 
-  return getTenantPrisma(user.etablissementId);
+	if (!user.etablissementId) {
+		throw new TaysirError(
+			"Accès refusé : Aucun établissement rattaché.",
+			ErrorCodes.ERR_UNAUTHORIZED,
+			401,
+		);
+	}
+
+	return getTenantPrisma(user.etablissementId);
 });
 
 // Récupérer les infos de l'école actuelle
 export const getCurrentTenant = cache(async () => {
-  const session = await getServerSession(authOptions);
-  const tenantId = session?.user?.etablissementId;
-  
-  if (!tenantId) return null;
+	const session = await getServerSession(authOptions);
+	const tenantId = session?.user?.etablissementId;
 
-  return await prisma.etablissement.findUnique({
-    where: { id: tenantId }
-  });
+	if (!tenantId) return null;
+
+	return await prisma.etablissement.findUnique({
+		where: { id: tenantId },
+	});
 });
 
 // Récupérer l'utilisateur connecté
 export const getCurrentUser = cache(async () => {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  const userRole = (session?.user as any)?.role;
+	const session = await getServerSession(authOptions);
+	const userId = session?.user?.id;
+	const userRole = (session?.user as any)?.role;
 
-  if (!userId) return null;
+	if (!userId) return null;
 
-  return await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      avatarUrl: true,
-      status: true,
-      salary: userRole === "GERANT",
-      etablissementId: true,
-    }
-  });
+	return await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			email: true,
+			firstName: true,
+			lastName: true,
+			role: true,
+			avatarUrl: true,
+			status: true,
+			salary: userRole === "GERANT",
+			etablissementId: true,
+		},
+	});
 });
 
 // Liste des écoles
 export const getTenants = async () => {
-  return await prisma.etablissement.findMany();
+	return await prisma.etablissement.findMany();
 };
 
 // Liste du staff
 export const getStaff = async () => {
-  const client = await getPrisma();
-  const session = await getServerSession(authOptions);
-  const userRole = (session?.user as any)?.role;
+	const client = await getPrisma();
+	const session = await getServerSession(authOptions);
+	const userRole = (session?.user as any)?.role;
 
-  return await client.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      avatarUrl: true,
-      status: true,
-      salary: userRole === "GERANT",
-      createdAt: true,
-      updatedAt: true,
-    }
-  });
+	return await client.user.findMany({
+		orderBy: { createdAt: "desc" },
+		select: {
+			id: true,
+			email: true,
+			firstName: true,
+			lastName: true,
+			role: true,
+			avatarUrl: true,
+			status: true,
+			salary: userRole === "GERANT",
+			createdAt: true,
+			updatedAt: true,
+		},
+	});
 };
 
 // Liste des salles
 export const getRooms = async () => {
-  const client = await getPrisma();
-  return await client.room.findMany();
+	const client = await getPrisma();
+	return await client.room.findMany();
 };
 
 // Liste des activités
 export const getActivities = async () => {
-  const client = await getPrisma();
-  return await client.activity.findMany();
+	const client = await getPrisma();
+	return await client.activity.findMany();
 };
 
 // Liste des groupes
 export const getGroups = async () => {
-  const client = await getPrisma();
-  return await client.groupe.findMany({
-    include: { students: true }
-  });
+	const client = await getPrisma();
+	return await client.groupe.findMany({
+		include: { students: true },
+	});
 };
 
 // Liste des séances
 export const getSessions = async () => {
-  const client = await getPrisma();
-  return await client.session.findMany({
-    include: { room: true, activity: true, group: true }
-  });
+	const client = await getPrisma();
+	return await client.session.findMany({
+		include: { room: true, activity: true, group: true },
+	});
 };
 
 // Liste des élèves
 export const getStudents = async () => {
-  const client = await getPrisma();
-  return await client.student.findMany({
-    include: { groups: true }
-  });
+	const session = await getServerSession(authOptions);
+	const tenantId = session?.user?.etablissementId;
+
+	if (!tenantId) {
+		if (session?.user?.role === "SUPER_ADMIN") {
+			return await prisma.student.findMany({ include: { groups: true } });
+		}
+		return [];
+	}
+
+	return await unstable_cache(
+		async () => {
+			const client = await getPrisma();
+			return await client.student.findMany({
+				include: { groups: true },
+			});
+		},
+		[`students-list-${tenantId}`],
+		{
+			tags: [`students-${tenantId}`],
+			revalidate: 3600, // Cache d'une heure par défaut, invalidé par tag
+		},
+	)();
 };
 
 // Liste des paiements (PaymentPlans)
 export const getPayments = async () => {
-  const client = await getPrisma();
-  return await client.paymentPlan.findMany({
-    include: { 
-      student: true,
-      activity: true, // Inclure l'activité suite au mandat de structure
-      tranches: {
-        include: { paiements: true },
-        orderBy: { dueDate: "asc" }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+	const client = await getPrisma();
+	return await client.paymentPlan.findMany({
+		include: {
+			student: true,
+			activity: true, // Inclure l'activité suite au mandat de structure
+			tranches: {
+				include: { paiements: true },
+				orderBy: { dueDate: "asc" },
+			},
+		},
+		orderBy: { createdAt: "desc" },
+	});
 };
 
 // Liste des présences
 export const getAttendance = async () => {
-  const client = await getPrisma();
-  return await client.attendanceRecord.findMany();
+	const client = await getPrisma();
+	return await client.attendanceRecord.findMany();
 };
 
 // Statistiques de présence pour le graphique
 export const getAttendanceStats = async () => {
-  const client = await getPrisma();
-  const now = new Date();
-  
-  // On définit le début et la fin de la semaine actuelle (Lundi à Dimanche)
-  const start = startOfWeek(now, { weekStartsOn: 1 });
-  const end = endOfWeek(now, { weekStartsOn: 1 });
-  
-  const records = await client.attendanceRecord.findMany({
-    where: {
-      session: {
-        startTime: { gte: start, lte: end }
-      }
-    },
-    select: {
-      status: true,
-      session: {
-        select: {
-          startTime: true
-        }
-      }
-    }
-  });
+	const client = await getPrisma();
+	const now = new Date();
 
-  const days = eachDayOfInterval({ start, end });
-  
-  return days.map(day => {
-    const dayRecords = records.filter((r: { session: { startTime: Date } }) => isSameDay(r.session.startTime, day));
-    if (dayRecords.length === 0) return 0;
-    
-    const presentCount = dayRecords.filter((r: { status: string }) => r.status === "PRESENT" || r.status === "RETARD").length;
-    return Math.round((presentCount / dayRecords.length) * 100);
-  });
+	// On définit le début et la fin de la semaine actuelle (Lundi à Dimanche)
+	const start = startOfWeek(now, { weekStartsOn: 1 });
+	const end = endOfWeek(now, { weekStartsOn: 1 });
+
+	const records = await client.attendanceRecord.findMany({
+		where: {
+			session: {
+				startTime: { gte: start, lte: end },
+			},
+		},
+		select: {
+			status: true,
+			session: {
+				select: {
+					startTime: true,
+				},
+			},
+		},
+	});
+
+	const days = eachDayOfInterval({ start, end });
+
+	return days.map((day) => {
+		const dayRecords = records.filter((r: { session: { startTime: Date } }) =>
+			isSameDay(r.session.startTime, day),
+		);
+		if (dayRecords.length === 0) return 0;
+
+		const presentCount = dayRecords.filter(
+			(r: { status: string }) =>
+				r.status === "PRESENT" || r.status === "RETARD",
+		).length;
+		return Math.round((presentCount / dayRecords.length) * 100);
+	});
 };

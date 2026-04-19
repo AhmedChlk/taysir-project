@@ -1,30 +1,30 @@
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import DashboardSPA from "@/components/dashboard/DashboardSPA";
-import StatsWidget from "@/components/dashboard/widgets/StatsWidget";
-import SessionsWidget from "@/components/dashboard/widgets/SessionsWidget";
+import LiveRosterWidget from "@/components/dashboard/widgets/LiveRosterWidget";
 import PaymentsWidget from "@/components/dashboard/widgets/PaymentsWidget";
 import PerformanceKPIsWidget from "@/components/dashboard/widgets/PerformanceKPIsWidget";
-import LiveRosterWidget from "@/components/dashboard/widgets/LiveRosterWidget";
+import SessionsWidget from "@/components/dashboard/widgets/SessionsWidget";
 import StaffAlertsWidget from "@/components/dashboard/widgets/StaffAlertsWidget";
+import StatsWidget from "@/components/dashboard/widgets/StatsWidget";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 interface PageProps {
-  params: Promise<{ locale: string }>;
+	params: Promise<{ locale: string }>;
 }
 
 export default async function DashboardPage({ params }: PageProps) {
-  const { locale } = await params;
+	const { locale } = await params;
 
-  return (
-    <DashboardLayout>
-      <DashboardSPA 
-        locale={locale}
-        stats={<StatsWidget />}
-        sessions={<SessionsWidget />}
-        payments={<PaymentsWidget />}
-        kpis={<PerformanceKPIsWidget />}
-        roster={<LiveRosterWidget />}
-        alerts={<StaffAlertsWidget />}
-      />
-    </DashboardLayout>
-  );
+	return (
+		<DashboardLayout>
+			<DashboardSPA
+				locale={locale}
+				stats={<StatsWidget />}
+				sessions={<SessionsWidget />}
+				payments={<PaymentsWidget />}
+				kpis={<PerformanceKPIsWidget />}
+				roster={<LiveRosterWidget />}
+				alerts={<StaffAlertsWidget />}
+			/>
+		</DashboardLayout>
+	);
 }
