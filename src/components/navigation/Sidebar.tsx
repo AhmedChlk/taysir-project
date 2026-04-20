@@ -318,8 +318,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 						type="button"
 						onClick={() => {
 							onClose?.();
-							const callbackUrl = getPathname({ locale, href: "/login" });
-							signOut({ callbackUrl });
+							signOut({ callbackUrl: `/${locale}/login` });
 						}}
 						className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black text-white/40 hover:bg-red-500/15 hover:text-red-400 transition-all duration-300 ease-in-out group uppercase tracking-widest"
 					>

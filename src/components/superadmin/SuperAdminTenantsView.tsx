@@ -253,16 +253,6 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 								<span className="text-lg font-black text-gray-900">{tenant._count.students}</span>
 							</div>
 						</div>
-                        
-                        <button
-                            type="button"
-                            onClick={() => window.open(`/${tenant.slug}/dashboard`, '_blank')}
-                            disabled={!tenant.isActive}
-                            className="mt-6 w-full py-3 bg-white border border-gray-200 rounded-2xl text-sm font-black text-gray-600 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <ExternalLink size={16} />
-                            Ouvrir l&apos;instance
-                        </button>
 					</div>
 				))}
 			</div>

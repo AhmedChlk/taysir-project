@@ -50,7 +50,7 @@ model User {
   receivedMessages Message[]      @relation("ReceivedMessages")
   sentMessages     Message[]      @relation("SentMessages")
   sessions         Session[]      @relation("InstructorSessions")
-  etablissement    Etablissement? @relation(fields: [etablissementId], references: [id])
+  etablissement    Etablissement? @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
@@ -64,7 +64,7 @@ model Room {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   etablissementId String
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   sessions        Session[]
 
   @@unique([id, etablissementId])
@@ -80,7 +80,7 @@ model Activity {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   etablissementId String
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   sessions        Session[]
   paymentPlans    PaymentPlan[]
 
@@ -95,7 +95,7 @@ model Groupe {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   etablissementId String
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   sessions        Session[]
   students        Student[]     @relation("GroupeToStudent")
 
@@ -124,7 +124,7 @@ model Student {
   attendance       AttendanceRecord[]
   documents        Document[]
   paymentPlans     PaymentPlan[]
-  etablissement    Etablissement      @relation(fields: [etablissementId], references: [id])
+  etablissement    Etablissement      @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   groups           Groupe[]           @relation("GroupeToStudent")
 
   @@unique([id, etablissementId])
@@ -145,8 +145,8 @@ model PaymentPlan {
   activityId      String
   etablissementId String
   activity        Activity          @relation(fields: [activityId], references: [id])
-  etablissement   Etablissement     @relation(fields: [etablissementId], references: [id])
-  student         Student           @relation(fields: [studentId], references: [id])
+  etablissement   Etablissement     @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  student         Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
   tranches        Tranche[]
 
   @@unique([id, etablissementId])
@@ -166,8 +166,8 @@ model Tranche {
   paymentPlanId   String
   etablissementId String
   paiements       Paiement[]
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
-  paymentPlan     PaymentPlan   @relation(fields: [paymentPlanId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  paymentPlan     PaymentPlan   @relation(fields: [paymentPlanId], references: [id], onDelete: Cascade)
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
@@ -188,8 +188,8 @@ model Paiement {
   trancheId       String
   etablissementId String
   receiptUrl      String?
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
-  tranche         Tranche       @relation(fields: [trancheId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  tranche         Tranche       @relation(fields: [trancheId], references: [id], onDelete: Cascade)
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
@@ -210,7 +210,7 @@ model Session {
   etablissementId String
   attendance      AttendanceRecord[]
   activity        Activity           @relation(fields: [activityId], references: [id])
-  etablissement   Etablissement      @relation(fields: [etablissementId], references: [id])
+  etablissement   Etablissement      @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   group           Groupe             @relation(fields: [groupId], references: [id])
   instructor      User               @relation("InstructorSessions", fields: [instructorId], references: [id])
   room            Room               @relation(fields: [roomId], references: [id])
@@ -230,9 +230,9 @@ model AttendanceRecord {
   sessionId       String
   studentId       String
   etablissementId String
-  etablissement   Etablissement  @relation(fields: [etablissementId], references: [id])
-  session         Session        @relation(fields: [sessionId], references: [id])
-  student         Student        @relation(fields: [studentId], references: [id])
+  etablissement   Etablissement  @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  session         Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([id, etablissementId])
   @@unique([sessionId, studentId, etablissementId])
@@ -249,8 +249,8 @@ model Document {
   etablissementId String
   status          StatusDocument @default(PENDING)
   studentId       String
-  etablissement   Etablissement  @relation(fields: [etablissementId], references: [id])
-  student         Student        @relation(fields: [studentId], references: [id])
+  etablissement   Etablissement  @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
@@ -264,7 +264,7 @@ model Message {
   senderId        String
   recipientId     String?
   etablissementId String
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id])
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   recipient       User?         @relation("ReceivedMessages", fields: [recipientId], references: [id])
   sender          User          @relation("SentMessages", fields: [senderId], references: [id])
 
