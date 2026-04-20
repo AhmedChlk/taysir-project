@@ -50,16 +50,11 @@ interface PendingPayment {
 }
 
 interface DrawerFormData {
-	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
-	rooms?: Record<string, unknown>[];
-	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
-	activities?: Record<string, unknown>[];
-	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
-	staff?: Record<string, unknown>[];
-	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
-	groups?: Record<string, unknown>[];
-	// biome-ignore lint/suspicious/noExplicitAny: form components accept any[] for their option arrays
-	students?: Record<string, unknown>[];
+	rooms?: { id: string; name: string; capacity: number }[];
+	activities?: { id: string; name: string; color?: string | null }[];
+	staff?: { id: string; role: string; firstName: string; lastName: string }[];
+	groups?: { id: string; name: string }[];
+	students?: { id: string; firstName: string; lastName: string }[];
 	todaySessions?: TodaySession[];
 	pendingPayments?: PendingPayment[];
 }

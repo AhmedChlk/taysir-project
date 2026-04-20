@@ -2,7 +2,8 @@
 
 import { Loader2, Save, Trash2 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { getPathname } from "@/i18n/routing";
 import { useTransition } from "react";
 import {
 	deleteAccountAction,
@@ -10,12 +11,23 @@ import {
 } from "@/actions/settings.actions";
 import { Input } from "@/components/ui/FormInput";
 
+type CurrentUser = {
+	id: string;
+	email: string;
+	firstName: string;
+	lastName: string;
+	role: string;
+	avatarUrl: string | null;
+	phone?: string | null;
+};
+
 interface ProfileSettingsProps {
-	user: any;
+	user: CurrentUser;
 }
 
 export default function ProfileSettings({ user }: ProfileSettingsProps) {
 	const t = useTranslations();
+	const locale = useLocale();
 	const [isPending, startTransition] = useTransition();
 
 	const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,7 +57,8 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 		startTransition(async () => {
 			const result = await deleteAccountAction({});
 			if (result.success) {
-				signOut({ callbackUrl: "/login" });
+				const callbackUrl = getPathname({ locale, href: "/login" });
+				signOut({ callbackUrl });
 			} else {
 				alert(result.error.message);
 			}
@@ -106,7 +119,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 						<Input
 							name="phone"
 							label={t("phone")}
-							defaultValue={user.phone}
+							defaultValue={user.phone ?? undefined}
 							placeholder={t("placeholder_phone")}
 						/>
 					</div>

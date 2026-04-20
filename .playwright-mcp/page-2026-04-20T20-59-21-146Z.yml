@@ -1,0 +1,139 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img "Taysir" [ref=e5]
+        - generic [ref=e6]: Taysir.
+      - navigation [ref=e7]:
+        - generic [ref=e177]: Administration
+        - link "Établissements" [ref=e178] [cursor=pointer]:
+          - /url: /fr/superadmin/tenants
+          - img [ref=e180]
+          - generic [ref=e183]: Établissements
+      - generic [ref=e8]:
+        - link "Paramètres" [ref=e185] [cursor=pointer]:
+          - /url: /fr/dashboard/settings
+          - img [ref=e186]
+          - generic [ref=e189]: Paramètres
+        - generic [ref=e9]:
+          - generic [ref=e10]: A
+          - generic [ref=e190]:
+            - generic [ref=e191]: Ahmed Choulak
+            - generic [ref=e192]: SUPER_ADMIN
+        - button "Déconnexion" [ref=e11]:
+          - img [ref=e12]
+          - text: Déconnexion
+    - generic [ref=e15]:
+      - banner [ref=e16]:
+        - generic [ref=e18]:
+          - img [ref=e19]
+          - textbox "Rechercher un établissement..." [ref=e22]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e25]
+            - text: Super Admin
+          - button [ref=e27]:
+            - img [ref=e28]
+      - main [ref=e32]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - heading "Parc Établissements" [level=1] [ref=e37]
+              - paragraph [ref=e38]: Déployez et pilotez les accès de vos clients.
+            - button "Nouveau Client" [ref=e39]:
+              - img [ref=e40]
+              - text: Nouveau Client
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - generic [ref=e44]:
+                - img [ref=e46]
+                - generic [ref=e50]:
+                  - button "Désactiver l'accès" [ref=e51]:
+                    - img [ref=e52]
+                  - button "Supprimer définitivement" [ref=e56]:
+                    - img [ref=e57]
+              - generic [ref=e60]:
+                - heading "Ecole Ruifed" [level=3] [ref=e62]
+                - generic [ref=e63]:
+                  - img [ref=e64]
+                  - text: ecole-ruifed
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - generic [ref=e69]:
+                    - img [ref=e70]
+                    - generic [ref=e75]: Staff
+                  - text: "1"
+                - generic [ref=e76]:
+                  - generic [ref=e77]:
+                    - img [ref=e78]
+                    - generic [ref=e81]: Élèves
+                  - text: "0"
+              - button "Ouvrir l'instance" [ref=e82]:
+                - img [ref=e83]
+                - text: Ouvrir l'instance
+            - generic [ref=e87]:
+              - generic [ref=e89]:
+                - img [ref=e91]
+                - generic [ref=e95]:
+                  - button "Désactiver l'accès" [ref=e96]:
+                    - img [ref=e97]
+                  - button "Supprimer définitivement" [ref=e101]:
+                    - img [ref=e102]
+              - generic [ref=e105]:
+                - heading "Etab B Isolation" [level=3] [ref=e107]
+                - generic [ref=e108]:
+                  - img [ref=e109]
+                  - text: etab-b-iso-6ff40848-b55f-42fd-a1fe-8c0b084cfb9e
+              - generic [ref=e112]:
+                - generic [ref=e113]:
+                  - generic [ref=e114]:
+                    - img [ref=e115]
+                    - generic [ref=e120]: Staff
+                  - text: "0"
+                - generic [ref=e121]:
+                  - generic [ref=e122]:
+                    - img [ref=e123]
+                    - generic [ref=e126]: Élèves
+                  - text: "1"
+              - button "Ouvrir l'instance" [ref=e127]:
+                - img [ref=e128]
+                - text: Ouvrir l'instance
+            - generic [ref=e132]:
+              - generic [ref=e134]:
+                - img [ref=e136]
+                - generic [ref=e140]:
+                  - button "Désactiver l'accès" [ref=e141]:
+                    - img [ref=e142]
+                  - button "Supprimer définitivement" [ref=e146]:
+                    - img [ref=e147]
+              - generic [ref=e150]:
+                - heading "Taysir Academy" [level=3] [ref=e152]
+                - generic [ref=e153]:
+                  - img [ref=e154]
+                  - text: taysir-academy
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - generic [ref=e159]:
+                    - img [ref=e160]
+                    - generic [ref=e165]: Staff
+                  - text: "2"
+                - generic [ref=e166]:
+                  - generic [ref=e167]:
+                    - img [ref=e168]
+                    - generic [ref=e171]: Élèves
+                  - text: "1"
+              - button "Ouvrir l'instance" [active] [ref=e172]:
+                - img [ref=e173]
+                - text: Ouvrir l'instance
+  - generic [ref=e197] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e198]:
+      - img [ref=e199]
+    - generic [ref=e202]:
+      - button "Open issues overlay" [ref=e203]:
+        - generic [ref=e204]:
+          - generic [ref=e205]: "0"
+          - generic [ref=e206]: "1"
+        - generic [ref=e207]: Issue
+      - button "Collapse issues badge" [ref=e208]:
+        - img [ref=e209]
+  - alert [ref=e211]

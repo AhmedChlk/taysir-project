@@ -7,8 +7,10 @@ import { useState, useTransition } from "react";
 import { updateSchoolAction } from "@/actions/settings.actions";
 import { Input, TextArea } from "@/components/ui/FormInput";
 
+import type { Etablissement } from "@prisma/client";
+
 interface SchoolSettingsProps {
-	tenant: any;
+	tenant: Etablissement | null;
 }
 
 export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
@@ -168,6 +170,6 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 }
 
 // Helper pour concaténer les classes
-function cn(...classes: any[]) {
+function cn(...classes: (string | undefined | null | boolean)[]) {
 	return classes.filter(Boolean).join(" ");
 }

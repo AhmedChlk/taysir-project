@@ -48,6 +48,18 @@ export const deleteGroupAction = createSafeAction(
 	z.object({ id: z.string().uuid() }),
 	async ({ id }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+
+		const exists = await tenantPrisma.groupe.findUnique({
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
+		});
+		if (!exists) {
+			throw new TaysirError(
+				"Groupe introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
 		const result = await tenantPrisma.groupe.delete({
 			where: {
 				id_etablissementId: {
@@ -95,6 +107,18 @@ export const deleteRoomAction = createSafeAction(
 	z.object({ id: z.string().uuid() }),
 	async ({ id }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+
+		const exists = await tenantPrisma.room.findUnique({
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
+		});
+		if (!exists) {
+			throw new TaysirError(
+				"Salle introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
 		const result = await tenantPrisma.room.delete({
 			where: {
 				id_etablissementId: {
@@ -142,6 +166,18 @@ export const deleteActivityAction = createSafeAction(
 	z.object({ id: z.string().uuid() }),
 	async ({ id }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+
+		const exists = await tenantPrisma.activity.findUnique({
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
+		});
+		if (!exists) {
+			throw new TaysirError(
+				"Activité introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
 		const result = await tenantPrisma.activity.delete({
 			where: {
 				id_etablissementId: {

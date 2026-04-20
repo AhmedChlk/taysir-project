@@ -26,6 +26,11 @@ export const authOptions: NextAuthOptions = {
 						return null;
 					}
 
+                    // Bloquer si le tenant est désactivé (sauf si Super Admin)
+                    if (user.role !== "SUPER_ADMIN" && user.etablissement && !user.etablissement.isActive) {
+                        return null;
+                    }
+
 					const isPasswordValid = await bcrypt.compare(
 						credentials.password,
 						user.password,
@@ -68,9 +73,16 @@ export const authOptions: NextAuthOptions = {
 			}
 			return session;
 		},
+		async redirect({ url, baseUrl }) {
+			// Allows relative callback URLs
+			if (url.startsWith("/")) return `${baseUrl}${url}`;
+			// Allows callback URLs on the same origin
+			else if (new URL(url).origin === baseUrl) return url;
+			return baseUrl;
+		},
 	},
 	pages: {
-		signIn: "/fr/login",
+		signIn: "/login",
 	},
 	session: {
 		strategy: "jwt",

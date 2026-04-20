@@ -2,23 +2,25 @@
   "mcpServers": {
     "nextjs": {
       "command": "npx",
-      "args": ["-y", "next-devtools-mcp@latest"],
-      "env": {}
+      "args": ["-y", "next-devtools-mcp@latest"]
     },
-    "browser": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
     "biome": {
       "command": "npx",
-      "args": ["@biomejs/biome", "lsp-proxy"],
-      "env": {}
+      "args": ["-y", "@biomejs/biome", "lsp-proxy"]
     },
-    "github": {
+    "snyk-mcp": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "args": ["-y", "snyk@latest", "mcp", "-t", "stdio"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "REDACTED_DO_NOT_COMMIT"
+        "SNYK_TOKEN": "TON_TOKEN_ICI"
       }
     }
   }

@@ -1,0 +1,193 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e63] [cursor=pointer]:
+    - img [ref=e64]
+  - alert [ref=e57]
+  - generic [ref=e67]:
+    - complementary [ref=e68]:
+      - generic [ref=e69]:
+        - img "Taysir" [ref=e70]
+        - generic [ref=e71]: Taysir.
+      - navigation [ref=e72]:
+        - generic [ref=e73]: Gestion
+        - link "Tableau de Bord" [ref=e74] [cursor=pointer]:
+          - /url: /fr
+          - img [ref=e75]
+          - generic [ref=e80]: Tableau de Bord
+        - link "Élèves" [ref=e81] [cursor=pointer]:
+          - /url: /fr/dashboard/students
+          - img [ref=e82]
+          - generic [ref=e86]: Élèves
+        - link "Planning" [ref=e87] [cursor=pointer]:
+          - /url: /fr/dashboard/schedule
+          - img [ref=e88]
+          - generic [ref=e90]: Planning
+        - link "Présences" [ref=e91] [cursor=pointer]:
+          - /url: /fr/dashboard/attendance
+          - img [ref=e92]
+          - generic [ref=e95]: Présences
+        - link "Paiements" [ref=e96] [cursor=pointer]:
+          - /url: /fr/dashboard/payments
+          - img [ref=e97]
+          - generic [ref=e100]: Paiements
+        - link "Groupes" [ref=e101] [cursor=pointer]:
+          - /url: /fr/dashboard/groups
+          - img [ref=e102]
+          - generic [ref=e107]: Groupes
+        - link "Salles" [ref=e108] [cursor=pointer]:
+          - /url: /fr/dashboard/rooms
+          - img [ref=e109]
+          - generic [ref=e112]: Salles
+        - link "Activités" [ref=e113] [cursor=pointer]:
+          - /url: /fr/dashboard/activities
+          - img [ref=e114]
+          - generic [ref=e116]: Activités
+        - link "Personnel" [ref=e117] [cursor=pointer]:
+          - /url: /fr/dashboard/staff
+          - img [ref=e118]
+          - generic [ref=e123]: Personnel
+      - generic [ref=e124]:
+        - link "Paramètres" [ref=e125] [cursor=pointer]:
+          - /url: /fr/dashboard/settings
+          - img [ref=e126]
+          - generic [ref=e129]: Paramètres
+        - generic [ref=e130]:
+          - generic [ref=e131]: A
+          - generic [ref=e132]:
+            - generic [ref=e133]: Admin Taysir
+            - generic [ref=e134]: GERANT
+        - button "Déconnexion" [ref=e135]:
+          - img [ref=e136]
+          - text: Déconnexion
+    - main [ref=e139]:
+      - generic [ref=e140]:
+        - heading "Bienvenue sur Taysir" [level=2] [ref=e143]
+        - generic [ref=e144]:
+          - button "Français" [ref=e147]:
+            - img [ref=e148]
+            - generic [ref=e152]: Français
+            - img [ref=e153]
+          - button [ref=e155]:
+            - img [ref=e156]
+          - button "A Admin Taysir GERANT" [ref=e161] [cursor=pointer]:
+            - generic [ref=e162]: A
+            - generic [ref=e163]:
+              - paragraph [ref=e164]: Admin Taysir
+              - paragraph [ref=e165]: GERANT
+            - img [ref=e166]
+      - generic [ref=e403]:
+        - generic [ref=e405]:
+          - heading "Gestion des inscriptions." [level=1] [ref=e406]
+          - paragraph [ref=e407]: Inscrivez, gérez et suivez l'évolution de vos apprenants.
+        - generic [ref=e408]:
+          - generic [ref=e409]:
+            - generic [ref=e410]:
+              - generic:
+                - img
+              - textbox "Rechercher un élève par nom, email ou groupe..." [ref=e411]
+            - button "Ajouter" [ref=e412]
+          - table [ref=e415]:
+            - rowgroup [ref=e416]:
+              - row "Identité Contact Affectation Statut" [ref=e417]:
+                - columnheader "Identité" [ref=e418]
+                - columnheader "Contact" [ref=e419]
+                - columnheader "Affectation" [ref=e420]
+                - columnheader "Statut" [ref=e421]
+                - columnheader [ref=e422]
+            - rowgroup [ref=e423]:
+              - row "test test test Inscrit le 4/19/2026 0777777777 aaa@aaa.com Aucun groupe Actif" [ref=e424]:
+                - cell "test test test Inscrit le 4/19/2026" [ref=e425]:
+                  - generic [ref=e426]:
+                    - img "test" [ref=e428]
+                    - generic [ref=e429]:
+                      - generic [ref=e430]: test test
+                      - generic [ref=e432]: Inscrit le 4/19/2026
+                - cell "0777777777 aaa@aaa.com" [ref=e433]:
+                  - generic [ref=e434]:
+                    - generic [ref=e435]:
+                      - img [ref=e436]
+                      - generic [ref=e438]: "0777777777"
+                    - generic [ref=e439]:
+                      - img [ref=e440]
+                      - generic [ref=e443]: aaa@aaa.com
+                - cell "Aucun groupe" [ref=e444]:
+                  - generic [ref=e446]: Aucun groupe
+                - cell "Actif" [ref=e447]:
+                  - generic [ref=e448]: Actif
+                - cell [ref=e450]:
+                  - button [ref=e453]:
+                    - img [ref=e454]
+  - generic [ref=e460]:
+    - generic [ref=e461]:
+      - heading "Inscription nouvel élève" [level=3] [ref=e462]
+      - button [ref=e463]:
+        - img [ref=e464]
+    - generic [ref=e468]:
+      - generic [ref=e469]:
+        - generic [ref=e470]:
+          - generic [ref=e471]:
+            - img [ref=e472]
+            - button [ref=e475]:
+              - img [ref=e476]
+          - paragraph [ref=e479]: Portrait Étudiant
+        - generic [ref=e480]:
+          - generic [ref=e481]:
+            - text: Prénom
+            - textbox "Prénom" [ref=e483]:
+              - /placeholder: "Ex: Karim"
+              - text: Jane
+          - generic [ref=e484]:
+            - text: Nom
+            - textbox "Nom" [ref=e486]:
+              - /placeholder: "Ex: Zidane"
+              - text: Doe
+      - generic [ref=e487]:
+        - generic [ref=e488]:
+          - img [ref=e490]
+          - generic [ref=e493]:
+            - generic [ref=e494]: Élève Mineur
+            - text: Active les coordonnées parents
+        - button [ref=e496] [cursor=pointer]
+      - generic [ref=e497]:
+        - generic [ref=e498]:
+          - img [ref=e499]
+          - heading "Coordonnées de contact" [level=3] [ref=e502]
+        - generic [ref=e503]:
+          - generic [ref=e504]:
+            - text: Email
+            - textbox "Email" [ref=e506]:
+              - /placeholder: karim@email.dz
+              - text: jane.doe@test.dz
+          - generic [ref=e507]:
+            - text: Téléphone
+            - textbox "Téléphone" [ref=e509]:
+              - /placeholder: 0550 00 00 00
+              - text: "0555999999"
+        - generic [ref=e510]:
+          - generic [ref=e511]:
+            - text: Adresse de résidence
+            - textbox "Adresse de résidence" [ref=e512]:
+              - /placeholder: "Ex: Cité 1200 logements, Bat 12, Alger"
+              - text: Alger Centre
+          - img [ref=e513]
+      - generic [ref=e516]:
+        - generic [ref=e517]:
+          - img [ref=e518]
+          - heading "Affectation Académique" [level=3] [ref=e520]
+        - generic [ref=e521]:
+          - text: Inscrire aux Groupes
+          - button "Inscrire aux Groupes" [ref=e523] [cursor=pointer]:
+            - generic [ref=e524]: Sélectionner un ou plusieurs groupes...
+            - img [ref=e525]
+    - generic [ref=e527]:
+      - button "Annuler" [ref=e528]
+      - button "Confirmer l'inscription" [active] [ref=e529]:
+        - generic [ref=e530]: Confirmer l'inscription
+  - generic [ref=e533]:
+    - generic [ref=e534]:
+      - heading "Attention" [level=3] [ref=e535]
+      - button [ref=e536]:
+        - img [ref=e537]
+    - generic [ref=e541]:
+      - img [ref=e543]
+      - paragraph [ref=e545]: La photo de l'élève est obligatoire à l'inscription.
+    - button "Compris" [ref=e547]

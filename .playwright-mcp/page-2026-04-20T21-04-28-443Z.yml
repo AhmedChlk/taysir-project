@@ -1,0 +1,247 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e61] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e62]:
+      - img [ref=e63]
+    - generic [ref=e66]:
+      - button "Open issues overlay" [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]: "0"
+          - generic [ref=e70]: "1"
+        - generic [ref=e71]: Issue
+      - button "Collapse issues badge" [ref=e72]:
+        - img [ref=e73]
+  - alert [ref=e75]
+  - generic [ref=e76]:
+    - complementary [ref=e77]:
+      - generic [ref=e78]:
+        - img "Taysir" [ref=e79]
+        - generic [ref=e80]: Taysir.
+      - navigation [ref=e81]:
+        - generic [ref=e82]: Gestion
+        - link "Tableau de Bord" [ref=e83] [cursor=pointer]:
+          - /url: /fr
+          - img [ref=e84]
+          - generic [ref=e89]: Tableau de Bord
+        - link "Élèves" [ref=e90] [cursor=pointer]:
+          - /url: /fr/dashboard/students
+          - img [ref=e91]
+          - generic [ref=e95]: Élèves
+        - link "Planning" [ref=e96] [cursor=pointer]:
+          - /url: /fr/dashboard/schedule
+          - img [ref=e97]
+          - generic [ref=e99]: Planning
+        - link "Présences" [ref=e100] [cursor=pointer]:
+          - /url: /fr/dashboard/attendance
+          - img [ref=e101]
+          - generic [ref=e104]: Présences
+        - link "Paiements" [ref=e105] [cursor=pointer]:
+          - /url: /fr/dashboard/payments
+          - img [ref=e106]
+          - generic [ref=e109]: Paiements
+        - link "Groupes" [ref=e110] [cursor=pointer]:
+          - /url: /fr/dashboard/groups
+          - img [ref=e111]
+          - generic [ref=e116]: Groupes
+        - link "Salles" [ref=e117] [cursor=pointer]:
+          - /url: /fr/dashboard/rooms
+          - img [ref=e118]
+          - generic [ref=e121]: Salles
+        - link "Activités" [ref=e122] [cursor=pointer]:
+          - /url: /fr/dashboard/activities
+          - img [ref=e123]
+          - generic [ref=e125]: Activités
+        - link "Personnel" [ref=e126] [cursor=pointer]:
+          - /url: /fr/dashboard/staff
+          - img [ref=e127]
+          - generic [ref=e132]: Personnel
+      - generic [ref=e133]:
+        - link "Paramètres" [ref=e134] [cursor=pointer]:
+          - /url: /fr/dashboard/settings
+          - img [ref=e135]
+          - generic [ref=e138]: Paramètres
+        - generic [ref=e139]:
+          - generic [ref=e140]: A
+          - generic [ref=e141]:
+            - generic [ref=e142]: Admin Taysir
+            - generic [ref=e143]: GERANT
+        - button "Déconnexion" [ref=e144]:
+          - img [ref=e145]
+          - text: Déconnexion
+    - main [ref=e148]:
+      - generic [ref=e149]:
+        - heading "Bienvenue sur Taysir" [level=2] [ref=e152]
+        - generic [ref=e153]:
+          - button "Français" [ref=e156]:
+            - img [ref=e157]
+            - generic [ref=e161]: Français
+            - img [ref=e162]
+          - button [ref=e164]:
+            - img [ref=e165]
+          - button "A Admin Taysir GERANT" [ref=e170] [cursor=pointer]:
+            - generic [ref=e171]: A
+            - generic [ref=e172]:
+              - paragraph [ref=e173]: Admin Taysir
+              - paragraph [ref=e174]: GERANT
+            - img [ref=e175]
+      - generic [ref=e179]:
+        - generic [ref=e180]:
+          - generic [ref=e181]:
+            - img [ref=e183]
+            - generic [ref=e188]:
+              - generic [ref=e190]: Centre de Commande
+              - heading "Tableau de Bord." [level=1] [ref=e192]
+          - generic [ref=e193]:
+            - generic [ref=e194]:
+              - img [ref=e195]
+              - textbox "Rechercher un élève, un groupe..." [ref=e198]
+            - generic [ref=e199]:
+              - generic [ref=e200]: Calendrier Académique
+              - generic [ref=e201]: lundi 20 avril
+        - main [ref=e202]:
+          - generic [ref=e203]:
+            - generic [ref=e204]:
+              - generic [ref=e205]:
+                - generic [ref=e206]:
+                  - generic [ref=e207]:
+                    - img [ref=e209]
+                    - generic [ref=e214]: Pilotage Effectifs
+                  - generic [ref=e215]:
+                    - heading "01" [level=2] [ref=e216]
+                    - generic [ref=e217]:
+                      - generic [ref=e218]: Inscrits
+                      - generic [ref=e219]:
+                        - generic [ref=e220]: 1 Actifs
+                        - generic [ref=e222]: 0 Archives
+                - generic [ref=e223]:
+                  - link "Base de données élèves" [ref=e224] [cursor=pointer]:
+                    - /url: /fr/dashboard/students
+                    - generic [ref=e225]: Base de données élèves
+                    - img [ref=e226]
+                  - link "Feuilles d'appel" [ref=e228] [cursor=pointer]:
+                    - /url: /fr/dashboard/attendance
+                    - img [ref=e229]
+                    - generic [ref=e232]: Feuilles d'appel
+              - generic:
+                - img
+            - generic [ref=e234]:
+              - generic [ref=e235]:
+                - generic [ref=e236]:
+                  - heading "Pilotage Directeur" [level=3] [ref=e237]:
+                    - img [ref=e238]
+                    - text: Pilotage Directeur
+                  - paragraph [ref=e240]: Indicateurs de santé critiques
+                - link [ref=e241] [cursor=pointer]:
+                  - /url: /fr/dashboard/payments
+                  - img [ref=e242]
+              - generic [ref=e245]:
+                - generic [ref=e246]:
+                  - generic [ref=e247]:
+                    - img [ref=e249]
+                    - generic [ref=e252]: Trésorerie Mensuelle
+                  - generic [ref=e253]:
+                    - generic [ref=e254]:
+                      - text: "0"
+                      - generic [ref=e255]: DZD
+                    - generic [ref=e259]: Flux Positif
+                - generic [ref=e260]:
+                  - generic [ref=e261]:
+                    - generic [ref=e265]: Engagement
+                    - generic [ref=e266]: 0%
+                  - generic [ref=e268]:
+                    - generic [ref=e272]: Occupation
+                    - generic [ref=e273]: 0%
+                - generic [ref=e275]:
+                  - application [ref=e279]
+                  - paragraph [ref=e280]: Tendance hebdomadaire
+          - generic [ref=e281]:
+            - generic [ref=e282]:
+              - generic [ref=e283]:
+                - generic [ref=e284]:
+                  - generic [ref=e285]:
+                    - img [ref=e287]
+                    - generic [ref=e289]:
+                      - generic [ref=e290]: Planning
+                      - generic [ref=e291]: Activité en temps réel
+                  - generic [ref=e292]: Agenda du jour
+                - generic [ref=e293]:
+                  - generic [ref=e294]: "00"
+                  - heading "Séances aujourd'hui" [level=3] [ref=e295]
+                  - generic [ref=e296]:
+                    - generic [ref=e297]:
+                      - img [ref=e298]
+                      - text: 0 Salles
+                    - generic [ref=e302]: Journée calme
+              - generic [ref=e304]:
+                - link "Voir tout le planning" [ref=e305] [cursor=pointer]:
+                  - /url: "?drawer=sessions"
+                  - generic [ref=e306]: Voir tout le planning
+                  - img [ref=e307]
+                - link "Planifier une séance" [ref=e310] [cursor=pointer]:
+                  - /url: "?drawer=new-session"
+                  - img [ref=e311]
+                  - generic [ref=e312]: Planifier une séance
+            - generic [ref=e314]:
+              - generic [ref=e315]:
+                - generic [ref=e316]:
+                  - heading "Équipage Établissement" [level=3] [ref=e317]:
+                    - img [ref=e318]
+                    - text: Équipage Établissement
+                  - paragraph [ref=e323]: Disponibilité et accès en temps réel
+                - generic [ref=e324]:
+                  - generic [ref=e325]: 2 Actifs
+                  - link [ref=e326] [cursor=pointer]:
+                    - /url: /fr/dashboard/staff
+                    - img [ref=e327]
+              - generic [ref=e329]:
+                - generic [ref=e330]:
+                  - generic [ref=e331]:
+                    - generic [ref=e333]: MS
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: Mamadou Sidibe
+                      - generic [ref=e339]:
+                        - img [ref=e340]
+                        - text: INTERVENANT
+                  - button [ref=e344]:
+                    - img [ref=e345]
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - generic [ref=e351]: AT
+                    - generic [ref=e354]:
+                      - generic [ref=e355]: Admin Taysir
+                      - generic [ref=e357]:
+                        - img [ref=e358]
+                        - text: GERANT
+                  - button [ref=e362]:
+                    - img [ref=e363]
+          - generic [ref=e366]:
+            - generic [ref=e367]:
+              - generic [ref=e368]:
+                - generic [ref=e369]:
+                  - generic [ref=e370]:
+                    - img [ref=e372]
+                    - generic [ref=e375]:
+                      - generic [ref=e376]: Recouvrement
+                      - generic [ref=e377]: Recettes à recouvrer
+                  - generic [ref=e378]: 0 dossiers
+                - generic [ref=e379]:
+                  - generic [ref=e380]:
+                    - text: "0"
+                    - generic [ref=e381]: DZD
+                  - paragraph [ref=e382]:
+                    - img [ref=e383]
+                    - text: Total des impayés à ce jour
+              - generic [ref=e389]:
+                - link "Détail impayés" [ref=e390] [cursor=pointer]:
+                  - /url: "?drawer=payments"
+                  - generic [ref=e391]: Détail impayés
+                - link "Gérer Finance" [ref=e394] [cursor=pointer]:
+                  - /url: "?drawer=new-finance"
+                  - generic [ref=e397]: Gérer Finance
+            - generic [ref=e399]:
+              - generic [ref=e400]:
+                - heading "Besoin d'assistance ?" [level=3] [ref=e401]
+                - paragraph [ref=e402]: Le module de support est disponible pour toute question technique. Accédez à la documentation Taysir pour optimiser votre gestion quotidienne.
+                - generic [ref=e403]:
+                  - button "Guide Utilisateur" [ref=e404]
+                  - button "Contacter Support" [ref=e405]
+              - img [ref=e407]

@@ -1,6 +1,7 @@
 "use server";
 
-import { put } from "@vercel/blob";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
@@ -28,32 +29,39 @@ export async function uploadFileAction(formData: FormData) {
 			};
 		}
 
-		const tenantId = session.user.etablissementId || "system";
-		const filename = `${tenantId}/${Date.now()}-${file.name}`;
-
-		if (!process.env.BLOB_READ_WRITE_TOKEN) {
-			return {
-				success: false,
-				error:
-					"Service d'upload non configuré. Contactez l'administrateur système.",
-			};
+		const tenantId = session.user.etablissementId;
+		if (!tenantId) {
+			return { success: false, error: "Aucun établissement associé à ce compte" };
 		}
+		// Sécurisation du nom de fichier : on ne garde que le nom de base pour éviter le path traversal
+		const safeFileName = path
+			.basename(file.name)
+			.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+		const relativePath = `uploads/${tenantId}/${Date.now()}-${safeFileName}`;
+		const absolutePath = path.join(process.cwd(), "public", relativePath);
 
-		const blob = await put(filename, file, {
-			access: "public",
-			addRandomSuffix: true,
-		});
+		// Création récursive du dossier
+		await mkdir(path.dirname(absolutePath), { recursive: true });
+
+		// Conversion en Buffer et écriture
+		const bytes = await file.arrayBuffer();
+		const buffer = Buffer.from(bytes);
+		await writeFile(absolutePath, buffer);
+
+		// URL relative ou absolue via variable d'env
+		const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+		const url = `${appUrl}/${relativePath}`;
 
 		return {
 			success: true,
 			data: {
-				url: blob.url,
-				pathname: blob.pathname,
-				contentType: blob.contentType,
+				url: url,
+				pathname: relativePath,
+				contentType: file.type,
 			},
 		};
 	} catch (error) {
 		console.error("[UPLOAD_ERROR]", error);
-		return { success: false, error: "Erreur lors de l'upload" };
+		return { success: false, error: "Erreur lors de l'upload local" };
 	}
 }

@@ -9,6 +9,8 @@ export default async function Home() {
 
 	if (!session) {
 		redirect(`/${locale}/login`);
+	} else if (session.user.role === "SUPER_ADMIN") {
+		redirect(`/${locale}/superadmin`);
 	} else {
 		redirect(`/${locale}/dashboard`);
 	}

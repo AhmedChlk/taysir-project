@@ -9,13 +9,17 @@ import { Input, Select } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatFullName } from "@/utils/format";
 
+type RoomOption = { id: string; name: string; capacity: number };
+type ActivityOption = { id: string; name: string; color?: string | null };
+type StaffOption = { id: string; role: string; firstName: string; lastName: string };
+type GroupOption = { id: string; name: string };
+
 interface SessionFormProps {
 	onSuccess?: () => void;
-	// Options pour les selects (peuvent être fetchées ou passées)
-	rooms?: any[];
-	activities?: any[];
-	staff?: any[];
-	groups?: any[];
+	rooms?: RoomOption[];
+	activities?: ActivityOption[];
+	staff?: StaffOption[];
+	groups?: GroupOption[];
 }
 
 export default function SessionForm({
@@ -45,7 +49,7 @@ export default function SessionForm({
 	});
 
 	const instructors = staff.filter(
-		(u: any) =>
+		(u) =>
 			u.role === "INTERVENANT" || u.role === "GERANT" || u.role === "ADMIN",
 	);
 

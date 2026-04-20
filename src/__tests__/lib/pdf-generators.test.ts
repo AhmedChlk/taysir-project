@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
+import { generatePaymentReceiptPDF } from "@/lib/pdf-generators/payment-receipt";
 
 const mockDocInstance = {
 	setFillColor: vi.fn(),
@@ -88,5 +89,35 @@ describe("generateStudentProfilePDF", () => {
 	it("gère un élève sans groupes", () => {
 		const studentWithoutGroups = { ...mockStudent, groups: [] };
 		expect(() => generateStudentProfilePDF(studentWithoutGroups)).not.toThrow();
+	});
+});
+
+describe("generatePaymentReceiptPDF", () => {
+	const mockReceiptData = {
+		paiementId: "pay-123-abc",
+		paiementDate: new Date("2024-04-20"),
+		amount: 5000,
+		method: "CASH",
+		reference: null,
+		resteSurTranche: 2000,
+		studentFirstName: "Ahmed",
+		studentLastName: "Benali",
+		schoolName: "Ecole Taysir",
+	};
+
+	it("génère un reçu de paiement sans lever d'exception", () => {
+		expect(() => generatePaymentReceiptPDF(mockReceiptData)).not.toThrow();
+	});
+
+	it("génère un reçu avec référence", () => {
+		expect(() =>
+			generatePaymentReceiptPDF({ ...mockReceiptData, reference: "REF-456" })
+		).not.toThrow();
+	});
+
+	it("génère un reçu si paiementId est vide", () => {
+		expect(() =>
+			generatePaymentReceiptPDF({ ...mockReceiptData, paiementId: "" })
+		).not.toThrow();
 	});
 });

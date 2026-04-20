@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cn, formatCurrency, formatFullName } from "./format";
+import {
+	cn,
+	formatCurrency,
+	formatDate,
+	formatFullName,
+	formatTime,
+} from "./format";
 
 describe("formatFullName", () => {
 	it("returns empty string when both params are undefined", () => {
@@ -41,5 +47,62 @@ describe("cn", () => {
 
 	it("resolves tailwind conflicts by keeping the last value", () => {
 		expect(cn("p-4", "p-8")).toBe("p-8");
+	});
+
+	it("ignores falsy values", () => {
+		expect(cn("base", false, undefined, null)).toBe("base");
+	});
+});
+
+describe("formatDate", () => {
+	const testDate = new Date("2024-09-15T10:00:00Z");
+
+	it("formate une date avec le locale fr par défaut", () => {
+		const result = formatDate(testDate);
+		expect(result).toBeTruthy();
+		expect(typeof result).toBe("string");
+	});
+
+	it("accepte une string ISO en entrée", () => {
+		const result = formatDate("2024-09-15");
+		expect(typeof result).toBe("string");
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("formate avec locale ar", () => {
+		const result = formatDate(testDate, "ar");
+		expect(typeof result).toBe("string");
+	});
+
+	it("accepte des options personnalisées", () => {
+		const result = formatDate(testDate, "fr", {
+			year: "numeric",
+			month: "long",
+		});
+		expect(result.toLowerCase()).toContain("2024");
+	});
+});
+
+describe("formatTime", () => {
+	const testDate = new Date("2024-09-15T14:30:00Z");
+
+	it("formate l'heure en format 2-digit par défaut", () => {
+		const result = formatTime(testDate, "fr");
+		expect(typeof result).toBe("string");
+		expect(result).toMatch(/\d+:\d+/);
+	});
+
+	it("accepte une string ISO", () => {
+		const result = formatTime("2024-09-15T14:30:00Z");
+		expect(typeof result).toBe("string");
+	});
+
+	it("accepte des options personnalisées", () => {
+		const result = formatTime(testDate, "fr", {
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+		});
+		expect(result).toMatch(/\d+:\d+:\d+/);
 	});
 });

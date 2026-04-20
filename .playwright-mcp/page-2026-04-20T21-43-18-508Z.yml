@@ -1,0 +1,118 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e63] [cursor=pointer]:
+    - img [ref=e64]
+  - alert [ref=e57]
+  - generic [ref=e67]:
+    - complementary [ref=e68]:
+      - generic [ref=e69]:
+        - img "Taysir" [ref=e70]
+        - generic [ref=e71]: Taysir.
+      - navigation [ref=e72]:
+        - generic [ref=e73]: Gestion
+        - link "Tableau de Bord" [ref=e74] [cursor=pointer]:
+          - /url: /fr
+          - img [ref=e75]
+          - generic [ref=e80]: Tableau de Bord
+        - link "Élèves" [active] [ref=e81] [cursor=pointer]:
+          - /url: /fr/dashboard/students
+          - img [ref=e82]
+          - generic [ref=e86]: Élèves
+        - link "Planning" [ref=e87] [cursor=pointer]:
+          - /url: /fr/dashboard/schedule
+          - img [ref=e88]
+          - generic [ref=e90]: Planning
+        - link "Présences" [ref=e91] [cursor=pointer]:
+          - /url: /fr/dashboard/attendance
+          - img [ref=e92]
+          - generic [ref=e95]: Présences
+        - link "Paiements" [ref=e96] [cursor=pointer]:
+          - /url: /fr/dashboard/payments
+          - img [ref=e97]
+          - generic [ref=e100]: Paiements
+        - link "Groupes" [ref=e101] [cursor=pointer]:
+          - /url: /fr/dashboard/groups
+          - img [ref=e102]
+          - generic [ref=e107]: Groupes
+        - link "Salles" [ref=e108] [cursor=pointer]:
+          - /url: /fr/dashboard/rooms
+          - img [ref=e109]
+          - generic [ref=e112]: Salles
+        - link "Activités" [ref=e113] [cursor=pointer]:
+          - /url: /fr/dashboard/activities
+          - img [ref=e114]
+          - generic [ref=e116]: Activités
+        - link "Personnel" [ref=e117] [cursor=pointer]:
+          - /url: /fr/dashboard/staff
+          - img [ref=e118]
+          - generic [ref=e123]: Personnel
+      - generic [ref=e124]:
+        - link "Paramètres" [ref=e125] [cursor=pointer]:
+          - /url: /fr/dashboard/settings
+          - img [ref=e126]
+          - generic [ref=e129]: Paramètres
+        - generic [ref=e130]:
+          - generic [ref=e131]: A
+          - generic [ref=e132]:
+            - generic [ref=e133]: Admin Taysir
+            - generic [ref=e134]: GERANT
+        - button "Déconnexion" [ref=e135]:
+          - img [ref=e136]
+          - text: Déconnexion
+    - main [ref=e139]:
+      - generic [ref=e140]:
+        - heading "Bienvenue sur Taysir" [level=2] [ref=e143]
+        - generic [ref=e144]:
+          - button "Français" [ref=e147]:
+            - img [ref=e148]
+            - generic [ref=e152]: Français
+            - img [ref=e153]
+          - button [ref=e155]:
+            - img [ref=e156]
+          - button "A Admin Taysir GERANT" [ref=e161] [cursor=pointer]:
+            - generic [ref=e162]: A
+            - generic [ref=e163]:
+              - paragraph [ref=e164]: Admin Taysir
+              - paragraph [ref=e165]: GERANT
+            - img [ref=e166]
+      - generic [ref=e403]:
+        - generic [ref=e405]:
+          - heading "Gestion des inscriptions." [level=1] [ref=e406]
+          - paragraph [ref=e407]: Inscrivez, gérez et suivez l'évolution de vos apprenants.
+        - generic [ref=e408]:
+          - generic [ref=e409]:
+            - generic [ref=e410]:
+              - generic:
+                - img
+              - textbox "Rechercher un élève par nom, email ou groupe..." [ref=e411]
+            - button "Ajouter" [ref=e412]
+          - table [ref=e415]:
+            - rowgroup [ref=e416]:
+              - row "Identité Contact Affectation Statut" [ref=e417]:
+                - columnheader "Identité" [ref=e418]
+                - columnheader "Contact" [ref=e419]
+                - columnheader "Affectation" [ref=e420]
+                - columnheader "Statut" [ref=e421]
+                - columnheader [ref=e422]
+            - rowgroup [ref=e423]:
+              - row "test test test Inscrit le 4/19/2026 0777777777 aaa@aaa.com Aucun groupe Actif" [ref=e424]:
+                - cell "test test test Inscrit le 4/19/2026" [ref=e425]:
+                  - generic [ref=e426]:
+                    - img "test" [ref=e428]
+                    - generic [ref=e429]:
+                      - generic [ref=e430]: test test
+                      - generic [ref=e432]: Inscrit le 4/19/2026
+                - cell "0777777777 aaa@aaa.com" [ref=e433]:
+                  - generic [ref=e434]:
+                    - generic [ref=e435]:
+                      - img [ref=e436]
+                      - generic [ref=e438]: "0777777777"
+                    - generic [ref=e439]:
+                      - img [ref=e440]
+                      - generic [ref=e443]: aaa@aaa.com
+                - cell "Aucun groupe" [ref=e444]:
+                  - generic [ref=e446]: Aucun groupe
+                - cell "Actif" [ref=e447]:
+                  - generic [ref=e448]: Actif
+                - cell [ref=e450]:
+                  - button [ref=e453]:
+                    - img [ref=e454]

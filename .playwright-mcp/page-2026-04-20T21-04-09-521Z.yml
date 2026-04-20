@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - button "Français" [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e10]: Français
+      - img [ref=e11]
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - img "TAYSIR" [ref=e17]
+        - generic [ref=e18]: TAYSIR
+      - generic [ref=e19]:
+        - img [ref=e20]
+        - heading "Simplifiez la gestion de votre établissement scolaire." [level=1] [ref=e23]
+        - paragraph [ref=e24]: La plateforme complète pour piloter votre établissement avec sérénité et efficacité au quotidien.
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: 100%
+          - generic [ref=e28]: Algérien
+        - generic [ref=e29]:
+          - generic [ref=e30]: 24/7
+          - generic [ref=e31]: Support
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - heading "Content de vous revoir" [level=2] [ref=e35]
+        - paragraph [ref=e36]: Accédez à votre espace de gestion
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - text: Email
+            - textbox "Email" [ref=e41]:
+              - /placeholder: example@email.dz
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - text: Mot de passe
+              - generic [ref=e44]:
+                - textbox "Mot de passe" [ref=e45]:
+                  - /placeholder: ••••••••
+                - button [ref=e47]:
+                  - img [ref=e48]
+            - button "Mot de passe oublié ?" [ref=e52]
+        - button "Se connecter" [ref=e53]:
+          - generic [ref=e54]: Se connecter
+      - paragraph [ref=e56]: © 2026 Taysir - Gestion de Scolarité
+  - button "Open Next.js Dev Tools" [ref=e62] [cursor=pointer]:
+    - img [ref=e63]

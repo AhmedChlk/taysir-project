@@ -16,6 +16,7 @@ model Etablissement {
   logoUrl      String?
   address      String?
   primaryColor String?            @default("#0F515C")
+  isActive     Boolean            @default(true)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   activities   Activity[]

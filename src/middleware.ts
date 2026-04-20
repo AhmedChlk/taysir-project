@@ -9,25 +9,37 @@ const intlMiddleware = createIntlMiddleware(routing);
 export default async function middleware(req: NextRequest) {
 	const { pathname } = req.nextUrl;
 
-	// Routes protégées — vérification JWT avant rendu
-	if (pathname.includes("/dashboard")) {
-		const secret = process.env.NEXTAUTH_SECRET;
+	// 1. Skip assets, api routes and internal next calls
+	if (
+		pathname.startsWith("/_next") ||
+		pathname.startsWith("/api") ||
+		pathname.includes(".")
+	) {
+		return NextResponse.next();
+	}
+
+	// 2. Auth protection
+	if (pathname.includes("/dashboard") || pathname.includes("/superadmin")) {
 		const token = await getToken({
 			req,
-			secret: secret ?? "",
+			secret: process.env.NEXTAUTH_SECRET!,
 		});
 
 		if (!token) {
-			// Extraire la locale depuis le pathname (ex: /fr/dashboard → fr)
-			const localeMatch = pathname.match(/^\/(fr|ar)\//);
-			const locale = localeMatch?.[1] ?? "fr";
+			const locale = pathname.split("/")[1] || "fr";
 			const loginUrl = new URL(`/${locale}/login`, req.url);
 			loginUrl.searchParams.set("callbackUrl", pathname);
 			return NextResponse.redirect(loginUrl);
 		}
+
+		// Role protection for superadmin
+		if (pathname.includes("/superadmin") && token.role !== "SUPER_ADMIN") {
+			const locale = pathname.split("/")[1] || "fr";
+			return NextResponse.redirect(new URL(`/${locale}/dashboard`, req.url));
+		}
 	}
 
-	// I18n middleware pour toutes les routes
+	// 3. I18n
 	return intlMiddleware(req);
 }
 

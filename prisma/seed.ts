@@ -6,6 +6,28 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Début du seeding propre...");
 
+  // 0. Création du Super Admin
+  const superAdminEmail = "ahmedchoulak80@superadmin.taysir.dz";
+  const superPassword = process.env.SEED_SUPER_ADMIN_PASSWORD;
+  if (!superPassword) {
+    throw new Error("SEED_SUPER_ADMIN_PASSWORD is required for seeding");
+  }
+  const hashedSuperPassword = await bcrypt.hash(superPassword, 12);
+
+  const superadmin = await prisma.user.upsert({
+    where: { email: superAdminEmail },
+    update: { password: hashedSuperPassword },
+    create: {
+      email: superAdminEmail,
+      password: hashedSuperPassword,
+      firstName: "Ahmed",
+      lastName: "Choulak",
+      role: RoleUser.SUPER_ADMIN,
+      status: "ACTIVE",
+    },
+  });
+  console.log(`✅ Super Admin créé : ${superadmin.email}`);
+
   // 1. Création de l'établissement par défaut
   const etablissement = await prisma.etablissement.upsert({
     where: { slug: "taysir-academy" },
@@ -20,8 +42,12 @@ async function main() {
   console.log(`✅ Établissement créé : ${etablissement.name}`);
 
   // 2. Création de l'unique Gérant propre
-  const adminEmail = "admin@taysir.dz";
-  const hashedPassword = await bcrypt.hash("Taysir2026!", 12);
+  const adminEmail = process.env.INITIAL_ADMIN_EMAIL || "admin@taysir.dz";
+  const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  if (!initialAdminPassword) {
+    throw new Error("INITIAL_ADMIN_PASSWORD is required for seeding");
+  }
+  const hashedPassword = await bcrypt.hash(initialAdminPassword, 12);
 
   const manager = await prisma.user.upsert({
     where: { email: adminEmail },

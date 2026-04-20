@@ -5,6 +5,8 @@ import { fr } from "date-fns/locale";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./calendar-overrides.css";
+
+import type { Activity, Groupe, Room, Session, User } from "@prisma/client";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const locales = {
@@ -19,8 +21,15 @@ const localizer = dateFnsLocalizer({
 	locales,
 });
 
+type SessionWithRelations = Session & {
+	room: Pick<Room, "name" | "capacity">;
+	activity: Pick<Activity, "name" | "color">;
+	group: Pick<Groupe, "name">;
+	instructor?: Pick<User, "firstName" | "lastName" | "avatarUrl">;
+};
+
 interface TaysirCalendarProps {
-	sessions: any[];
+	sessions: SessionWithRelations[];
 	currentDate: Date;
 }
 
@@ -39,21 +48,21 @@ export default function TaysirCalendar({
 		resource: s,
 	}));
 
-	const handleSelectEvent = (event: any) => {
+	const handleSelectEvent = (event: (typeof events)[number]) => {
 		const params = new URLSearchParams(searchParams.toString());
 		params.set("drawer", "view-session");
 		params.set("id", event.id);
 		router.push(`?${params.toString()}`, { scroll: false });
 	};
 
-	const handleSelectSlot = ({ start }: any) => {
+	const handleSelectSlot = ({ start }: { start: Date }) => {
 		const params = new URLSearchParams(searchParams.toString());
 		params.set("drawer", "new-session");
 		params.set("start", start.toISOString());
 		router.push(`?${params.toString()}`, { scroll: false });
 	};
 
-	const eventPropGetter = (event: any) => {
+	const eventPropGetter = (event: (typeof events)[number]) => {
 		return {
 			style: {
 				backgroundColor: event.resource.activity.color || "#0F515C",

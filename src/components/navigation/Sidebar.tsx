@@ -7,6 +7,7 @@ import {
 	FileText,
 	LayoutDashboard,
 	LogOut,
+	ShieldCheck,
 	type LucideIcon,
 	MapPin,
 	Settings,
@@ -17,7 +18,7 @@ import {
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/routing";
+import { Link, usePathname, getPathname } from "@/i18n/routing";
 import { UserRole } from "@/types/schema";
 
 interface NavItem {
@@ -32,7 +33,14 @@ const navItems: NavItem[] = [
 		labelKey: "dashboard",
 		href: "/",
 		icon: LayoutDashboard,
-		roles: Object.values(UserRole),
+		roles: [
+			UserRole.ADMIN,
+			UserRole.GERANT,
+			UserRole.SECRETAIRE,
+			UserRole.INTERVENANT,
+			UserRole.PARTICIPANT,
+			UserRole.RESPONSABLE,
+		],
 	},
 	{
 		labelKey: "students",
@@ -94,6 +102,15 @@ const navItems: NavItem[] = [
 	},
 ];
 
+const superAdminItems: NavItem[] = [
+	{
+		labelKey: "superadmin_tenants",
+		href: "/superadmin/tenants",
+		icon: ShieldCheck,
+		roles: [UserRole.SUPER_ADMIN],
+	},
+];
+
 interface SidebarProps {
 	isOpen?: boolean;
 	onClose?: () => void;
@@ -108,6 +125,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 	const userRole = session?.user?.role;
 
 	const filteredNavItems = navItems.filter(
+		(item) => userRole && item.roles.includes(userRole),
+	);
+
+	const filteredSuperAdminItems = superAdminItems.filter(
 		(item) => userRole && item.roles.includes(userRole),
 	);
 	const showSettings = !!userRole;
@@ -146,47 +167,104 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 				</div>
 
 				<nav className="flex-1 space-y-0.5 px-4 py-2 overflow-y-auto custom-scrollbar">
-					{filteredNavItems.map((item) => {
-						const isActive = pathname === item.href;
-						return (
-							<Link
-								key={item.href}
-								href={item.href}
-								onClick={onClose}
-								className={clsx(
-									"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
-									isActive
-										? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1"
-										: "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1",
-								)}
-							>
-								{isActive && (
-									<div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
-								)}
-								<item.icon
-									size={22}
-									strokeWidth={1.5}
-									className={clsx(
-										"transition-all duration-300",
-										isActive
-											? "text-taysir-accent scale-110"
-											: "group-hover:text-white group-hover:scale-110",
-										isRtl &&
-											(item.icon === LogOut || item.icon === FileText) &&
-											"rotate-180",
-									)}
-								/>
-								<span
-									className={clsx(
-										"truncate uppercase tracking-wider text-[11px]",
-										isActive ? "font-bold" : "",
-									)}
-								>
-									{t(item.labelKey)}
-								</span>
-							</Link>
-						);
-					})}
+					{filteredSuperAdminItems.length > 0 && (
+						<>
+							<div className="px-4 py-2 text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+								Administration
+							</div>
+							{filteredSuperAdminItems.map((item) => {
+								const isActive = pathname === item.href;
+								return (
+									<Link
+										key={item.href}
+										href={item.href}
+										onClick={onClose}
+										className={clsx(
+											"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
+											isActive
+												? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1"
+												: "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1",
+										)}
+									>
+										{isActive && (
+											<div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
+										)}
+										<item.icon
+											size={22}
+											strokeWidth={1.5}
+											className={clsx(
+												"transition-all duration-300",
+												isActive
+													? "text-taysir-accent scale-110"
+													: "group-hover:text-white group-hover:scale-110",
+												isRtl &&
+													(item.icon === LogOut || item.icon === FileText) &&
+													"rotate-180",
+											)}
+										/>
+										<span
+											className={clsx(
+												"truncate uppercase tracking-wider text-[11px]",
+												isActive ? "font-bold" : "",
+											)}
+										>
+											{t(item.labelKey)}
+										</span>
+									</Link>
+								);
+							})}
+							<div className="my-4 border-t border-white/5" />
+						</>
+					)}
+
+					{filteredNavItems.length > 0 && (
+						<>
+							<div className="px-4 py-2 text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+								Gestion
+							</div>
+							{filteredNavItems.map((item) => {
+								const isActive = pathname === item.href;
+								return (
+									<Link
+										key={item.href}
+										href={item.href}
+										onClick={onClose}
+										className={clsx(
+											"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
+											isActive
+												? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1"
+												: "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1",
+										)}
+									>
+										{isActive && (
+											<div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
+										)}
+										<item.icon
+											size={22}
+											strokeWidth={1.5}
+											className={clsx(
+												"transition-all duration-300",
+												isActive
+													? "text-taysir-accent scale-110"
+													: "group-hover:text-white group-hover:scale-110",
+												isRtl &&
+													(item.icon === LogOut || item.icon === FileText) &&
+													"rotate-180",
+											)}
+										/>
+										<span
+											className={clsx(
+												"truncate uppercase tracking-wider text-[11px]",
+												isActive ? "font-bold" : "",
+											)}
+										>
+											{t(item.labelKey)}
+										</span>
+									</Link>
+								);
+							})}
+						</>
+					)}
 				</nav>
 
 				<div className="mt-auto border-t border-white/5 p-4 bg-black/20 space-y-2">
@@ -240,7 +318,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 						type="button"
 						onClick={() => {
 							onClose?.();
-							signOut({ callbackUrl: "/login" });
+							signOut({ callbackUrl: `/${locale}/login` });
 						}}
 						className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black text-white/40 hover:bg-red-500/15 hover:text-red-400 transition-all duration-300 ease-in-out group uppercase tracking-widest"
 					>

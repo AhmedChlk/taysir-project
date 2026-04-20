@@ -20,7 +20,7 @@ import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Sidebar from "@/components/navigation/Sidebar";
 import Drawer from "@/components/ui/Drawer";
-import { Link } from "@/i18n/routing";
+import { Link, getPathname } from "@/i18n/routing";
 
 export default function DashboardLayout({
 	children,
@@ -182,7 +182,10 @@ export default function DashboardLayout({
 										</div>
 										<div className="h-px bg-taysir-teal/5 my-2 mx-3" />
 										<button
-											onClick={() => signOut({ callbackUrl: "/login" })}
+											onClick={() => {
+												const callbackUrl = getPathname({ locale, href: "/login" });
+												signOut({ callbackUrl });
+											}}
 											className="flex w-full items-center gap-3 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
 										>
 											<LogOut size={18} />

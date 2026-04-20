@@ -1,0 +1,190 @@
+- generic [ref=e1]:
+  - generic [ref=e61] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e62]:
+      - img [ref=e63]
+    - generic [ref=e66]:
+      - button "Open issues overlay" [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]: "0"
+          - generic [ref=e70]: "1"
+        - generic [ref=e71]: Issue
+      - button "Collapse issues badge" [ref=e72]:
+        - img [ref=e73]
+  - alert [ref=e75]
+  - generic [ref=e76]:
+    - complementary [ref=e77]:
+      - generic [ref=e78]:
+        - img "Taysir" [ref=e79]
+        - generic [ref=e80]: Taysir.
+      - navigation [ref=e81]:
+        - generic [ref=e82]: Administration
+        - link "Établissements" [ref=e83] [cursor=pointer]:
+          - /url: /fr/superadmin/tenants
+          - img [ref=e85]
+          - generic [ref=e88]: Établissements
+      - generic [ref=e90]:
+        - link "Paramètres" [ref=e91] [cursor=pointer]:
+          - /url: /fr/dashboard/settings
+          - img [ref=e92]
+          - generic [ref=e95]: Paramètres
+        - generic [ref=e96]:
+          - generic [ref=e97]: A
+          - generic [ref=e98]:
+            - generic [ref=e99]: Ahmed Choulak
+            - generic [ref=e100]: SUPER_ADMIN
+        - button "Déconnexion" [ref=e101]:
+          - img [ref=e102]
+          - text: Déconnexion
+    - generic [ref=e105]:
+      - banner [ref=e106]:
+        - generic [ref=e108]:
+          - img [ref=e109]
+          - textbox "Rechercher un établissement..." [ref=e112]
+        - generic [ref=e113]:
+          - generic [ref=e114]:
+            - img [ref=e115]
+            - text: Super Admin
+          - button [ref=e117]:
+            - img [ref=e118]
+      - main [ref=e122]:
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - heading "Parc Établissements" [level=1] [ref=e127]
+              - paragraph [ref=e128]: Déployez et pilotez les accès de vos clients.
+            - button "Nouveau Client" [active] [ref=e129]:
+              - img [ref=e130]
+              - text: Nouveau Client
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e134]:
+                - img [ref=e136]
+                - generic [ref=e140]:
+                  - button "Désactiver l'accès" [ref=e141]:
+                    - img [ref=e142]
+                  - button "Supprimer définitivement" [ref=e146]:
+                    - img [ref=e147]
+              - generic [ref=e150]:
+                - heading "Ecole Ruifed" [level=3] [ref=e152]
+                - generic [ref=e153]:
+                  - img [ref=e154]
+                  - text: ecole-ruifed
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - generic [ref=e159]:
+                    - img [ref=e160]
+                    - generic [ref=e165]: Staff
+                  - text: "1"
+                - generic [ref=e166]:
+                  - generic [ref=e167]:
+                    - img [ref=e168]
+                    - generic [ref=e171]: Élèves
+                  - text: "0"
+              - button "Ouvrir l'instance" [ref=e172]:
+                - img [ref=e173]
+                - text: Ouvrir l'instance
+            - generic [ref=e177]:
+              - generic [ref=e179]:
+                - img [ref=e181]
+                - generic [ref=e185]:
+                  - button "Désactiver l'accès" [ref=e186]:
+                    - img [ref=e187]
+                  - button "Supprimer définitivement" [ref=e191]:
+                    - img [ref=e192]
+              - generic [ref=e195]:
+                - heading "Etab B Isolation" [level=3] [ref=e197]
+                - generic [ref=e198]:
+                  - img [ref=e199]
+                  - text: etab-b-iso-6ff40848-b55f-42fd-a1fe-8c0b084cfb9e
+              - generic [ref=e202]:
+                - generic [ref=e203]:
+                  - generic [ref=e204]:
+                    - img [ref=e205]
+                    - generic [ref=e210]: Staff
+                  - text: "0"
+                - generic [ref=e211]:
+                  - generic [ref=e212]:
+                    - img [ref=e213]
+                    - generic [ref=e216]: Élèves
+                  - text: "1"
+              - button "Ouvrir l'instance" [ref=e217]:
+                - img [ref=e218]
+                - text: Ouvrir l'instance
+            - generic [ref=e222]:
+              - generic [ref=e224]:
+                - img [ref=e226]
+                - generic [ref=e230]:
+                  - button "Désactiver l'accès" [ref=e231]:
+                    - img [ref=e232]
+                  - button "Supprimer définitivement" [ref=e236]:
+                    - img [ref=e237]
+              - generic [ref=e240]:
+                - heading "Taysir Academy" [level=3] [ref=e242]
+                - generic [ref=e243]:
+                  - img [ref=e244]
+                  - text: taysir-academy
+              - generic [ref=e247]:
+                - generic [ref=e248]:
+                  - generic [ref=e249]:
+                    - img [ref=e250]
+                    - generic [ref=e255]: Staff
+                  - text: "2"
+                - generic [ref=e256]:
+                  - generic [ref=e257]:
+                    - img [ref=e258]
+                    - generic [ref=e261]: Élèves
+                  - text: "1"
+              - button "Ouvrir l'instance" [ref=e262]:
+                - img [ref=e263]
+                - text: Ouvrir l'instance
+  - generic [ref=e269]:
+    - generic [ref=e270]:
+      - heading "Déploiement d'une nouvelle instance" [level=3] [ref=e271]
+      - button [ref=e272]:
+        - img [ref=e273]
+    - generic [ref=e277]:
+      - generic [ref=e278]:
+        - generic [ref=e279]:
+          - img [ref=e280]
+          - text: Information Client
+        - generic [ref=e284]:
+          - text: Nom de l'école / entreprise
+          - textbox "Nom de l'école / entreprise" [ref=e286]:
+            - /placeholder: "ex: École les Glycines"
+        - generic [ref=e287]:
+          - text: Slug (URL unique)
+          - textbox "Slug (URL unique)" [ref=e289]:
+            - /placeholder: "ex: glycines"
+        - generic [ref=e290]:
+          - generic [ref=e291]:
+            - img [ref=e292]
+            - text: Identité Visuelle
+          - generic [ref=e298]:
+            - textbox [ref=e299] [cursor=pointer]: "#0f515c"
+            - generic [ref=e300]: Couleur thème dashboard.
+      - generic [ref=e302]:
+        - generic [ref=e303]:
+          - img [ref=e304]
+          - text: Compte Gérant Initial
+        - generic [ref=e306]:
+          - generic [ref=e307]:
+            - text: Prénom
+            - textbox "Prénom" [ref=e309]
+          - generic [ref=e310]:
+            - text: Nom
+            - textbox "Nom" [ref=e312]
+        - generic [ref=e313]:
+          - text: Email de connexion
+          - textbox "Email de connexion" [ref=e315]:
+            - /placeholder: manager@ecole.com
+        - generic [ref=e316]:
+          - text: Mot de passe provisoire
+          - generic [ref=e317]:
+            - textbox "Mot de passe provisoire" [ref=e318]:
+              - /placeholder: ••••••••
+            - button [ref=e320]:
+              - img [ref=e321]
+        - paragraph [ref=e324]: Ce compte aura les pleins pouvoirs (GERANT) sur l'instance créée. Communiquez ces identifiants au client après le déploiement.
+      - generic [ref=e325]:
+        - button "Annuler" [ref=e326]
+        - button "Lancer le déploiement" [ref=e327]

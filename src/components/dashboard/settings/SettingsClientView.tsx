@@ -14,9 +14,24 @@ import ProfileSettings from "./ProfileSettings";
 import SchoolSettings from "./SchoolSettings";
 import SecuritySettings from "./SecuritySettings";
 
+import type { Etablissement } from "@prisma/client";
+
+type CurrentUser = {
+	id: string;
+	email: string;
+	firstName: string;
+	lastName: string;
+	role: string;
+	avatarUrl: string | null;
+	status: string;
+	phone?: string | null;
+	salary: number | null;
+	etablissementId: string | null;
+};
+
 interface SettingsClientViewProps {
-	user: any; // User type might need to match getCurrentUser select
-	tenant: any;
+	user: CurrentUser;
+	tenant: Etablissement | null;
 }
 
 export default function SettingsClientView({

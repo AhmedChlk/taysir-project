@@ -9,10 +9,13 @@ import { Input, Select } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { formatFullName } from "@/utils/format";
 
+type StudentOption = { id: string; firstName: string; lastName: string };
+type ActivityOption = { id: string; name: string };
+
 interface PaymentPlanFormProps {
 	onSuccess?: () => void;
-	students?: any[];
-	activities?: any[];
+	students?: StudentOption[];
+	activities?: ActivityOption[];
 }
 
 export default function PaymentPlanForm({

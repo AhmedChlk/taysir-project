@@ -178,7 +178,7 @@ export const deleteStudentAction = createSafeAction(
 
 				// 4. Suppression finale de l'élève
 				return await tx.student.delete({
-					where: { id },
+					where: { id_etablissementId: { id, etablissementId: tenantId } },
 				});
 			},
 		);

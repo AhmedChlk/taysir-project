@@ -20,9 +20,9 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' blob: data: https://api.dicebear.com https://*.public.blob.vercel-storage.com",
+      "img-src 'self' blob: data: https://api.dicebear.com",
       "font-src 'self'",
       "connect-src 'self'",
       "frame-ancestors 'none'",
@@ -33,9 +33,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  experimental: {
-    typedRoutes: true,
-  },
+  typedRoutes: true,
   async headers() {
     return [
       {
@@ -45,17 +43,22 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "api.dicebear.com",
-        port: "",
-        pathname: "/**",
+        protocol: "http",
+        hostname: "localhost",
+        port: "3000",
+        pathname: "/uploads/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "3000",
+        pathname: "/uploads/**",
       },
       {
         protocol: "https",
-        hostname: "**.public.blob.vercel-storage.com",
+        hostname: "api.dicebear.com",
         port: "",
         pathname: "/**",
       },

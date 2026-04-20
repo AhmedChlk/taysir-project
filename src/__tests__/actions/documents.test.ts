@@ -19,6 +19,10 @@ vi.mock("@/lib/auth", () => ({
 	authOptions: {},
 }));
 
+vi.mock("next/cache", () => ({
+	revalidateTag: vi.fn(),
+}));
+
 import { getServerSession } from "next-auth/next";
 import { getStudentDocumentsAction } from "@/actions/documents.actions";
 

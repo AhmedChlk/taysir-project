@@ -1,72 +1,39 @@
 # Taysir - Plateforme de Gestion Scolaire 🏫
 
 ## Vision & Architecture
-Taysir est un ERP scolaire moderne conçu pour la sérénité. L'interface utilise la palette **Taysir Teal** (#0F515C) avec un design asymétrique Bento Box et des animations basées sur la physique des ressorts.
+Taysir est un ERP scolaire moderne conçu pour être robuste, sécurisé (Multi-Tenant) et extrêmement léger en ressources.
 
-### Optimisations de Performance 🚀
-*   **Requêtes Mémoïsées** : Utilisation de `React.cache` pour réduire les appels Redondants à `getServerSession`.
-*   **Prisma Client Cache** : Les clients étendus pour le multi-tenant sont mis en cache pour éviter l'overhead de `$extends`.
-*   **Indexation DB** : Index ajoutés sur les dates (`startTime`, `dueDate`, `date`) et IDs de tenant pour des requêtes instantanées.
-*   **Standalone Mode** : Build Docker optimisé pour une empreinte VPS minimale.
-
----
-
-## Guide d'Installation (Local)
-
-### 1. Variables d'Environnement
-Créez un fichier `.env` à la racine :
-```env
-# Database (PostgreSQL)
-POSTGRES_PRISMA_URL="postgresql://user:password@localhost:5432/taysir_db?schema=public"
-POSTGRES_URL_NON_POOLING="postgresql://user:password@localhost:5432/taysir_db?schema=public"
-
-# Authentification
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="générer-un-secret-ici"
-```
-
-### 2. Initialisation
-```bash
-npm install
-npx prisma db push
-npx prisma db seed
-```
-
-**Accès par défaut :**
-- **Email** : `admin@taysir.dz`
-- **Mot de passe** : `Taysir2026!`
-
-### 3. Lancement
-```bash
-npm run dev
-```
+### Optimisations de Performance & Infrastructure 🚀
+* **CIBLE DE DÉPLOIEMENT : VPS ORACLE FREE TIER.** Le projet est conçu pour tourner sur un environnement très contraint en ressources (ex: 1 Go de RAM). 
+* **INTERDICTION D'UTILISER VERCEL :** Le code ne doit dépendre d'aucune infrastructure Serverless propriétaire. Tout doit fonctionner dans un environnement Node.js classique.
+* **Standalone Mode** : Build Docker optimisé (`output: "standalone"` dans `next.config.ts`) pour une empreinte mémoire minimale.
+* **Requêtes Mémoïsées** : Utilisation de `React.cache` pour limiter la charge sur la base de données PostgreSQL.
 
 ---
 
-## Déploiement Production (Docker / VPS)
+## Guide d'Installation & Déploiement
 
-Le projet est 100% prêt pour Docker. Les migrations Prisma s'exécutent automatiquement au démarrage du conteneur.
+### Déploiement Production (Docker / Oracle VPS)
+Le projet est 100% prêt pour Docker. Les migrations Prisma s'exécutent au démarrage.
 
-### Lancement Rapide
 ```bash
 docker compose up -d --build
 ```
-### Initialisation de la Base 
-Si les tables ne sont pas créées automatiquement, exécutez :
 
+Si les tables ne sont pas créées automatiquement, exécutez l'initialisation dans le conteneur :
 ```bash
 docker exec -it taysir-app npx prisma db push
 docker exec -it taysir-app npx prisma db seed
 ```
-### Configuration Docker Compose
-Le fichier `docker-compose.yml` est configuré pour isoler la base de données (non accessible depuis l'extérieur) et utiliser un réseau interne pour une sécurité maximale.
+### 2. `AUDIT_TODO.md` (Le plan d'attaque étape par étape)
+On réinitialise les cases cochées et on impose une règle stricte : l'agent doit corriger les bugs **un par un**.
 
----
+```markdown
+# TAYSIR — AUDIT COMPLET & TODO REFACTORING
 
-## Stack Technique
-- **Frontend** : Next.js 16 (App Router), Tailwind CSS v4, Framer Motion.
-- **Backend** : Prisma 6, NextAuth, PostgreSQL.
-- **i18n** : `next-intl` (Support FR/AR avec RTL).
+> État Actuel : L'application contient de multiples erreurs, de logique et d'incohérences (notamment sur le nouveau module SuperAdmin).
 
----
 
+## ⚠️ RÈGLE DE TRAVAIL POUR L'AGENT 
+Tu DOIS faire un audit et corriger les problèmes **STRICTEMENT UN PAR UN**. 
+Interdiction de modifier 15 fichiers en même temps. Tu répares un composant, tu testes , et tu passes au suivant.

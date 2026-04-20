@@ -4,10 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint"
-  },
+    "lint": "next lint",
+    "clean:test": "rm -rf coverage/ playwright-report/ test-results/ .next/ tsconfig.tsbuildinfo",
+    "test:agent": "npm run clean:test && vitest run --reporter=verbose",
+    "e2e:agent": "playwright test --reporter=list",
+    "build:agent": "npm run clean:test && ./node_modules/.bin/tsc --noEmit && next build",
+    "security:agent": "npx snyk code test"
+    },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@t3-oss/env-nextjs": "^0.13.11",
@@ -47,6 +52,7 @@
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "jsdom": "^29.0.2",

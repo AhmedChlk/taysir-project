@@ -15,5 +15,8 @@ export default async function DashboardRootLayout({
 	if (!session) {
 		redirect(`/${locale}/login`);
 	}
+    if (session.user.role === "SUPER_ADMIN") {
+        redirect(`/${locale}/superadmin`);
+    }
 	return <DashboardShell>{children}</DashboardShell>;
 }

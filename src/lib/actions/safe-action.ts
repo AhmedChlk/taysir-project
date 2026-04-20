@@ -61,9 +61,11 @@ export function createSafeAction<TInput, TOutput>(
 			}
 
 			// 4. Exécution de la logique
-			// TODO DOC-02: SUPER_ADMIN doit utiliser le client prisma global sans filtre établissement
 			const result = await handler(validation.data, {
-				tenantId: tenantId ?? "",
+				tenantId:
+					session.user.role === RoleUser.SUPER_ADMIN && !tenantId
+						? "SUPERADMIN_ACCESS"
+						: (tenantId ?? ""),
 				userId: session.user.id,
 				role: session.user.role,
 			});

@@ -25,7 +25,7 @@ export default async function StaffAlertsWidget() {
 			</div>
 
 			<div className="flex flex-wrap gap-4">
-				{alerts.map((session: any) => (
+				{alerts.map((session) => (
 					<div
 						key={session.id}
 						className="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm flex items-center gap-4 flex-1 min-w-[280px]"
