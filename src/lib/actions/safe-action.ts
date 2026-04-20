@@ -62,10 +62,7 @@ export function createSafeAction<TInput, TOutput>(
 
 			// 4. Exécution de la logique
 			const result = await handler(validation.data, {
-				tenantId:
-					session.user.role === RoleUser.SUPER_ADMIN && !tenantId
-						? "SUPERADMIN_ACCESS"
-						: (tenantId ?? ""),
+				tenantId: tenantId ?? (session.user.role === RoleUser.SUPER_ADMIN ? "GLOBAL_ACCESS" : ""),
 				userId: session.user.id,
 				role: session.user.role,
 			});

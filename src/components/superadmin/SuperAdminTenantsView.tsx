@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, Building2, Globe, Palette, Users, GraduationCap, ExternalLink, ShieldAlert, CheckCircle2, XCircle, Mail, User, Lock } from "lucide-react";
-import { createTenantAction, deleteTenantAction, toggleTenantStatusAction } from "@/actions/superadmin.actions";
+import { Plus, Trash2, Building2, Globe, Palette, Users, GraduationCap, ExternalLink, ShieldAlert, CheckCircle2, XCircle, Mail, User, Lock, Calendar, Edit3 } from "lucide-react";
+import { createTenantAction, deleteTenantAction, toggleTenantStatusAction, updateTenantAction } from "@/actions/superadmin.actions";
 import Modal from "@/components/ui/Modal";
 import { Input } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { clsx } from "clsx";
+import { formatDate } from "@/utils/format";
+import { useLocale } from "next-intl";
 
 interface Tenant {
 	id: string;
@@ -15,6 +17,7 @@ interface Tenant {
 	slug: string;
     isActive: boolean;
 	primaryColor: string | null;
+    contractEndDate: Date | null;
 	createdAt: Date;
 	_count: {
 		users: number;
@@ -29,9 +32,11 @@ interface SuperAdminTenantsViewProps {
 export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTenantsViewProps) {
 	const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
 	const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
     const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
+    const locale = useLocale();
 
 	const handleCreateTenant = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -41,6 +46,7 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 			name: formData.get("name") as string,
 			slug: formData.get("slug") as string,
 			primaryColor: formData.get("primaryColor") as string,
+            contractEndDate: formData.get("contractEndDate") as string,
             manager: {
                 email: formData.get("managerEmail") as string,
                 firstName: formData.get("managerFirstName") as string,
@@ -58,6 +64,30 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 			}
 		});
 	};
+
+    const handleUpdateTenant = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedTenant) return;
+        setError(null);
+        const formData = new FormData(e.currentTarget);
+        const data = {
+            id: selectedTenant.id,
+            name: formData.get("name") as string,
+            slug: formData.get("slug") as string,
+            primaryColor: formData.get("primaryColor") as string,
+            contractEndDate: formData.get("contractEndDate") as string,
+        };
+
+        startTransition(async () => {
+            const res = await updateTenantAction(data);
+            if (res.success) {
+                setTenants(tenants.map(t => t.id === selectedTenant.id ? { ...t, ...res.data, contractEndDate: res.data.contractEndDate ? new Date(res.data.contractEndDate) : null } : t));
+                setSelectedTenant(null);
+            } else {
+                setError(res.error.message);
+            }
+        });
+    };
 
 	const handleToggleStatus = async (tenant: Tenant) => {
         setError(null);
@@ -91,7 +121,7 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 	};
 
 	return (
-		<div className="space-y-8">
+		<div className="space-y-8 pb-20">
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 				<div>
 					<h1 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -149,6 +179,14 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 								<Building2 size={28} strokeWidth={1.5} />
 							</div>
 							<div className="flex gap-1">
+                                <button
+									type="button"
+									onClick={() => setSelectedTenant(tenant)}
+									className="p-2 text-gray-400 hover:text-taysir-teal hover:bg-teal-50 rounded-xl transition-all"
+									title="Modifier les détails"
+								>
+									<Edit3 size={18} />
+								</button>
 								<button
 									type="button"
                                     onClick={() => handleToggleStatus(tenant)}
@@ -186,6 +224,19 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 							</div>
 						</div>
 
+                        <div className="mb-6 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                            <div className="flex items-center gap-2 text-gray-400 mb-2">
+                                <Calendar size={14} />
+                                <span className="text-[10px] font-black uppercase tracking-wider">Fin de contrat</span>
+                            </div>
+                            <span className={clsx(
+                                "text-sm font-bold",
+                                tenant.contractEndDate && new Date(tenant.contractEndDate) < new Date() ? "text-red-500" : "text-gray-700"
+                            )}>
+                                {tenant.contractEndDate ? formatDate(tenant.contractEndDate, locale) : "Non définie"}
+                            </span>
+                        </div>
+
 						<div className="grid grid-cols-2 gap-4 mt-auto">
 							<div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
 								<div className="flex items-center gap-2 text-gray-400 mb-1">
@@ -216,13 +267,13 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 				))}
 			</div>
 
-			{/* Modal Création - ÉVOLUÉ : Tenant + Gérant */}
+			{/* Modal Création */}
 			<Modal
 				isOpen={isCreateModalOpen}
 				onClose={() => setIsCreateModalOpen(false)}
 				title="Déploiement d&apos;une nouvelle instance"
 			>
-				<form onSubmit={handleCreateTenant} className="space-y-8 max-h-[80vh] overflow-y-auto px-1 custom-scrollbar">
+				<form onSubmit={handleCreateTenant} className="space-y-8 max-h-[80vh] overflow-y-auto px-1 custom-scrollbar pb-6">
 					{/* Section Établissement */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-taysir-teal font-black text-xs uppercase tracking-[0.2em] mb-4">
@@ -230,7 +281,7 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
                             Information Client
                         </div>
                         <Input
-                            label="Nom de l'école / entreprise"
+                            label="Nom de l&apos;école / entreprise"
                             name="name"
                             placeholder="ex: École les Glycines"
                             required
@@ -240,6 +291,11 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
                             name="slug"
                             placeholder="ex: glycines"
                             required
+                        />
+                        <Input
+                            label="Date de fin de contrat"
+                            name="contractEndDate"
+                            type="date"
                         />
                         <div className="space-y-2">
                             <label className="text-sm font-black text-gray-700 uppercase tracking-wider flex items-center gap-2">
@@ -313,6 +369,58 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 					</div>
 				</form>
 			</Modal>
+
+            {/* Modal Modification */}
+            <Modal
+                isOpen={!!selectedTenant}
+                onClose={() => setSelectedTenant(null)}
+                title={`Modifier ${selectedTenant?.name}`}
+            >
+                <form onSubmit={handleUpdateTenant} className="space-y-6 pb-6">
+                    <Input
+                        label="Nom de l'établissement"
+                        name="name"
+                        defaultValue={selectedTenant?.name}
+                        required
+                    />
+                    <Input
+                        label="Slug"
+                        name="slug"
+                        defaultValue={selectedTenant?.slug}
+                        required
+                    />
+                    <Input
+                        label="Date de fin de contrat"
+                        name="contractEndDate"
+                        type="date"
+                        defaultValue={selectedTenant?.contractEndDate ? new Date(selectedTenant.contractEndDate).toISOString().split('T')[0] : ''}
+                    />
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                            <Palette size={16} className="text-taysir-teal" />
+                            Couleur Thème
+                        </label>
+                        <input
+                            type="color"
+                            name="primaryColor"
+                            defaultValue={selectedTenant?.primaryColor || "#0F515C"}
+                            className="h-12 w-full rounded-xl cursor-pointer border-2 border-gray-100 p-1"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-6">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedTenant(null)}
+                            className="btn-ghost"
+                        >
+                            Annuler
+                        </button>
+                        <SubmitButton isLoading={isPending}>
+                            Enregistrer les modifications
+                        </SubmitButton>
+                    </div>
+                </form>
+            </Modal>
 
 			<ConfirmModal
 				isOpen={!!tenantToDelete}

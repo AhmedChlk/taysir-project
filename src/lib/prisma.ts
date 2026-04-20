@@ -134,8 +134,23 @@ export function getTenantPrisma(etablissementId: string): PrismaClient {
 		);
 	}
 
-	if (etablissementId === "SUPERADMIN_ACCESS") {
-		return prisma;
+	if (etablissementId === "GLOBAL_ACCESS") {
+		// Client restreint au modèle global pour le SuperAdmin
+		return prisma.$extends({
+			query: {
+				$allModels: {
+					async $allOperations({ model, args, query }) {
+						const globalModels = ["Etablissement"];
+						if (!globalModels.includes(model)) {
+							throw new Error(
+								`Accès refusé : Le modèle ${model} est confidentiel et réservé au locataire.`,
+							);
+						}
+						return query(args);
+					},
+				},
+			},
+		}) as unknown as PrismaClient;
 	}
 
 	// Probabilistic cleanup: 1 chance in 10 to evict expired entries

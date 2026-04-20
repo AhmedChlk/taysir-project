@@ -13,6 +13,7 @@ const CreateTenantSchema = z.object({
 	name: z.string().min(2),
 	slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug invalide (minuscules, chiffres, tirets)"),
 	primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    contractEndDate: z.string().optional(),
     manager: z.object({
         email: z.string().email(),
         firstName: z.string().min(2),
@@ -76,7 +77,8 @@ export const createTenantAction = createSafeAction(
                     name: data.name,
                     slug: data.slug,
                     primaryColor: data.primaryColor || "#0F515C",
-                    isActive: true
+                    isActive: true,
+                    contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : null,
                 }
             });
 
@@ -117,6 +119,37 @@ export const toggleTenantStatusAction = createSafeAction(
 
 		revalidateTag("superadmin_tenants", "max");
 		revalidateTag("superadmin_stats", "max");
+        return result;
+    }
+);
+
+/**
+ * Mise à jour d'un établissement
+ */
+export const updateTenantAction = createSafeAction(
+    z.object({
+        id: z.string().uuid(),
+        name: z.string().min(2).optional(),
+        slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
+        primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+        contractEndDate: z.string().optional(),
+    }),
+    async ({ id, ...data }, { role }) => {
+        if (role !== RoleUser.SUPER_ADMIN) {
+            throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
+        }
+
+        const updateData: any = { ...data };
+        if (data.contractEndDate) {
+            updateData.contractEndDate = new Date(data.contractEndDate);
+        }
+
+        const result = await prisma.etablissement.update({
+            where: { id },
+            data: updateData
+        });
+
+        revalidateTag("superadmin_tenants", "max");
         return result;
     }
 );

@@ -124,6 +124,6 @@ describe("createSafeAction", () => {
 
 		const result = await action({ name: "x" });
 		expect(result.success).toBe(true);
-		if (result.success) expect(result.data).toBe("SUPERADMIN_ACCESS");
+		if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
 	});
 });
