@@ -105,19 +105,19 @@
 ## PHASE 4 — FRONTEND & UX
 
 ### UI-01 — Zéro useOptimistic (UX bloquante)
-- [ ] **`StudentsClientView.tsx`, `PaymentsClientView.tsx`, `GroupsClientView.tsx`** — Implémenter `useOptimistic` pour les mutations fréquentes (create, delete, update)
+- [x] **CORRIGÉ (2026-04-20)** — `useOptimistic` implémenté dans `StudentsClientView.tsx` (delete/create/update), `PaymentsClientView.tsx` (register tranche optimiste), `GroupsClientView.tsx` (delete/update). Les mutations sont instantanées côté UI avec rollback automatique en cas d'erreur.
 
 ### UI-02 — Zéro Suspense boundaries / Skeletons sur les pages
-- [ ] **`src/app/[locale]/dashboard/page.tsx` et toutes les pages dashboard** — Envelopper chaque widget dans `<Suspense fallback={<SkeletonWidget />}>`
-  > Note: `src/components/ui/Skeleton.tsx` existe mais n'est jamais utilisé dans les pages
+- [x] **CORRIGÉ (2026-04-20)** — `loading.tsx` créés pour dashboard, students, students/[id], payments, groups. Dashboard page via `DashboardSPA` wrappait déjà chaque widget en `<Suspense fallback={<WidgetSkeleton />}>`. `WidgetSkeleton` et `Skeleton` utilisés correctement.
 
 ### UI-03 — Textes hardcodés (violation I18n massive)
-Tous ces fichiers doivent utiliser `useTranslations` / `getTranslations` :
-- [ ] **`src/components/dashboard/DashboardClientView.tsx`** — 13 occurrences (lignes 63,71,92,97,100,105,109,112,142,144,162,183,186)
-- [ ] **`src/components/dashboard/students/StudentsClientView.tsx`** — 9 occurrences (lignes 110,119,287,345,347,348,380,382,432)
-- [ ] **`src/components/dashboard/payments/PaymentsClientView.tsx`** — 15 occurrences (lignes 199,203,213,215,224,229,233,237,241,245,257,263-271)
-- [ ] **`src/app/[locale]/dashboard/students/[id]/page.tsx`** — 10 occurrences (lignes 51,55,85,86,128,142,163,175,193,232)
-- [ ] **`src/components/navigation/Sidebar.tsx:72`** — `Taysir.` hardcodé
+- [x] **CORRIGÉ (2026-04-20)** — 100+ clés ajoutées dans `fr.json` et `ar.json`. Tous les composants utilisent `useTranslations`/`getTranslations` :
+  - `StatsWidget.tsx`, `SessionsWidget.tsx`, `PerformanceKPIsWidget.tsx`, `LiveRosterWidget.tsx` — tous externalisés
+  - `StudentsClientView.tsx` — colonnes, modals, labels externalisés
+  - `PaymentsClientView.tsx` — headers, statuts, modals externalisés
+  - `GroupsClientView.tsx` — compteurs, modals externalisés
+  - `students/[id]/page.tsx` — `getTranslations()` ajouté, tous textes externalisés
+  - Note: `Sidebar.tsx:72` (`Taysir.`) non corrigé (texte de marque, intentionnel)
 
 ### UI-04 — Accessibilité (violations Biome a11y)
 - [ ] **Boutons sans `type="button"`** — Ajouter `type="button"` sur tous les `<button>` non-submit dans: `DashboardClientView.tsx`, `DashboardSPA.tsx`, `DataTable.tsx`, `Drawer.tsx`, `EmptyState.tsx`, `Modal.tsx`, `PaymentCard.tsx` (17+ occurrences)
