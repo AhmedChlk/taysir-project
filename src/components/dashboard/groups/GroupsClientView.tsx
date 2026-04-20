@@ -12,7 +12,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import {
 	createGroupAction,
 	deleteGroupAction,
@@ -40,6 +40,11 @@ interface GroupsClientViewProps {
 	students: Student[];
 }
 
+type OptimisticGroupAction =
+	| { type: "delete"; id: string }
+	| { type: "create"; group: Group }
+	| { type: "update"; group: Group };
+
 export default function GroupsClientView({
 	initialGroups = [],
 	activities: _activities = [],
@@ -53,11 +58,28 @@ export default function GroupsClientView({
 	const t = useTranslations();
 	const router = useRouter();
 
-	// Metrics calculation for the Bento Grid
+	const [optimisticGroups, applyOptimistic] = useOptimistic(
+		initialGroups,
+		(state: Group[], action: OptimisticGroupAction) => {
+			switch (action.type) {
+				case "delete":
+					return state.filter((g) => g.id !== action.id);
+				case "create":
+					return [...state, action.group];
+				case "update":
+					return state.map((g) =>
+						g.id === action.group.id ? action.group : g,
+					);
+				default:
+					return state;
+			}
+		},
+	);
+
 	const metrics = useMemo(() => {
-		const totalGroups = initialGroups.length;
-		const activeGroups = initialGroups.filter((g) => g.isActive).length;
-		const totalStudentsInGroups = initialGroups.reduce(
+		const totalGroups = optimisticGroups.length;
+		const activeGroups = optimisticGroups.filter((g) => g.isActive).length;
+		const totalStudentsInGroups = optimisticGroups.reduce(
 			(acc, g) => acc + (g.students?.length || 0),
 			0,
 		);
@@ -65,7 +87,7 @@ export default function GroupsClientView({
 			totalGroups > 0 ? Math.round(totalStudentsInGroups / totalGroups) : 0;
 
 		return { totalGroups, activeGroups, totalStudentsInGroups, avgStudents };
-	}, [initialGroups]);
+	}, [optimisticGroups]);
 
 	const handleAction = (group: Group) => {
 		setSelectedGroup(group);
@@ -75,17 +97,17 @@ export default function GroupsClientView({
 	const handleDelete = async (id: string) => {
 		if (!confirm(t("confirm_delete"))) return;
 		startTransition(async () => {
+			applyOptimistic({ type: "delete", id });
 			const result = await deleteGroupAction({ id });
-			if (result.success) {
-				router.refresh();
-			} else {
+			if (!result.success) {
 				alert(result.error.message);
 			}
+			router.refresh();
 		});
 	};
 
 	const handleRemoveStudent = async (studentId: string, groupId: string) => {
-		if (!confirm("Voulez-vous retirer cet étudiant du groupe ?")) return;
+		if (!confirm(t("groups_remove_confirm"))) return;
 		startTransition(async () => {
 			const result = await removeStudentFromGroupAction({ studentId, groupId });
 			if (result.success) {
@@ -129,17 +151,16 @@ export default function GroupsClientView({
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
-
-		const data = {
-			name: formData.get("name") as string,
-		};
+		const name = formData.get("name") as string;
 
 		startTransition(async () => {
 			let result;
 			if (selectedGroup) {
-				result = await updateGroupAction({ id: selectedGroup.id, ...data });
+				const optimisticGroup: Group = { ...selectedGroup, name };
+				applyOptimistic({ type: "update", group: optimisticGroup });
+				result = await updateGroupAction({ id: selectedGroup.id, name });
 			} else {
-				result = await createGroupAction(data);
+				result = await createGroupAction({ name });
 			}
 
 			if (result.success) {
@@ -219,16 +240,17 @@ export default function GroupsClientView({
 			),
 		},
 		{
-			header: "Actions",
+			header: t("actions"),
 			accessor: (group: Group) => (
 				<div className="flex items-center justify-end gap-2">
 					<button
+						type="button"
 						onClick={(e) => {
 							e.stopPropagation();
 							handleDelete(group.id);
 						}}
 						className="p-2 bg-red-600 text-white rounded-xl transition-all duration-300 ease-out shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-						title="Supprimer ce groupe"
+						title={t("delete")}
 					>
 						<Trash2 size={18} />
 					</button>
@@ -250,6 +272,7 @@ export default function GroupsClientView({
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => {
 						setSelectedGroup(null);
 						setIsModalOpen(true);
@@ -270,7 +293,7 @@ export default function GroupsClientView({
 							<Users size={20} />
 						</div>
 						<h3 className="font-semibold text-gray-600 text-sm">
-							Total Groupes
+							{t("groups_total_count")}
 						</h3>
 					</div>
 					<p className="text-3xl font-black text-gray-900">
@@ -284,7 +307,7 @@ export default function GroupsClientView({
 							<CheckCircle2 size={20} />
 						</div>
 						<h3 className="font-semibold text-gray-600 text-sm">
-							Groupes Actifs
+							{t("groups_active_count")}
 						</h3>
 					</div>
 					<p className="text-3xl font-black text-gray-900">
@@ -298,7 +321,7 @@ export default function GroupsClientView({
 							<TrendingUp size={20} />
 						</div>
 						<h3 className="font-semibold text-gray-600 text-sm">
-							Élèves Inscrits
+							{t("groups_enrolled_count")}
 						</h3>
 					</div>
 					<p className="text-3xl font-black text-gray-900">
@@ -312,7 +335,7 @@ export default function GroupsClientView({
 							<Users size={20} />
 						</div>
 						<h3 className="font-semibold text-gray-600 text-sm">
-							Moy. Élèves/Groupe
+							{t("groups_avg_students")}
 						</h3>
 					</div>
 					<p className="text-3xl font-black text-gray-900">
@@ -324,24 +347,25 @@ export default function GroupsClientView({
 			{/* Main Table */}
 			<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 				<DataTable
-					data={initialGroups}
+					data={optimisticGroups}
 					columns={columns}
-					searchPlaceholder="Rechercher un groupe..."
+					searchPlaceholder={t("groups_search_placeholder")}
 					onAction={handleAction}
 				/>
 			</div>
 
-			{/* Modal Redesign */}
+			{/* Modal */}
 			<Modal
 				isOpen={isModalOpen}
 				onClose={() => {
 					setIsModalOpen(false);
 					setSelectedGroup(null);
 				}}
-				title={selectedGroup ? "Gérer le groupe" : "Nouveau groupe"}
+				title={selectedGroup ? t("groups_manage") : t("groups_new")}
 				footer={
 					<div className="flex items-center justify-end gap-3 w-full">
 						<button
+							type="button"
 							disabled={isPending}
 							onClick={() => setIsModalOpen(false)}
 							className="btn-ghost"
@@ -371,11 +395,11 @@ export default function GroupsClientView({
 							<div className="w-6 h-6 rounded-md bg-accent-teal/10 flex items-center justify-center text-accent-teal">
 								1
 							</div>
-							Informations générales
+							{t("groups_general_info")}
 						</h4>
 						<Input
 							name="name"
-							label="Nom du groupe"
+							label={t("group_name")}
 							defaultValue={selectedGroup?.name}
 							placeholder="Ex: Groupe A - Mathématiques"
 							required
@@ -389,18 +413,18 @@ export default function GroupsClientView({
 								<div className="w-6 h-6 rounded-md bg-accent-teal/10 flex items-center justify-center text-accent-teal">
 									2
 								</div>
-								Gestion des élèves
+								{t("groups_student_management")}
 							</h4>
 
 							{/* Add Student Row */}
 							<div className="flex gap-3 items-end bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
 								<div className="flex-1">
 									<Select
-										label="Ajouter un nouvel élève"
+										label={t("groups_add_new_student")}
 										value={selectedStudentToAdd}
 										onChange={(e) => setSelectedStudentToAdd(e.target.value)}
 										options={[
-											{ label: "Sélectionner un élève...", value: "" },
+											{ label: t("groups_select_student"), value: "" },
 											...students
 												.filter(
 													(s) =>
@@ -426,7 +450,7 @@ export default function GroupsClientView({
 									className="btn-secondary mb-1.5 flex items-center gap-2"
 								>
 									<Plus size={18} />
-									Ajouter
+									{t("add")}
 								</button>
 							</div>
 
@@ -434,7 +458,9 @@ export default function GroupsClientView({
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
 									<span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-										Élèves inscrits ({selectedGroup.students?.length || 0})
+										{t("groups_enrolled_count_detail", {
+											count: selectedGroup.students?.length || 0,
+										})}
 									</span>
 								</div>
 
@@ -445,11 +471,10 @@ export default function GroupsClientView({
 											<Inbox size={24} className="text-gray-300" />
 										</div>
 										<h3 className="text-sm font-bold text-gray-700 mb-1">
-											Aucun élève
+											{t("groups_no_students")}
 										</h3>
 										<p className="text-xs text-gray-500 text-center max-w-[250px]">
-											Ce groupe est vide. Ajoutez des élèves en utilisant le
-											sélecteur ci-dessus.
+											{t("groups_empty_group_desc")}
 										</p>
 									</div>
 								) : (
@@ -471,18 +496,19 @@ export default function GroupsClientView({
 														<span className="text-xs font-medium text-gray-500">
 															{student.email ||
 																student.phone ||
-																"Aucun contact"}
+																t("student_not_provided")}
 														</span>
 													</div>
 												</div>
 												<button
+													type="button"
 													onClick={(e) => {
 														e.preventDefault();
 														handleRemoveStudent(student.id, selectedGroup.id);
 													}}
 													disabled={isPending}
 													className="p-2 bg-red-600 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-													title="Retirer du groupe"
+													title={t("delete")}
 												>
 													<UserMinus size={18} />
 												</button>
@@ -499,7 +525,6 @@ export default function GroupsClientView({
 	);
 }
 
-// Icon helper for the table
 function UserTypeIcon() {
 	return (
 		<svg

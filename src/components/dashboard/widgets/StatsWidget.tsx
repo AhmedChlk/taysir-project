@@ -1,15 +1,15 @@
 import { ArrowRight, FileText, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getDashboardStatsAction } from "@/actions/dashboard.actions";
 import { Link } from "@/i18n/routing";
 
 export default async function StatsWidget() {
+	const t = await getTranslations();
 	const response = await getDashboardStatsAction({});
 
 	if (!response.success) {
 		return (
-			<div className="bento-card p-8 text-red-500">
-				Erreur lors du chargement des statistiques.
-			</div>
+			<div className="bento-card p-8 text-red-500">{t("stats_load_error")}</div>
 		);
 	}
 
@@ -24,7 +24,7 @@ export default async function StatsWidget() {
 							<Users size={20} />
 						</div>
 						<span className="text-sm font-black uppercase tracking-[0.2em]">
-							Pilotage Effectifs
+							{t("stats_widget_title")}
 						</span>
 					</div>
 
@@ -34,15 +34,15 @@ export default async function StatsWidget() {
 						</h2>
 						<div className="mb-2">
 							<span className="text-white/40 text-2xl md:text-3xl font-black uppercase tracking-tighter block leading-none italic">
-								Inscrits
+								{t("stats_enrolled")}
 							</span>
 							<div className="flex gap-2 mt-2">
 								<div className="flex items-center gap-1.5 bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-emerald-400/20">
 									<div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-									{active} Actifs
+									{t("stats_n_actifs", { count: active })}
 								</div>
 								<div className="flex items-center gap-1.5 bg-white/10 text-white/60 px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-white/10">
-									{total - active} Archives
+									{total - active} {t("stats_archived")}
 								</div>
 							</div>
 						</div>
@@ -54,7 +54,7 @@ export default async function StatsWidget() {
 						href="/dashboard/students"
 						className="bg-white text-taysir-teal px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:shadow-xl hover:shadow-white/10 hover:scale-[1.02] active:scale-95 flex items-center gap-2"
 					>
-						<span>Base de données élèves</span>
+						<span>{t("stats_students_db")}</span>
 						<ArrowRight size={16} />
 					</Link>
 					<Link
@@ -62,7 +62,7 @@ export default async function StatsWidget() {
 						className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all backdrop-blur-sm border border-white/10 flex items-center gap-2"
 					>
 						<FileText size={16} />
-						<span>Feuilles d&apos;appel</span>
+						<span>{t("stats_attendance_sheets")}</span>
 					</Link>
 				</div>
 			</div>

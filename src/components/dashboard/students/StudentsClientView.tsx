@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useRef, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 import {
 	createStudentAction,
 	deleteStudentAction,
@@ -36,8 +36,15 @@ import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile"
 import type { Group, Student } from "@/types/schema";
 import { formatFullName } from "@/utils/format";
 
+type StudentWithGroups = Student & { groups: Group[] };
+
+type OptimisticAction =
+	| { type: "delete"; id: string }
+	| { type: "create"; student: StudentWithGroups }
+	| { type: "update"; student: StudentWithGroups };
+
 interface StudentsClientViewProps {
-	initialStudents: (Student & { groups: Group[] })[];
+	initialStudents: StudentWithGroups[];
 	groups: Group[];
 }
 
@@ -49,9 +56,8 @@ export default function StudentsClientView({
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const [selectedStudent, setSelectedStudent] = useState<
-		(Student & { groups: Group[] }) | null
-	>(null);
+	const [selectedStudent, setSelectedStudent] =
+		useState<StudentWithGroups | null>(null);
 	const [isMinor, setIsMinor] = useState(false);
 	const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 	const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -62,7 +68,25 @@ export default function StudentsClientView({
 	const t = useTranslations();
 	const router = useRouter();
 
-	const handleEdit = (student: Student & { groups: Group[] }) => {
+	const [optimisticStudents, applyOptimistic] = useOptimistic(
+		initialStudents,
+		(state: StudentWithGroups[], action: OptimisticAction) => {
+			switch (action.type) {
+				case "delete":
+					return state.filter((s) => s.id !== action.id);
+				case "create":
+					return [...state, action.student];
+				case "update":
+					return state.map((s) =>
+						s.id === action.student.id ? action.student : s,
+					);
+				default:
+					return state;
+			}
+		},
+	);
+
+	const handleEdit = (student: StudentWithGroups) => {
 		setSelectedStudent(student);
 		setIsMinor(student.isMinor || false);
 		setPhotoPreview(student.photoUrl || null);
@@ -85,15 +109,16 @@ export default function StudentsClientView({
 
 	const confirmDelete = async () => {
 		if (!studentToDelete) return;
+		const id = studentToDelete;
+		setIsDeleteModalOpen(false);
+		setStudentToDelete(null);
 		startTransition(async () => {
-			const result = await deleteStudentAction({ id: studentToDelete });
-			if (result.success) {
-				setIsDeleteModalOpen(false);
-				setStudentToDelete(null);
-				router.refresh();
-			} else {
+			applyOptimistic({ type: "delete", id });
+			const result = await deleteStudentAction({ id });
+			if (!result.success) {
 				setErrorMessage(result.error.message);
 			}
+			router.refresh();
 		});
 	};
 
@@ -112,12 +137,11 @@ export default function StudentsClientView({
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
 
-		// Upload image if provided
 		let uploadedPhotoUrl = selectedStudent?.photoUrl || null;
 		const file = fileInputRef.current?.files?.[0];
 
 		if (!selectedStudent && !file) {
-			setErrorMessage("La photo de l'élève est obligatoire à l'inscription.");
+			setErrorMessage(t("students_photo_required"));
 			return;
 		}
 
@@ -126,9 +150,7 @@ export default function StudentsClientView({
 			uploadData.append("file", file);
 			const uploadRes = await uploadFileAction(uploadData);
 			if (!uploadRes.success || !uploadRes.data?.url) {
-				setErrorMessage(
-					uploadRes.error || "Erreur lors de l'upload de la photo",
-				);
+				setErrorMessage(uploadRes.error || t("students_photo_upload_error"));
 				return;
 			}
 			uploadedPhotoUrl = uploadRes.data.url;
@@ -148,9 +170,19 @@ export default function StudentsClientView({
 			groupIds: selectedGroupIds,
 		};
 
+		const selectedGroups = groups.filter((g) =>
+			selectedGroupIds.includes(g.id),
+		);
+
 		startTransition(async () => {
 			let result;
 			if (selectedStudent) {
+				const optimisticUpdated: StudentWithGroups = {
+					...selectedStudent,
+					...data,
+					groups: selectedGroups,
+				};
+				applyOptimistic({ type: "update", student: optimisticUpdated });
 				result = await updateStudentAction({ id: selectedStudent.id, ...data });
 			} else {
 				result = await createStudentAction(data);
@@ -161,25 +193,25 @@ export default function StudentsClientView({
 				setSelectedStudent(null);
 				router.refresh();
 			} else {
-				alert(result.error.message || "Une erreur est survenue.");
+				setErrorMessage(result.error.message || t("error_generic"));
 			}
 		});
 	};
 
-	const handleDownloadPDF = (student: Student & { groups: Group[] }) => {
+	const handleDownloadPDF = (student: StudentWithGroups) => {
 		try {
 			const doc = generateStudentProfilePDF(student);
 			doc.save(`Fiche_${student.lastName}_${student.firstName}.pdf`);
 			setPdfError(null);
 		} catch (error) {
 			console.error("PDF Generation failed", error);
-			setPdfError("Erreur lors de la génération du PDF. Veuillez réessayer.");
+			setPdfError(t("students_pdf_error"));
 		}
 	};
 
 	const columns = [
 		{
-			header: "Identité",
+			header: t("students_identity"),
 			accessor: (student: Student) => (
 				<div className="flex items-center gap-4">
 					<div className="relative w-12 h-12 rounded-[18px] overflow-hidden border-2 border-white shadow-sm shrink-0 bg-taysir-teal/5 flex items-center justify-center">
@@ -201,11 +233,11 @@ export default function StudentsClientView({
 						<div className="flex items-center gap-1.5 mt-0.5">
 							{student.isMinor && (
 								<span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[8px] font-black uppercase border border-amber-200">
-									Mineur
+									{t("student_minor")}
 								</span>
 							)}
 							<span className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
-								Inscrit le{" "}
+								{t("student_enrolled_on")}{" "}
 								{new Date(student.registrationDate).toLocaleDateString()}
 							</span>
 						</div>
@@ -214,7 +246,7 @@ export default function StudentsClientView({
 			),
 		},
 		{
-			header: "Contact",
+			header: t("students_contact"),
 			accessor: (student: Student) => (
 				<div className="flex flex-col gap-1">
 					<div className="flex items-center gap-2 text-xs font-bold text-taysir-teal/70">
@@ -233,8 +265,8 @@ export default function StudentsClientView({
 			),
 		},
 		{
-			header: "Affectation",
-			accessor: (student: Student & { groups: Group[] }) => (
+			header: t("students_assignment"),
+			accessor: (student: StudentWithGroups) => (
 				<div className="flex flex-wrap gap-1">
 					{student.groups.length > 0 ? (
 						student.groups.map((g) => (
@@ -247,7 +279,7 @@ export default function StudentsClientView({
 						))
 					) : (
 						<span className="text-[10px] italic text-gray-300 font-bold uppercase">
-							Aucun groupe
+							{t("students_no_group")}
 						</span>
 					)}
 				</div>
@@ -272,27 +304,27 @@ export default function StudentsClientView({
 		},
 		{
 			header: "",
-			accessor: (student: Student & { groups: Group[] }) => (
+			accessor: (student: StudentWithGroups) => (
 				<div className="flex justify-end pr-2">
 					<DropdownMenu
 						items={[
 							{
-								label: "Voir la fiche",
+								label: t("student_view_file"),
 								icon: <Eye size={14} />,
 								href: `/dashboard/students/${student.id}`,
 							},
 							{
-								label: "Télécharger la fiche",
+								label: t("student_download_file"),
 								icon: <Download size={14} />,
 								onClick: () => handleDownloadPDF(student),
 							},
 							{
-								label: "Modifier",
+								label: t("student_edit"),
 								icon: <Edit3 size={14} />,
 								onClick: () => handleEdit(student),
 							},
 							{
-								label: "Supprimer",
+								label: t("delete"),
 								icon: <Trash2 size={14} />,
 								variant: "danger",
 								onClick: () => handleDelete(student.id),
@@ -310,11 +342,11 @@ export default function StudentsClientView({
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
 				<div>
 					<h1 className="text-3xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
-						Gestion des inscriptions
+						{t("students_manage_title")}
 						<span className="text-taysir-accent">.</span>
 					</h1>
 					<p className="text-sm text-taysir-teal/50 mt-2 font-medium">
-						Inscrivez, gérez et suivez l&apos;évolution de vos apprenants.
+						{t("students_manage_subtitle")}
 					</p>
 				</div>
 			</div>
@@ -324,9 +356,9 @@ export default function StudentsClientView({
 			)}
 
 			<DataTable
-				data={initialStudents}
+				data={optimisticStudents}
 				columns={columns}
-				searchPlaceholder="Rechercher un élève par nom, email ou groupe..."
+				searchPlaceholder={t("students_search_placeholder")}
 				onAdd={handleAdd}
 				hideDefaultAction={true}
 			/>
@@ -335,9 +367,9 @@ export default function StudentsClientView({
 				isOpen={isDeleteModalOpen}
 				onClose={() => setIsDeleteModalOpen(false)}
 				onConfirm={confirmDelete}
-				title="Supprimer l'élève"
-				message="Êtes-vous sûr de vouloir supprimer cet élève ? Cette action supprimera également tous les paiements et documents associés. Cette action est irréversible."
-				confirmLabel="Supprimer"
+				title={t("students_delete_title")}
+				message={t("students_delete_message")}
+				confirmLabel={t("delete")}
 				variant="danger"
 				isLoading={isPending}
 			/>
@@ -345,13 +377,14 @@ export default function StudentsClientView({
 			<Modal
 				isOpen={!!errorMessage}
 				onClose={() => setErrorMessage(null)}
-				title="Attention"
+				title={t("students_error_title")}
 				footer={
 					<button
+						type="button"
 						onClick={() => setErrorMessage(null)}
 						className="btn-primary px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest"
 					>
-						Compris
+						{t("students_understood")}
 					</button>
 				}
 			>
@@ -370,11 +403,14 @@ export default function StudentsClientView({
 					setSelectedStudent(null);
 				}}
 				title={
-					selectedStudent ? "Mise à jour dossier" : "Inscription nouvel élève"
+					selectedStudent
+						? t("students_update_file")
+						: t("students_new_registration")
 				}
 				footer={
 					<>
 						<button
+							type="button"
 							disabled={isPending}
 							onClick={() => setIsModalOpen(false)}
 							className="btn-ghost font-black text-xs uppercase tracking-widest text-taysir-teal/40"
@@ -390,8 +426,8 @@ export default function StudentsClientView({
 							{isPending && <Loader2 size={16} className="animate-spin" />}
 							<span className="font-black text-xs uppercase tracking-widest">
 								{selectedStudent
-									? "Valider les modifications"
-									: "Confirmer l'inscription"}
+									? t("students_confirm_update")
+									: t("students_confirm_registration")}
 							</span>
 						</button>
 					</>
@@ -431,21 +467,21 @@ export default function StudentsClientView({
 								onChange={handlePhotoChange}
 							/>
 							<p className="text-[10px] font-black text-center mt-3 text-taysir-teal/40 uppercase tracking-widest">
-								Portrait Étudiant
+								{t("students_portrait")}
 							</p>
 						</div>
 
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
 							<Input
 								name="firstName"
-								label="Prénom"
+								label={t("first_name")}
 								defaultValue={selectedStudent?.firstName}
 								placeholder="Ex: Karim"
 								required
 							/>
 							<Input
 								name="lastName"
-								label="Nom"
+								label={t("last_name")}
 								defaultValue={selectedStudent?.lastName}
 								placeholder="Ex: Zidane"
 								required
@@ -460,10 +496,10 @@ export default function StudentsClientView({
 							</div>
 							<div>
 								<span className="text-sm font-black text-taysir-teal uppercase tracking-tight block leading-none">
-									Élève Mineur
+									{t("students_minor_label")}
 								</span>
 								<span className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
-									Active les coordonnées parents
+									{t("students_minor_desc")}
 								</span>
 							</div>
 						</div>
@@ -474,7 +510,7 @@ export default function StudentsClientView({
 						<div className="flex items-center gap-2 mb-2">
 							<ShieldCheck size={16} className="text-taysir-accent" />
 							<h3 className="text-xs font-black text-taysir-teal uppercase tracking-widest">
-								Coordonnées de contact
+								{t("students_contact_section")}
 							</h3>
 						</div>
 
@@ -483,14 +519,14 @@ export default function StudentsClientView({
 								<Input
 									name="email"
 									type="email"
-									label="Email"
+									label={t("email")}
 									defaultValue={selectedStudent?.email || ""}
 									placeholder="karim@email.dz"
 								/>
 								<Input
 									name="phone"
 									type="tel"
-									label="Téléphone"
+									label={t("phone")}
 									defaultValue={selectedStudent?.phone || ""}
 									placeholder="0550 00 00 00"
 								/>
@@ -499,7 +535,7 @@ export default function StudentsClientView({
 							<div className="space-y-4 p-5 bg-amber-50/50 rounded-3xl border border-amber-100/50">
 								<Input
 									name="parentName"
-									label="Nom complet du Parent / Tuteur"
+									label={t("parent_name_label")}
 									defaultValue={selectedStudent?.parentName || ""}
 									placeholder="Ex: Zidane Mourad"
 									required
@@ -507,14 +543,14 @@ export default function StudentsClientView({
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<Input
 										name="parentPhone"
-										label="Téléphone parent"
+										label={t("parent_phone_label")}
 										defaultValue={selectedStudent?.parentPhone || ""}
 										placeholder="0550 00 00 00"
 										required
 									/>
 									<Input
 										name="parentEmail"
-										label="Email parent"
+										label={t("parent_email_label")}
 										defaultValue={selectedStudent?.parentEmail || ""}
 										placeholder="parent@email.dz"
 									/>
@@ -525,7 +561,7 @@ export default function StudentsClientView({
 						<div className="relative">
 							<TextArea
 								name="address"
-								label="Adresse de résidence"
+								label={t("student_address_label")}
 								defaultValue={selectedStudent?.address || ""}
 								placeholder="Ex: Cité 1200 logements, Bat 12, Alger"
 							/>
@@ -540,13 +576,13 @@ export default function StudentsClientView({
 						<div className="flex items-center gap-2 mb-2">
 							<Edit3 size={16} className="text-taysir-accent" />
 							<h3 className="text-xs font-black text-taysir-teal uppercase tracking-widest">
-								Affectation Académique
+								{t("students_academic_assignment")}
 							</h3>
 						</div>
 
 						<MultiSelect
-							label="Inscrire aux Groupes"
-							placeholder="Sélectionner un ou plusieurs groupes..."
+							label={t("students_enroll_groups")}
+							placeholder={t("students_groups_placeholder")}
 							options={groups.map((g) => ({ label: g.name, value: g.id }))}
 							value={selectedGroupIds}
 							onChange={setSelectedGroupIds}

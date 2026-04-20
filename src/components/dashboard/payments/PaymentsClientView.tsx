@@ -16,7 +16,7 @@ import {
 	Wallet,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import {
 	createPaymentPlanAction,
 	registerPaymentAction,
@@ -34,6 +34,10 @@ interface PaymentsClientViewProps {
 	activities: Activity[];
 }
 
+type OptimisticPaymentAction =
+	| { type: "create"; payment: Payment }
+	| { type: "register"; trancheId: string; amount: number; paymentId: string };
+
 export default function PaymentsClientView({
 	initialPayments = [],
 	students = [],
@@ -49,22 +53,50 @@ export default function PaymentsClientView({
 	const t = useTranslations();
 	const router = useRouter();
 
-	// Sync selected payment with updated props from router.refresh()
+	const [optimisticPayments, applyOptimistic] = useOptimistic(
+		initialPayments,
+		(state: Payment[], action: OptimisticPaymentAction) => {
+			if (action.type === "create") {
+				return [...state, action.payment];
+			}
+			if (action.type === "register") {
+				return state.map((p) => {
+					if (p.id !== action.paymentId) return p;
+					const updatedTranches = (p.tranches ?? []).map((tr) =>
+						tr.id === action.trancheId ? { ...tr, isPaid: true } : tr,
+					);
+					const newPaid = p.paidAmount + action.amount;
+					const newStatus =
+						newPaid >= p.totalAmount
+							? "PAID"
+							: newPaid > 0
+								? "PARTIAL"
+								: p.status;
+					return {
+						...p,
+						paidAmount: newPaid,
+						status: newStatus as Payment["status"],
+						tranches: updatedTranches,
+					};
+				});
+			}
+			return state;
+		},
+	);
+
 	const selectedPayment = useMemo(() => {
 		if (!selectedPaymentState) return null;
 		return (
-			initialPayments.find((p) => p.id === selectedPaymentState.id) ||
+			optimisticPayments.find((p) => p.id === selectedPaymentState.id) ||
 			selectedPaymentState
 		);
-	}, [initialPayments, selectedPaymentState]);
+	}, [optimisticPayments, selectedPaymentState]);
 
-	// --- States for NEW Payment Plan ---
 	const [newPlanStudentId, setNewPlanStudentId] = useState("");
 	const [newPlanActivityId, setNewPlanActivityId] = useState("");
 	const [newPlanTotal, setNewPlanTotal] = useState(0);
 	const [tranchesCount, setTranchesCount] = useState(1);
 
-	// --- States for REGISTERING a Payment ---
 	const [selectedTrancheId, setSelectedTrancheId] = useState("");
 	const [paymentAmount, setPaymentAmount] = useState(0);
 	const [paymentMethod, _setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -80,7 +112,7 @@ export default function PaymentsClientView({
 	}, [students]);
 
 	const filteredPayments = useMemo(() => {
-		return (initialPayments || []).filter((payment) => {
+		return (optimisticPayments || []).filter((payment) => {
 			const student = studentsMap[payment.studentId];
 			const studentName = formatFullName(
 				student?.firstName,
@@ -91,12 +123,11 @@ export default function PaymentsClientView({
 				statusFilter === "all" || payment.status === statusFilter;
 			return nameMatch && statusMatch;
 		});
-	}, [searchTerm, statusFilter, initialPayments, studentsMap]);
+	}, [searchTerm, statusFilter, optimisticPayments, studentsMap]);
 
 	const handleManage = (payment: Payment) => {
 		setSelectedPaymentState(payment);
 		setIsManageModalOpen(true);
-		// Reset payment fields
 		setSelectedTrancheId("");
 		setPaymentAmount(0);
 	};
@@ -105,7 +136,6 @@ export default function PaymentsClientView({
 		e.preventDefault();
 		if (!newPlanStudentId || !newPlanActivityId || newPlanTotal <= 0) return;
 
-		// Create simple tranches automatically
 		const trancheAmount = Math.floor(newPlanTotal / tranchesCount);
 		const tranches = Array.from({ length: tranchesCount }).map((_, i) => {
 			const date = new Date();
@@ -148,60 +178,50 @@ export default function PaymentsClientView({
 
 	const handleRegisterPayment = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!selectedTrancheId || paymentAmount <= 0) return;
+		if (!selectedTrancheId || paymentAmount <= 0 || !selectedPayment) return;
+
+		const paymentId = selectedPayment.id;
+		const trancheId = selectedTrancheId;
+		const amount = paymentAmount;
 
 		startTransition(async () => {
+			applyOptimistic({ type: "register", trancheId, amount, paymentId });
+			setPaymentAmount(0);
+			setSelectedTrancheId("");
+
 			const result = await registerPaymentAction({
-				trancheId: selectedTrancheId,
-				montant_paye: paymentAmount,
+				trancheId,
+				montant_paye: amount,
 				methode: paymentMethod,
 			});
 
-			if (result.success) {
-				setPaymentAmount(0);
-				setSelectedTrancheId("");
-				router.refresh();
-
-				if (selectedPayment) {
-					const updatedTranches = selectedPayment.tranches?.map((t) => {
-						if (t.id === selectedTrancheId) {
-							const isPaid = result.data.trancheStatut === "PAID";
-							return { ...t, isPaid };
-						}
-						return t;
-					});
-					setSelectedPaymentState({
-						...selectedPayment,
-						paidAmount: selectedPayment.paidAmount + paymentAmount,
-						tranches: updatedTranches ?? [],
-					});
-				}
-			} else {
+			if (!result.success) {
 				alert(result.error.message);
 			}
+			router.refresh();
 		});
 	};
 
 	const stats = useMemo(() => {
-		const total = initialPayments.reduce((acc, p) => acc + p.totalAmount, 0);
-		const paid = initialPayments.reduce((acc, p) => acc + p.paidAmount, 0);
+		const total = optimisticPayments.reduce((acc, p) => acc + p.totalAmount, 0);
+		const paid = optimisticPayments.reduce((acc, p) => acc + p.paidAmount, 0);
 		return { total, paid, remaining: total - paid };
-	}, [initialPayments]);
+	}, [optimisticPayments]);
 
 	const exportToCSV = () => {
 		const headers = [
-			"Élève",
-			"Activité",
-			"Montant Total",
-			"Montant Payé",
-			"Reste",
-			"Statut",
+			t("students_identity"),
+			t("payments_activity"),
+			t("payments_total_amount"),
+			t("payments_paid_amount_col"),
+			t("payments_remaining"),
+			t("payments_status"),
 		];
 		const rows = filteredPayments.map((p) => {
 			const student = studentsMap[p.studentId];
 			const studentName = student
 				? formatFullName(student.firstName, student.lastName)
-				: "Inconnu";
+				: t("unknown");
 			return [
 				`"${studentName}"`,
 				`"${p.activity?.name || "N/A"}"`,
@@ -244,24 +264,26 @@ export default function PaymentsClientView({
 							{t("payments")}
 						</h1>
 						<p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-							Gestion Financière & Échéanciers
+							{t("payments_subtitle")}
 						</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-3">
 					<button
+						type="button"
 						onClick={exportToCSV}
 						className="flex items-center gap-2 bg-white text-taysir-teal border border-taysir-teal/20 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-taysir-teal/5 transition-all shadow-sm"
 					>
 						<Download size={18} />
-						Exporter CSV
+						{t("payments_export_csv")}
 					</button>
 					<button
+						type="button"
 						onClick={() => setIsAddModalOpen(true)}
 						className="btn-primary flex items-center gap-2 text-sm py-2.5"
 					>
 						<Plus size={20} strokeWidth={2.5} />
-						Nouveau Plan Financier
+						{t("payments_new_plan")}
 					</button>
 				</div>
 			</div>
@@ -274,7 +296,7 @@ export default function PaymentsClientView({
 					</div>
 					<div>
 						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							Total Prévu
+							{t("payments_total_forecast")}
 						</p>
 						<p className="text-2xl font-black text-gray-900">
 							{stats.total.toLocaleString()} DA
@@ -287,7 +309,7 @@ export default function PaymentsClientView({
 					</div>
 					<div>
 						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							Total Encaissé
+							{t("payments_total_collected")}
 						</p>
 						<p className="text-2xl font-black text-gray-900">
 							{stats.paid.toLocaleString()} DA
@@ -300,7 +322,7 @@ export default function PaymentsClientView({
 					</div>
 					<div>
 						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							Reste à percevoir
+							{t("payments_remaining_collect")}
 						</p>
 						<p className="text-2xl font-black text-red-600">
 							{stats.remaining.toLocaleString()} DA
@@ -318,7 +340,7 @@ export default function PaymentsClientView({
 					/>
 					<input
 						type="text"
-						placeholder="Rechercher un élève par nom..."
+						placeholder={t("payments_search_placeholder")}
 						className="block w-full rounded-2xl border-none bg-gray-50 py-3 pl-12 pr-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5 transition-all shadow-inner"
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
@@ -331,10 +353,10 @@ export default function PaymentsClientView({
 						onChange={(e) => setStatusFilter(e.target.value)}
 						className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer py-2"
 					>
-						<option value="all">Tous les statuts</option>
-						<option value="PAID">Payé</option>
-						<option value="PARTIAL">Partiel</option>
-						<option value="PENDING">En attente</option>
+						<option value="all">{t("payments_all_statuses")}</option>
+						<option value="PAID">{t("paid")}</option>
+						<option value="PARTIAL">{t("partial")}</option>
+						<option value="PENDING">{t("pending")}</option>
 					</select>
 				</div>
 			</div>
@@ -350,6 +372,7 @@ export default function PaymentsClientView({
 								payment={payment}
 								student={student}
 								onManage={handleManage}
+								t={t}
 							/>
 						) : null;
 					})}
@@ -357,9 +380,9 @@ export default function PaymentsClientView({
 			) : (
 				<EmptyState
 					icon={DollarSign}
-					title="Aucun plan financier trouvé"
-					description="Créez un plan de paiement pour un élève afin de commencer le suivi."
-					actionLabel="Créer un plan"
+					title={t("payments_no_plan_found")}
+					description={t("payments_empty_desc")}
+					actionLabel={t("payments_create_plan")}
 					onAction={() => setIsAddModalOpen(true)}
 				/>
 			)}
@@ -368,14 +391,15 @@ export default function PaymentsClientView({
 			<Modal
 				isOpen={isAddModalOpen}
 				onClose={() => setIsAddModalOpen(false)}
-				title="Créer un Plan Financier"
+				title={t("payments_create_plan_title")}
 				footer={
 					<div className="flex items-center justify-end gap-3 w-full">
 						<button
+							type="button"
 							onClick={() => setIsAddModalOpen(false)}
 							className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl px-5 py-2.5 transition-all font-bold text-sm"
 						>
-							Annuler
+							{t("cancel")}
 						</button>
 						<button
 							form="add-plan-form"
@@ -389,7 +413,7 @@ export default function PaymentsClientView({
 							className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
 						>
 							{isPending && <Loader2 size={18} className="animate-spin" />}
-							Créer l&apos;échéancier
+							{t("payments_create_schedule")}
 						</button>
 					</div>
 				}
@@ -401,11 +425,11 @@ export default function PaymentsClientView({
 				>
 					<div className="bg-gray-50 p-5 rounded-3xl border border-gray-100 space-y-4">
 						<Select
-							label="Élève concerné"
+							label={t("payments_student_concerned")}
 							value={newPlanStudentId}
 							onChange={(e) => setNewPlanStudentId(e.target.value)}
 							options={[
-								{ label: "Sélectionner un élève...", value: "" },
+								{ label: t("payments_select_student"), value: "" },
 								...students.map((s) => ({
 									label: formatFullName(s.firstName, s.lastName),
 									value: s.id,
@@ -414,18 +438,18 @@ export default function PaymentsClientView({
 							required
 						/>
 						<Select
-							label="Activité associée"
+							label={t("activity_associated")}
 							value={newPlanActivityId}
 							onChange={(e) => setNewPlanActivityId(e.target.value)}
 							options={[
-								{ label: "Sélectionner une activité...", value: "" },
+								{ label: t("payments_select_activity"), value: "" },
 								...activities.map((a) => ({ label: a.name, value: a.id })),
 							]}
 							required
 						/>
 						<div className="grid grid-cols-2 gap-4">
 							<Input
-								label="Montant Total (DA)"
+								label={t("payments_total_amount_da")}
 								type="number"
 								value={newPlanTotal}
 								onChange={(e) => setNewPlanTotal(Number(e.target.value))}
@@ -433,7 +457,7 @@ export default function PaymentsClientView({
 								required
 							/>
 							<Input
-								label="Nombre de tranches"
+								label={t("payments_tranches_count")}
 								type="number"
 								min="1"
 								max="12"
@@ -459,14 +483,15 @@ export default function PaymentsClientView({
 			<Modal
 				isOpen={isManageModalOpen}
 				onClose={() => setIsManageModalOpen(false)}
-				title="Détails de l&apos;échéancier"
+				title={t("payments_schedule_details")}
 				footer={
 					<div className="flex items-center justify-end w-full">
 						<button
+							type="button"
 							onClick={() => setIsManageModalOpen(false)}
 							className="btn-primary text-sm"
 						>
-							Terminer
+							{t("payments_done")}
 						</button>
 					</div>
 				}
@@ -476,7 +501,7 @@ export default function PaymentsClientView({
 					<div className="flex items-center justify-between bg-gradient-to-br from-primary-teal to-accent-teal p-6 rounded-[32px] text-white shadow-lg">
 						<div>
 							<p className="text-[10px] font-black uppercase tracking-widest opacity-70">
-								Reste à payer
+								{t("payments_remaining_to_pay")}
 							</p>
 							<p className="text-3xl font-black">
 								{(selectedPayment?.totalAmount || 0) -
@@ -504,7 +529,7 @@ export default function PaymentsClientView({
 					>
 						<h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
 							<DollarSign size={14} className="text-green-500" />
-							Enregistrer un règlement
+							{t("payments_register_payment_title")}
 						</h4>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 							<div className="md:col-span-1">
@@ -512,28 +537,28 @@ export default function PaymentsClientView({
 									value={selectedTrancheId}
 									onChange={(e) => {
 										setSelectedTrancheId(e.target.value);
-										const t = selectedPayment?.tranches?.find(
-											(tr) => tr.id === e.target.value,
+										const tr = selectedPayment?.tranches?.find(
+											(tranche) => tranche.id === e.target.value,
 										);
-										if (t) setPaymentAmount(t.amount);
+										if (tr) setPaymentAmount(tr.amount);
 									}}
 									className="w-full bg-gray-50 rounded-xl border-gray-100 py-2.5 px-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5"
 									required
 								>
-									<option value="">Choisir une tranche...</option>
+									<option value="">{t("payments_choose_tranche")}</option>
 									{selectedPayment?.tranches
-										?.filter((t) => !t.isPaid)
+										?.filter((tr) => !tr.isPaid)
 										.map((tranche) => (
 											<option key={tranche.id} value={tranche.id}>
-												Mois: {getMonthName(tranche.dueDate)} ({tranche.amount}{" "}
-												DA)
+												{t("payments_month_label")}{" "}
+												{getMonthName(tranche.dueDate)} ({tranche.amount} DA)
 											</option>
 										))}
 								</select>
 							</div>
 							<input
 								type="number"
-								placeholder="Montant (DA)"
+								placeholder={t("payments_amount_da")}
 								value={paymentAmount || ""}
 								onChange={(e) => setPaymentAmount(Number(e.target.value))}
 								className="w-full bg-gray-50 rounded-xl border-gray-100 py-2.5 px-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5"
@@ -549,7 +574,7 @@ export default function PaymentsClientView({
 								) : (
 									<CheckCircle2 size={16} />
 								)}
-								Valider
+								{t("payments_validate")}
 							</button>
 						</div>
 					</form>
@@ -558,7 +583,7 @@ export default function PaymentsClientView({
 					<div className="space-y-4">
 						<h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 px-2">
 							<Calendar size={14} className="text-primary-teal" />
-							Échéancier Mensuel (Timeline)
+							{t("payments_monthly_schedule")}
 						</h4>
 						<div className="space-y-3">
 							{selectedPayment?.tranches?.map((tranche) => (
@@ -592,7 +617,9 @@ export default function PaymentsClientView({
 										</p>
 										<p className="text-[10px] font-medium text-gray-500">
 											{getMonthName(tranche.dueDate)} •{" "}
-											{tranche.isPaid ? "Payée" : "À régler"}
+											{tranche.isPaid
+												? t("payments_paid_label")
+												: t("payments_to_pay")}
 										</p>
 									</div>
 									{tranche.isPaid ? (
@@ -614,21 +641,22 @@ export default function PaymentsClientView({
 	);
 }
 
-// Internal Styled Card
 function PaymentCardStyled({
 	payment,
 	student,
 	onManage,
+	t,
 }: {
 	payment: Payment;
 	student: Student;
 	onManage: (p: Payment) => void;
+	t: ReturnType<typeof useTranslations>;
 }) {
 	const percent =
 		payment.totalAmount > 0
 			? Math.round((payment.paidAmount / payment.totalAmount) * 100)
 			: 0;
-	const paidTranches = payment.tranches?.filter((t) => t.isPaid).length || 0;
+	const paidTranches = payment.tranches?.filter((tr) => tr.isPaid).length || 0;
 	const totalTranches = payment.tranches?.length || 0;
 
 	return (
@@ -645,10 +673,13 @@ function PaymentCardStyled({
 						</h3>
 						<div className="flex flex-col">
 							<p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-								{student.email ? student.email.split("@")[0] : "Élève"}
+								{student.email ? student.email.split("@")[0] : t("students")}
 							</p>
 							<p className="text-[10px] font-bold text-primary-teal/70 uppercase tracking-tight mt-0.5">
-								{paidTranches}/{totalTranches} mois réglés
+								{t("payments_months_settled", {
+									paid: paidTranches,
+									total: totalTranches,
+								})}
 							</p>
 							{payment.activity && (
 								<p className="text-[9px] font-bold bg-primary-teal/5 text-primary-teal px-1.5 py-0.5 rounded-md mt-1 self-start">
@@ -669,10 +700,10 @@ function PaymentCardStyled({
 					)}
 				>
 					{payment.status === "PAID"
-						? "Soldé"
+						? t("payments_settled")
 						: payment.status === "PARTIAL"
-							? "Partiel"
-							: "Dû"}
+							? t("partial")
+							: t("payments_due")}
 				</div>
 			</div>
 
@@ -680,7 +711,7 @@ function PaymentCardStyled({
 				<div className="flex justify-between items-end">
 					<div className="space-y-1">
 						<p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-							Encaissé
+							{t("payments_collected")}
 						</p>
 						<p className="text-xl font-black text-gray-900">
 							{payment.paidAmount.toLocaleString()}{" "}
@@ -700,7 +731,7 @@ function PaymentCardStyled({
 				<div className="flex justify-between py-2 border-t border-gray-50 mt-2">
 					<div>
 						<p className="text-[9px] font-bold text-gray-400 uppercase">
-							Total
+							{t("total")}
 						</p>
 						<p className="text-xs font-bold text-gray-700">
 							{payment.totalAmount.toLocaleString()} DA
@@ -708,7 +739,7 @@ function PaymentCardStyled({
 					</div>
 					<div className="text-right">
 						<p className="text-[9px] font-bold text-gray-400 uppercase">
-							Reste
+							{t("remaining")}
 						</p>
 						<p className="text-xs font-bold text-red-500">
 							{(payment.totalAmount - payment.paidAmount).toLocaleString()} DA
@@ -718,10 +749,11 @@ function PaymentCardStyled({
 			</div>
 
 			<button
+				type="button"
 				onClick={() => onManage(payment)}
 				className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 py-3 text-xs uppercase tracking-widest"
 			>
-				Gérer l&apos;échéancier
+				{t("payments_manage_schedule")}
 				<ArrowRight size={14} strokeWidth={3} />
 			</button>
 		</div>

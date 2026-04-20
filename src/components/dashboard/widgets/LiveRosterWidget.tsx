@@ -1,10 +1,13 @@
 import { Edit2, Mail, ShieldCheck, Users } from "lucide-react";
+import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getStaff } from "@/services/api";
 import type { User } from "@/types/schema";
 import { cn } from "@/utils/format";
 
 export default async function LiveRosterWidget() {
+	const t = await getTranslations();
 	const staff = await getStaff();
 
 	return (
@@ -12,16 +15,18 @@ export default async function LiveRosterWidget() {
 			<div className="flex justify-between items-center relative z-10">
 				<div>
 					<h3 className="text-sm font-black text-taysir-teal uppercase tracking-[0.2em] flex items-center gap-2">
-						<Users size={18} className="text-taysir-light" /> Équipage
-						Établissement
+						<Users size={18} className="text-taysir-light" />{" "}
+						{t("roster_title")}
 					</h3>
 					<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest mt-1">
-						Disponibilité et accès en temps réel
+						{t("roster_subtitle")}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-100">
-						{staff.filter((m: any) => m.status === "ACTIVE").length} Actifs
+						{t("stats_n_actifs", {
+							count: staff.filter((m: User) => m.status === "ACTIVE").length,
+						})}
 					</span>
 					<Link
 						href="/dashboard/staff"
@@ -42,10 +47,11 @@ export default async function LiveRosterWidget() {
 							<div className="relative">
 								<div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-taysir-teal font-black text-lg uppercase overflow-hidden shadow-sm border border-taysir-teal/5">
 									{member.avatarUrl ? (
-										<img
+										<Image
 											src={member.avatarUrl}
 											alt={member.firstName}
-											className="w-full h-full object-cover"
+											fill
+											className="object-cover"
 										/>
 									) : (
 										(member.firstName[0] ?? "") +
@@ -80,7 +86,10 @@ export default async function LiveRosterWidget() {
 						</div>
 
 						<div className="flex flex-col gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-							<button className="p-2 rounded-lg bg-white text-taysir-teal hover:bg-taysir-teal hover:text-white transition-all shadow-sm">
+							<button
+								type="button"
+								className="p-2 rounded-lg bg-white text-taysir-teal hover:bg-taysir-teal hover:text-white transition-all shadow-sm"
+							>
 								<Mail size={12} />
 							</button>
 						</div>
@@ -94,7 +103,7 @@ export default async function LiveRosterWidget() {
 						href="/dashboard/staff"
 						className="text-[10px] font-black text-taysir-teal/40 uppercase tracking-[0.3em] hover:text-taysir-teal transition-colors"
 					>
-						Voir les {staff.length - 6} autres membres →
+						{t("roster_view_more", { count: staff.length - 6 })} →
 					</Link>
 				</div>
 			)}

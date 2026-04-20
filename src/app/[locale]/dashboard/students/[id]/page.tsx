@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getStudentFullProfileAction } from "@/actions/students.actions";
 import type { Group, Student } from "@/types/schema";
 
@@ -46,7 +47,10 @@ interface PageProps {
 
 export default async function StudentProfilePage({ params }: PageProps) {
 	const { id } = await params;
-	const response = await getStudentFullProfileAction({ id });
+	const [response, t] = await Promise.all([
+		getStudentFullProfileAction({ id }),
+		getTranslations(),
+	]);
 
 	if (!response.success || !response.data) {
 		notFound();
@@ -71,12 +75,13 @@ export default async function StudentProfilePage({ params }: PageProps) {
 					<div>
 						<div className="flex items-center gap-2 mb-0.5">
 							<span className="text-[10px] font-black tracking-[0.3em] text-taysir-teal/40 uppercase">
-								Dossier Académique
+								{t("student_academic_file")}
 							</span>
 							<div className="w-1 h-1 rounded-full bg-taysir-accent animate-pulse" />
 						</div>
 						<h1 className="text-3xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
-							Profil Étudiant<span className="text-taysir-accent">.</span>
+							{t("student_profile_title")}
+							<span className="text-taysir-accent">.</span>
 						</h1>
 					</div>
 				</div>
@@ -115,7 +120,9 @@ export default async function StudentProfilePage({ params }: PageProps) {
 										: "bg-rose-50 text-rose-600 border-rose-100"
 								}`}
 							>
-								{student.isActive ? "Dossier Actif" : "Dossier Inactif"}
+								{student.isActive
+									? t("student_active_file")
+									: t("student_inactive_file")}
 							</span>
 						</div>
 
@@ -124,7 +131,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								<div className="p-2 bg-white rounded-lg shadow-sm">
 									<Mail size={16} className="text-taysir-teal/30" />
 								</div>
-								<span>{student.email || "Non renseigné"}</span>
+								<span>{student.email || t("student_not_provided")}</span>
 							</div>
 							<div className="flex items-center gap-3 text-sm font-bold text-taysir-teal/70">
 								<div className="p-2 bg-white rounded-lg shadow-sm">
@@ -141,7 +148,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<Calendar size={16} className="text-taysir-teal/30" />
 								</div>
 								<span>
-									Inscrit le{" "}
+									{t("student_enrolled_on")}{" "}
 									{new Date(student.registrationDate).toLocaleDateString()}
 								</span>
 							</div>
@@ -150,7 +157,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<MapPin size={16} className="text-taysir-teal/30" />
 								</div>
 								<span className="truncate max-w-[200px]">
-									{student.address || "Adresse non saisie"}
+									{student.address || t("student_no_address")}
 								</span>
 							</div>
 						</div>
@@ -162,7 +169,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								</div>
 								<div>
 									<p className="text-[10px] font-black text-amber-600/60 uppercase tracking-widest leading-none mb-1">
-										Responsable Légal
+										{t("student_legal_guardian")}
 									</p>
 									<p className="text-sm font-black text-amber-700 uppercase tracking-tight">
 										{student.parentName}
@@ -184,7 +191,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<Clock size={24} className="text-taysir-light" />
 								</div>
 								<span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
-									Sessions
+									{t("student_sessions_label")}
 								</span>
 							</div>
 							<div className="mt-6">
@@ -192,7 +199,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									{student.attendance.length}
 								</div>
 								<div className="text-[10px] font-black uppercase tracking-widest opacity-60 mt-2">
-									Présences enregistrées
+									{t("student_attendance_recorded")}
 								</div>
 							</div>
 						</div>
@@ -208,7 +215,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<Wallet size={24} />
 								</div>
 								<span className="text-[10px] font-black uppercase tracking-[0.2em] text-taysir-teal/30">
-									Trésorerie
+									{t("student_treasury")}
 								</span>
 							</div>
 							<div className="mt-6">
@@ -222,7 +229,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									<span className="text-sm">DZD</span>
 								</div>
 								<div className="text-[10px] font-black uppercase tracking-widest text-rose-500 mt-2">
-									Solde débiteur actuel
+									{t("student_current_debit")}
 								</div>
 							</div>
 						</div>
@@ -239,7 +246,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 							<Users size={20} />
 						</div>
 						<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-							Inscriptions Groupes
+							{t("student_group_enrollments")}
 						</h3>
 					</div>
 					<div className="grid grid-cols-1 gap-3">
@@ -258,7 +265,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 												{group.name}
 											</div>
 											<div className="text-[9px] font-bold text-taysir-teal/30 uppercase tracking-widest">
-												Actif depuis le{" "}
+												{t("student_active_since")}{" "}
 												{new Date(group.createdAt).toLocaleDateString()}
 											</div>
 										</div>
@@ -269,7 +276,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 							<div className="py-12 text-center bg-white rounded-[32px] border-2 border-dashed border-taysir-teal/5 opacity-40">
 								<Users size={40} className="mx-auto mb-3 text-taysir-teal/20" />
 								<p className="text-xs font-black uppercase tracking-widest">
-									Aucun groupe affecté
+									{t("student_no_groups")}
 								</p>
 							</div>
 						)}
@@ -284,7 +291,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								<FileText size={20} />
 							</div>
 							<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-								Dossier Numérique
+								{t("student_digital_file")}
 							</h3>
 						</div>
 						<AddDocumentButton studentId={student.id} />
@@ -332,7 +339,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									className="mx-auto mb-3 text-taysir-teal/20"
 								/>
 								<p className="text-xs font-black uppercase tracking-widest text-taysir-teal">
-									Aucune pièce jointe
+									{t("student_no_documents")}
 								</p>
 							</div>
 						)}
@@ -347,7 +354,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						<User size={20} />
 					</div>
 					<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-						Journal des Présences
+						{t("student_attendance_log")}
 					</h3>
 				</div>
 				<div className="bento-card p-0 overflow-hidden bg-white border border-taysir-teal/5 shadow-xl">
@@ -355,10 +362,12 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						<table className="w-full text-left border-collapse">
 							<thead className="bg-taysir-bg/50 text-[10px] font-black text-taysir-teal/40 uppercase tracking-widest">
 								<tr>
-									<th className="px-8 py-5">Date & Séance</th>
-									<th className="px-8 py-5">Module / Activité</th>
-									<th className="px-8 py-5 text-center">Engagement</th>
-									<th className="px-8 py-5">Commentaires</th>
+									<th className="px-8 py-5">{t("student_date_session")}</th>
+									<th className="px-8 py-5">{t("student_module_activity")}</th>
+									<th className="px-8 py-5 text-center">
+										{t("kpi_engagement")}
+									</th>
+									<th className="px-8 py-5">{t("student_comments")}</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-taysir-teal/5">
@@ -403,7 +412,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 											</span>
 										</td>
 										<td className="px-8 py-6 text-xs text-taysir-teal/50 font-medium italic">
-											{record.note || "Aucune observation"}
+											{record.note || t("student_no_observation")}
 										</td>
 									</tr>
 								))}
@@ -417,7 +426,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								className="mx-auto mb-4 text-taysir-teal/20"
 							/>
 							<p className="font-black uppercase tracking-[0.3em] text-xs">
-								Historique vierge
+								{t("student_empty_history")}
 							</p>
 						</div>
 					)}

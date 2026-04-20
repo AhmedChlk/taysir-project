@@ -1,4 +1,5 @@
 import { ArrowUpRight, DoorOpen, TrendingUp, Wallet, Zap } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import {
 	getAttendanceStatsAction,
 	getDailyAttendanceRatioAction,
@@ -9,6 +10,7 @@ import { Link } from "@/i18n/routing";
 import AttendanceSparkline from "./AttendanceSparkline";
 
 export default async function PerformanceKPIsWidget() {
+	const t = await getTranslations();
 	const [financeRes, attendanceRes, sparklineRes, occupancyRes] =
 		await Promise.all([
 			getFinancialKPIsAction({}),
@@ -31,10 +33,11 @@ export default async function PerformanceKPIsWidget() {
 			<div className="flex justify-between items-start mb-8 relative z-10">
 				<div>
 					<h3 className="text-sm font-black text-taysir-teal uppercase tracking-[0.2em] flex items-center gap-2">
-						<Zap size={18} className="text-taysir-accent" /> Pilotage Directeur
+						<Zap size={18} className="text-taysir-accent" />{" "}
+						{t("kpi_widget_title")}
 					</h3>
 					<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest mt-1">
-						Indicateurs de santé critiques
+						{t("kpi_health_indicators")}
 					</p>
 				</div>
 				<Link
@@ -53,7 +56,7 @@ export default async function PerformanceKPIsWidget() {
 							<Wallet size={16} />
 						</div>
 						<span className="text-[10px] font-black text-taysir-teal/30 uppercase tracking-widest">
-							Trésorerie Mensuelle
+							{t("kpi_monthly_revenue")}
 						</span>
 					</div>
 					<div className="mt-4">
@@ -68,7 +71,7 @@ export default async function PerformanceKPIsWidget() {
 								<div className="h-full bg-emerald-500 w-[70%] transition-all duration-1000" />
 							</div>
 							<span className="text-[10px] font-black text-emerald-600">
-								Flux Positif
+								{t("kpi_positive_flow")}
 							</span>
 						</div>
 					</div>
@@ -80,7 +83,7 @@ export default async function PerformanceKPIsWidget() {
 						<div className="flex items-center gap-2 mb-2">
 							<TrendingUp size={14} className="text-taysir-accent" />
 							<span className="text-[9px] font-black text-taysir-teal/30 uppercase tracking-wider">
-								Engagement
+								{t("kpi_engagement")}
 							</span>
 						</div>
 						<div className="text-2xl font-black text-taysir-teal">
@@ -99,7 +102,7 @@ export default async function PerformanceKPIsWidget() {
 						<div className="flex items-center gap-2 mb-2">
 							<DoorOpen size={14} className="text-taysir-teal" />
 							<span className="text-[9px] font-black text-taysir-teal/30 uppercase tracking-wider">
-								Occupation
+								{t("kpi_occupation")}
 							</span>
 						</div>
 						<div className="text-2xl font-black text-taysir-teal">
@@ -118,7 +121,7 @@ export default async function PerformanceKPIsWidget() {
 				<div className="px-2">
 					<AttendanceSparkline data={sparklineData} color="#1A7A89" />
 					<p className="text-[8px] font-bold text-center text-taysir-teal/20 uppercase tracking-[0.3em] mt-2">
-						Tendance hebdomadaire
+						{t("kpi_weekly_trend")}
 					</p>
 				</div>
 			</div>
