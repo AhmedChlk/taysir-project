@@ -3,7 +3,7 @@
 import { clsx } from "clsx";
 import { Check, ChevronDown, X } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 interface Option {
 	label: string;
@@ -27,6 +27,7 @@ export default function MultiSelect({
 }: MultiSelectProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const triggerId = useId();
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -59,12 +60,21 @@ export default function MultiSelect({
 
 	return (
 		<div className="w-full space-y-1.5" ref={containerRef}>
-			<label className="text-sm font-semibold text-taysir-teal">{label}</label>
+			<label
+				htmlFor={triggerId}
+				className="text-sm font-semibold text-taysir-teal"
+			>
+				{label}
+			</label>
 			<div className="relative">
-				<div
+				<button
+					id={triggerId}
+					type="button"
+					aria-expanded={isOpen}
+					aria-haspopup="listbox"
 					onClick={() => setIsOpen(!isOpen)}
 					className={clsx(
-						"flex min-h-[50px] w-full flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm transition-all outline-none cursor-pointer focus:ring-4 focus:ring-taysir-teal/10",
+						"flex min-h-[50px] w-full flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm transition-all outline-none cursor-pointer focus:ring-4 focus:ring-taysir-teal/10 text-start",
 						isOpen
 							? "border-taysir-teal ring-4 ring-taysir-teal/10"
 							: "border-taysir-teal/15 hover:border-taysir-teal/30",
@@ -100,14 +110,27 @@ export default function MultiSelect({
 							isOpen && "rotate-180",
 						)}
 					/>
-				</div>
+				</button>
 
 				{isOpen && (
-					<div className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-black/5 custom-scrollbar">
+					<div
+						role="listbox"
+						aria-multiselectable="true"
+						className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-black/5 custom-scrollbar"
+					>
 						{options.map((option) => (
 							<div
 								key={option.value}
+								role="option"
+								aria-selected={value.includes(option.value)}
+								tabIndex={-1}
 								onClick={() => toggleOption(option.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										toggleOption(option.value);
+									}
+								}}
 								className={clsx(
 									"flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-colors cursor-pointer",
 									value.includes(option.value)

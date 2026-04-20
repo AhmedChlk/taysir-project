@@ -43,7 +43,7 @@ export const CreatePaymentPlanSchema = z.object({
 	studentId: z.string().uuid(),
 	activityId: z.string().uuid("L'activité est requise."),
 	totalAmount: z.number().positive(),
-	currency: z.string().length(3).default("DZD"),
+	currency: z.enum(["DZD", "EUR", "USD"]).default("DZD"),
 	tranches: z
 		.array(
 			z.object({
@@ -200,7 +200,7 @@ export const PaymentSchema = z.object({
 	studentId: z.string(),
 	totalAmount: z.number().positive(),
 	paidAmount: z.number().nonnegative(),
-	currency: z.string().length(3),
+	currency: z.enum(["DZD", "EUR", "USD"]),
 	status: z.enum(["PENDING", "PARTIAL", "PAID"]),
 });
 

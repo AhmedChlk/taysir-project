@@ -25,6 +25,9 @@
 				"noStaticElementInteractions": "warn",
 				"noSvgWithoutTitle": "warn"
 			},
+			"security": {
+				"noDangerouslySetInnerHtml": "error"
+			},
 			"suspicious": {
 				"noExplicitAny": "warn",
 				"noImplicitAnyLet": "warn",

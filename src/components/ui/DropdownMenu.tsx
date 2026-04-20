@@ -92,6 +92,7 @@ export default function DropdownMenu({
 					{isOpen && (
 						<div
 							className="fixed inset-0 z-[9998]"
+							aria-hidden="true"
 							onClick={() => setIsOpen(false)}
 						>
 							<div className="absolute inset-0 pointer-events-none" />

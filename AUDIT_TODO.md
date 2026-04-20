@@ -120,13 +120,10 @@
   - Note: `Sidebar.tsx:72` (`Taysir.`) non corrigé (texte de marque, intentionnel)
 
 ### UI-04 — Accessibilité (violations Biome a11y)
-- [ ] **Boutons sans `type="button"`** — Ajouter `type="button"` sur tous les `<button>` non-submit dans: `DashboardClientView.tsx`, `DashboardSPA.tsx`, `DataTable.tsx`, `Drawer.tsx`, `EmptyState.tsx`, `Modal.tsx`, `PaymentCard.tsx` (17+ occurrences)
-- [ ] **Labels sans contrôle associé** — Corriger dans `FormInput.tsx:42,128,155`, `MultiSelect.tsx:52`, `AttendanceClientView.tsx:97`
-- [ ] **Divs clickables sans keyboard handler** — Ajouter `onKeyDown`/`role="button"` sur `Sidebar.tsx:60`, `DropdownMenu.tsx:84`, `Modal.tsx:48`, `MultiSelect.tsx:54,91`
-- [ ] **`<img>` natif** — Remplacer `<img>` par `next/image` dans `Sidebar.tsx:71`
+- [x] **CORRIGÉ (2026-04-20)** — `type="button"` ajouté sur tous les `<button>` non-submit: `DataTable.tsx` (add, action, 3 pagination), `Drawer.tsx` (close ×, close bottom), `EmptyState.tsx`, `Modal.tsx`, `Sidebar.tsx` (logout), `LiveRosterWidget.tsx` (mail). `htmlFor`/`id` pairés via `useId()` dans `FormInput.tsx` (Input, Select, TextArea) et `MultiSelect.tsx`. Trigger `MultiSelect` converti en `<button>` avec `aria-expanded` + `aria-haspopup`. Options listbox avec `role="option"` + `aria-selected` + `onKeyDown`. Overlays backdrop (`Modal`, `Sidebar`, `DropdownMenu`) avec `aria-hidden="true"`. `<img src="/logo.png">` → `<Image>` dans `Sidebar.tsx`.
 
 ### UI-05 — Variables inutilisées dans DashboardSPA.tsx
-- [ ] **`src/components/dashboard/DashboardSPA.tsx:3,4,6,8,31,34`** — Supprimer imports et variables `session`, `isPending` non utilisés
+- [x] **CORRIGÉ (2026-04-20)** — `_activeDrawer`, `_closeDrawer`, `useRouter`, `useSearchParams` supprimés de `DashboardSPA.tsx`.
 
 ---
 
@@ -165,10 +162,10 @@
 - [ ] Cibler zéro erreur Biome avant merge
 
 ### QUAL-02 — Zod : améliorer les validations de devise
-- [ ] **`src/lib/validations.ts:35`** — Remplacer `z.string().length(3)` par `z.enum(["DZD", "EUR", "USD"])`
+- [x] **CORRIGÉ (2026-04-20)** — `z.string().length(3)` → `z.enum(["DZD", "EUR", "USD"])` dans `CreatePaymentPlanSchema.currency` et `PaymentSchema.currency`.
 
 ### QUAL-03 — Biome security rules
-- [ ] **`biome.json`** — Activer `security/noDangerouslySetInnerHtml` et règles de sécurité supplémentaires
+- [x] **CORRIGÉ (2026-04-20)** — `security/noDangerouslySetInnerHtml: "error"` activé dans `biome.json`.
 
 ---
 

@@ -3,7 +3,7 @@
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 interface BaseProps {
 	label: string;
@@ -30,8 +30,11 @@ export function Input({
 	className,
 	type,
 	suffix,
+	id: propsId,
 	...props
 }: InputProps) {
+	const generatedId = useId();
+	const inputId = propsId ?? generatedId;
 	const [showPassword, setShowPassword] = useState(false);
 	const isPassword = type === "password";
 
@@ -43,11 +46,15 @@ export function Input({
 
 	return (
 		<div className="w-full space-y-1.5 group">
-			<label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+			<label
+				htmlFor={inputId}
+				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+			>
 				{label}
 			</label>
 			<div className="relative">
 				<motion.input
+					id={inputId}
 					whileFocus={{ scale: 1.01 }}
 					type={inputType}
 					className={clsx(
@@ -60,7 +67,7 @@ export function Input({
 						(isPassword || suffix || error || success) && "pe-12",
 						className,
 					)}
-					{...(props as any)}
+					{...(props as unknown as Record<string, unknown>)}
 				/>
 
 				{/* Adornments */}
@@ -146,15 +153,22 @@ export function Select({
 	helperText,
 	options = [],
 	className,
+	id: propsId,
 	...props
 }: SelectProps) {
+	const generatedId = useId();
+	const selectId = propsId ?? generatedId;
 	const safeOptions = Array.isArray(options) ? options : [];
 	return (
 		<div className="w-full space-y-1.5 group">
-			<label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+			<label
+				htmlFor={selectId}
+				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+			>
 				{label}
 			</label>
 			<select
+				id={selectId}
 				className={clsx(
 					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
 					error
@@ -162,7 +176,7 @@ export function Select({
 						: "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
 					className,
 				)}
-				{...(props as any)}
+				{...props}
 			>
 				{safeOptions.map((opt) => (
 					<option key={opt.value} value={opt.value}>
@@ -182,14 +196,21 @@ export function TextArea({
 	error,
 	helperText,
 	className,
+	id: propsId,
 	...props
 }: TextAreaProps) {
+	const generatedId = useId();
+	const textareaId = propsId ?? generatedId;
 	return (
 		<div className="w-full space-y-1.5 group">
-			<label className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light">
+			<label
+				htmlFor={textareaId}
+				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+			>
 				{label}
 			</label>
 			<textarea
+				id={textareaId}
 				className={clsx(
 					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
 					error
@@ -198,7 +219,7 @@ export function TextArea({
 					className,
 				)}
 				rows={3}
-				{...(props as any)}
+				{...props}
 			/>
 			{error && (
 				<p className="text-xs font-medium text-rose-600 mt-1">{error}</p>

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { GraduationCap, LayoutDashboard, Search } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type React from "react";
 import { Suspense } from "react";
@@ -34,18 +33,7 @@ export default function DashboardSPA({
 	alerts,
 	locale,
 }: DashboardSPAProps) {
-	const searchParams = useSearchParams();
-	const router = useRouter();
-	const _activeDrawer = searchParams.get("drawer");
 	const t = useTranslations();
-
-	const _closeDrawer = () => {
-		const params = new URLSearchParams(searchParams.toString());
-		params.delete("drawer");
-		params.delete("id");
-		router.push(`?${params.toString()}`, { scroll: false });
-	};
-
 	const today = new Date();
 
 	return (

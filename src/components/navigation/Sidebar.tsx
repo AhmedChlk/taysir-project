@@ -14,6 +14,7 @@ import {
 	Users,
 	Wallet,
 } from "lucide-react";
+import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
@@ -116,6 +117,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 			{isOpen && (
 				<div
 					className="fixed inset-0 z-40 bg-taysir-teal/60 backdrop-blur-sm md:hidden animate-in fade-in duration-300"
+					aria-hidden="true"
 					onClick={onClose}
 				/>
 			)}
@@ -131,10 +133,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 				)}
 			>
 				<div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
-					<img
+					<Image
 						src="/logo.png"
 						alt="Taysir"
-						className="w-14 h-14 object-contain brightness-0 invert"
+						width={56}
+						height={56}
+						className="object-contain brightness-0 invert"
 					/>
 					<span className="text-2xl font-black tracking-tight text-white">
 						Taysir<span className="text-taysir-accent">.</span>
@@ -233,6 +237,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 					</div>
 
 					<button
+						type="button"
 						onClick={() => {
 							onClose?.();
 							signOut({ callbackUrl: "/login" });

@@ -111,6 +111,7 @@ export default function DataTable<T extends { id: string | number }>({
 
 				{onAdd && (
 					<button
+						type="button"
 						onClick={onAdd}
 						className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-primary-teal px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-teal/20 hover:bg-accent-teal hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200"
 					>
@@ -165,6 +166,7 @@ export default function DataTable<T extends { id: string | number }>({
 										{!hideDefaultAction && (
 											<td className="px-6 py-4 text-end">
 												<button
+													type="button"
 													onClick={(e) => {
 														e.stopPropagation();
 														onAction ? onAction(item) : undefined;
@@ -211,6 +213,7 @@ export default function DataTable<T extends { id: string | number }>({
 
 						<div className="flex items-center gap-1.5">
 							<button
+								type="button"
 								onClick={() => goToPage(currentPage - 1)}
 								disabled={currentPage === 1}
 								className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"
@@ -223,6 +226,7 @@ export default function DataTable<T extends { id: string | number }>({
 									(page) => (
 										<button
 											key={page}
+											type="button"
 											onClick={() => goToPage(page)}
 											className={clsx(
 												"h-9 w-9 rounded-xl text-sm font-bold transition-all",
@@ -238,6 +242,7 @@ export default function DataTable<T extends { id: string | number }>({
 							</div>
 
 							<button
+								type="button"
 								onClick={() => goToPage(currentPage + 1)}
 								disabled={currentPage === totalPages}
 								className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"

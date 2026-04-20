@@ -289,6 +289,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 						</div>
 					</div>
 					<button
+						type="button"
 						onClick={onClose}
 						className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-taysir-teal/5 transition-colors"
 					>
@@ -302,6 +303,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 
 				<div className="p-8 border-t border-taysir-teal/5 bg-white">
 					<button
+						type="button"
 						onClick={onClose}
 						className="w-full py-4 rounded-2xl border-2 border-taysir-teal/10 text-taysir-teal font-black uppercase tracking-widest text-xs hover:bg-taysir-teal/5 transition-all active:scale-95"
 					>
