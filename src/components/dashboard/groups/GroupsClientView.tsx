@@ -22,6 +22,7 @@ import {
 	addStudentToGroupAction,
 	removeStudentFromGroupAction,
 } from "@/actions/students.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, Select } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
@@ -52,6 +53,17 @@ export default function GroupsClientView({
 	students = [],
 }: GroupsClientViewProps) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [confirmModal, setConfirmModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+		onConfirm: () => void;
+	}>({
+		isOpen: false,
+		title: "",
+		message: "",
+		onConfirm: () => {},
+	});
 	const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const [selectedStudentToAdd, setSelectedStudentToAdd] = useState<string>("");
@@ -94,32 +106,51 @@ export default function GroupsClientView({
 		setIsModalOpen(true);
 	};
 
-	const handleDelete = async (id: string) => {
-		if (!confirm(t("confirm_delete"))) return;
-		startTransition(async () => {
-			applyOptimistic({ type: "delete", id });
-			const result = await deleteGroupAction({ id });
-			if (!result.success) {
-				alert(result.error.message);
-			}
-			router.refresh();
+	const handleDelete = (id: string) => {
+		setConfirmModal({
+			isOpen: true,
+			title: t("confirm_delete"),
+			message: t("confirm_delete_desc") || t("confirm_delete"),
+			onConfirm: () => {
+				startTransition(async () => {
+					applyOptimistic({ type: "delete", id });
+					const result = await deleteGroupAction({ id });
+					if (!result.success) {
+						alert(result.error.message);
+					}
+					setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+					router.refresh();
+				});
+			},
 		});
 	};
 
-	const handleRemoveStudent = async (studentId: string, groupId: string) => {
-		if (!confirm(t("groups_remove_confirm"))) return;
-		startTransition(async () => {
-			const result = await removeStudentFromGroupAction({ studentId, groupId });
-			if (result.success) {
-				router.refresh();
-				if (selectedGroup) {
-					setSelectedGroup({
-						...selectedGroup,
-						students:
-							selectedGroup.students?.filter((s) => s.id !== studentId) ?? [],
+	const handleRemoveStudent = (studentId: string, groupId: string) => {
+		setConfirmModal({
+			isOpen: true,
+			title: t("groups_remove_confirm_title") || t("groups_remove_confirm"),
+			message: t("groups_remove_confirm"),
+			onConfirm: () => {
+				startTransition(async () => {
+					const result = await removeStudentFromGroupAction({
+						studentId,
+						groupId,
 					});
-				}
-			}
+					if (result.success) {
+						router.refresh();
+						if (selectedGroup) {
+							setSelectedGroup({
+								...selectedGroup,
+								students:
+									selectedGroup.students?.filter((s) => s.id !== studentId) ?? [],
+							});
+						}
+					} else {
+						alert(result.error.message);
+					}
+					setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+				});
+			},
 		});
 	};
 
@@ -521,6 +552,17 @@ export default function GroupsClientView({
 					)}
 				</div>
 			</Modal>
+
+			<ConfirmModal
+				isOpen={confirmModal.isOpen}
+				onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+				onConfirm={confirmModal.onConfirm}
+				title={confirmModal.title}
+				message={confirmModal.message}
+				confirmLabel={t("confirm")}
+				variant="danger"
+				isLoading={isPending}
+			/>
 		</div>
 	);
 }

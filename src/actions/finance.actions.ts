@@ -83,7 +83,7 @@ export const registerPaymentAction = createSafeAction(
 			async (tx: Prisma.TransactionClient) => {
 				// Verrouillage pessimiste pour éviter les race conditions sur le calcul du solde
 				// On utilise executeRaw car Prisma ne supporte pas encore nativement FOR UPDATE dans findUnique
-				await tx.$executeRaw`SELECT 1 FROM "Tranche" WHERE id = ${data.trancheId}::uuid FOR UPDATE`;
+				await tx.$executeRaw`SELECT 1 FROM "Tranche" WHERE id = CAST(${data.trancheId} AS uuid) FOR UPDATE`;
 
 				const tranche = (await tx.tranche.findUnique({
 					where: {

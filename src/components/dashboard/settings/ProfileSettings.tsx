@@ -4,11 +4,12 @@ import { Loader2, Save, Trash2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname } from "@/i18n/routing";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
 	deleteAccountAction,
 	updateProfileAction,
 } from "@/actions/settings.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { Input } from "@/components/ui/FormInput";
 
 type CurrentUser = {
@@ -29,6 +30,7 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 	const t = useTranslations();
 	const locale = useLocale();
 	const [isPending, startTransition] = useTransition();
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
 	const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -51,9 +53,11 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 		});
 	};
 
-	const handleDeleteAccount = async () => {
-		if (!confirm(t("delete_account_desc"))) return;
+	const handleDeleteAccount = () => {
+		setIsDeleteModalOpen(true);
+	};
 
+	const confirmDeleteAccount = async () => {
 		startTransition(async () => {
 			const result = await deleteAccountAction({});
 			if (result.success) {
@@ -164,6 +168,17 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 					</button>
 				</div>
 			</div>
+
+			<ConfirmModal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				onConfirm={confirmDeleteAccount}
+				title={t("delete_account_btn")}
+				message={t("delete_account_desc")}
+				confirmLabel={t("delete")}
+				variant="danger"
+				isLoading={isPending}
+			/>
 		</div>
 	);
 }

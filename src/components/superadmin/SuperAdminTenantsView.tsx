@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, Trash2, Building2, Globe, Palette, Users, GraduationCap, ExternalLink, ShieldAlert, CheckCircle2, XCircle, Mail, User, Lock } from "lucide-react";
 import { createTenantAction, deleteTenantAction, toggleTenantStatusAction } from "@/actions/superadmin.actions";
 import Modal from "@/components/ui/Modal";
-import { Input as FormInput } from "@/components/ui/FormInput";
+import { Input } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { clsx } from "clsx";
@@ -30,10 +30,12 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 	const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
+    const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
 
 	const handleCreateTenant = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+        setError(null);
 		const formData = new FormData(e.currentTarget);
 		const data = {
 			name: formData.get("name") as string,
@@ -52,12 +54,13 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 			if (res.success) {
 				window.location.reload();
 			} else {
-				alert(res.error.message);
+				setError(res.error.message);
 			}
 		});
 	};
 
 	const handleToggleStatus = async (tenant: Tenant) => {
+        setError(null);
 		startTransition(async () => {
 			const res = await toggleTenantStatusAction({ 
                 id: tenant.id, 
@@ -66,13 +69,14 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 			if (res.success) {
 				setTenants(tenants.map(t => t.id === tenant.id ? { ...t, isActive: !t.isActive } : t));
 			} else {
-				alert(res.error.message);
+				setError(res.error.message);
 			}
 		});
 	};
 
 	const handleDeleteTenant = async () => {
 		if (!tenantToDelete) return;
+        setError(null);
 
 		startTransition(async () => {
 			const res = await deleteTenantAction({ id: tenantToDelete.id });
@@ -80,7 +84,8 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 				setTenants(tenants.filter((t) => t.id !== tenantToDelete.id));
 				setTenantToDelete(null);
 			} else {
-				alert(res.error.message);
+				setError(res.error.message);
+                setTenantToDelete(null);
 			}
 		});
 	};
@@ -98,13 +103,26 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
 				</div>
 				<button
 					type="button"
-					onClick={() => setIsCreateModalOpen(true)}
+					onClick={() => {
+                        setError(null);
+                        setIsCreateModalOpen(true);
+                    }}
 					className="btn-primary flex items-center gap-2 shadow-lg shadow-taysir-teal/20 self-start"
 				>
 					<Plus size={20} />
 					Nouveau Client
 				</button>
 			</div>
+
+            {error && (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2 duration-300 shadow-sm">
+                    <ShieldAlert size={18} />
+                    {error}
+                    <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600 transition-colors">
+                        <XCircle size={18} />
+                    </button>
+                </div>
+            )}
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				{tenants.map((tenant) => (
@@ -211,13 +229,13 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
                             <Building2 size={16} />
                             Information Client
                         </div>
-                        <FormInput
-                            label="Nom de l&apos;école / entreprise"
+                        <Input
+                            label="Nom de l'école / entreprise"
                             name="name"
                             placeholder="ex: École les Glycines"
                             required
                         />
-                        <FormInput
+                        <Input
                             label="Slug (URL unique)"
                             name="slug"
                             placeholder="ex: glycines"
@@ -249,27 +267,27 @@ export default function SuperAdminTenantsView({ initialTenants }: SuperAdminTena
                             Compte Gérant Initial
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <FormInput
+                            <Input
                                 label="Prénom"
                                 name="managerFirstName"
                                 placeholder="Prénom"
                                 required
                             />
-                            <FormInput
+                            <Input
                                 label="Nom"
                                 name="managerLastName"
                                 placeholder="Nom"
                                 required
                             />
                         </div>
-                        <FormInput
+                        <Input
                             label="Email de connexion"
                             name="managerEmail"
                             type="email"
                             placeholder="manager@ecole.com"
                             required
                         />
-                        <FormInput
+                        <Input
                             label="Mot de passe provisoire"
                             name="managerPassword"
                             type="password"

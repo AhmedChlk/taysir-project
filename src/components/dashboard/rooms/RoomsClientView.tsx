@@ -8,6 +8,7 @@ import {
 	deleteRoomAction,
 	updateRoomAction,
 } from "@/actions/logistics.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, TextArea } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
@@ -22,6 +23,8 @@ export default function RoomsClientView({
 	initialRooms = [],
 }: RoomsClientViewProps) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 	const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const t = useTranslations();
@@ -32,11 +35,18 @@ export default function RoomsClientView({
 		setIsModalOpen(true);
 	};
 
-	const handleDelete = async (id: string) => {
-		if (!confirm(t("confirm_delete"))) return;
+	const handleDelete = (id: string) => {
+		setRoomToDelete(id);
+		setIsDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (!roomToDelete) return;
 		startTransition(async () => {
-			const result = await deleteRoomAction({ id });
+			const result = await deleteRoomAction({ id: roomToDelete });
 			if (result.success) {
+				setIsDeleteModalOpen(false);
+				setRoomToDelete(null);
 				router.refresh();
 			} else {
 				alert(result.error.message);
@@ -200,6 +210,17 @@ export default function RoomsClientView({
 					/>
 				</form>
 			</Modal>
+
+			<ConfirmModal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				onConfirm={confirmDelete}
+				title={t("confirm_delete")}
+				message={t("confirm_delete_desc") || t("confirm_delete")}
+				confirmLabel={t("delete")}
+				variant="danger"
+				isLoading={isPending}
+			/>
 		</div>
 	);
 }

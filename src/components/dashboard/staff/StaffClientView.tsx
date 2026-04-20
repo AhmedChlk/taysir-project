@@ -21,6 +21,7 @@ import {
 	resetUserPasswordAction,
 	updateUserAction,
 } from "@/actions/users.actions";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, Select } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
@@ -38,6 +39,8 @@ export default function StaffClientView({
 }: StaffClientViewProps) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [staffToDelete, setStaffToDelete] = useState<string | null>(null);
 	const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
 	const [roleFilter, setRoleFilter] = useState<string>("ALL");
 	const [newPassword, setNewPassword] = useState("");
@@ -80,12 +83,19 @@ export default function StaffClientView({
 		});
 	};
 
-	const handleDelete = async (id: string) => {
-		if (!confirm(t("confirm_delete"))) return;
+	const handleDelete = (id: string) => {
+		setStaffToDelete(id);
+		setIsDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (!staffToDelete) return;
 
 		startTransition(async () => {
-			const result = await deleteUserAction({ id });
+			const result = await deleteUserAction({ id: staffToDelete });
 			if (result.success) {
+				setIsDeleteModalOpen(false);
+				setStaffToDelete(null);
 				router.refresh();
 			} else {
 				alert(result.error.message);
@@ -479,6 +489,17 @@ export default function StaffClientView({
 					)}
 				</form>
 			</Modal>
+
+			<ConfirmModal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				onConfirm={confirmDelete}
+				title={t("confirm_delete")}
+				message={t("confirm_delete_desc") || t("confirm_delete")}
+				confirmLabel={t("delete")}
+				variant="danger"
+				isLoading={isPending}
+			/>
 		</div>
 	);
 }

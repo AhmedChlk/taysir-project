@@ -60,6 +60,18 @@ export const deleteGroupAction = createSafeAction(
 			);
 		}
 
+		// Vérifier si le groupe est utilisé dans des séances
+		const hasSessions = await tenantPrisma.session.findFirst({
+			where: { groupId: id, etablissementId: tenantId },
+		});
+		if (hasSessions) {
+			throw new TaysirError(
+				"Impossible de supprimer ce groupe car il est lié à des séances de cours existantes.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
+			);
+		}
+
 		const result = await tenantPrisma.groupe.delete({
 			where: {
 				id_etablissementId: {
@@ -119,6 +131,18 @@ export const deleteRoomAction = createSafeAction(
 			);
 		}
 
+		// Vérifier si la salle est utilisée dans des séances
+		const hasSessions = await tenantPrisma.session.findFirst({
+			where: { roomId: id, etablissementId: tenantId },
+		});
+		if (hasSessions) {
+			throw new TaysirError(
+				"Impossible de supprimer cette salle car elle est utilisée dans des séances de cours planifiées.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
+			);
+		}
+
 		const result = await tenantPrisma.room.delete({
 			where: {
 				id_etablissementId: {
@@ -175,6 +199,22 @@ export const deleteActivityAction = createSafeAction(
 				"Activité introuvable.",
 				ErrorCodes.ERR_NOT_FOUND,
 				404,
+			);
+		}
+
+		// Vérifier si l'activité est utilisée
+		const hasSessions = await tenantPrisma.session.findFirst({
+			where: { activityId: id, etablissementId: tenantId },
+		});
+		const hasPaymentPlans = await tenantPrisma.paymentPlan.findFirst({
+			where: { activityId: id, etablissementId: tenantId },
+		});
+
+		if (hasSessions || hasPaymentPlans) {
+			throw new TaysirError(
+				"Impossible de supprimer cette activité car elle est liée à des séances ou des plans de paiement.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
 			);
 		}
 
