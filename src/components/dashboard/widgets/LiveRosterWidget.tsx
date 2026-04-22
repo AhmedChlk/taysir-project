@@ -11,41 +11,31 @@ export default async function LiveRosterWidget() {
 	const staff = await getStaff();
 
 	return (
-		<div className="col-span-1 md:col-span-8 bento-card p-8 flex flex-col gap-6 group hover:border-taysir-teal/20 transition-all duration-500 shadow-sm hover:shadow-xl relative overflow-hidden bg-white">
-			<div className="flex justify-between items-center relative z-10">
+		<div className="h-full bg-white rounded-[24px] border border-line p-8 flex flex-col gap-6 group shadow-sm hover:shadow-ts-2 transition-all duration-300 relative overflow-hidden">
+			<div className="flex justify-between items-center relative z-10 mb-2">
 				<div>
-					<h3 className="text-sm font-black text-taysir-teal uppercase tracking-[0.2em] flex items-center gap-2">
-						<Users size={18} className="text-taysir-light" />{" "}
+					<h3 className="text-[11px] font-bold text-ink-400 uppercase tracking-[0.2em] flex items-center gap-2">
+						<Users size={16} className="text-brand-500" strokeWidth={2.5} />{" "}
 						{t("roster_title")}
 					</h3>
-					<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest mt-1">
-						{t("roster_subtitle")}
-					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-100">
-						{t("stats_n_actifs", {
-							count: staff.filter((m: User) => m.status === "ACTIVE").length,
-						})}
+					<span className="text-[10px] font-bold bg-success-50 text-success px-2.5 py-1 rounded-full uppercase tracking-widest border border-success/10 flex items-center gap-1.5">
+						<div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+						{staff.filter((m: User) => m.status === "ACTIVE").length}
 					</span>
-					<Link
-						href="/dashboard/staff"
-						className="p-2 bg-taysir-teal/5 rounded-xl text-taysir-teal hover:bg-taysir-teal hover:text-white transition-all"
-					>
-						<Edit2 size={16} />
-					</Link>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
-				{staff.slice(0, 6).map((member: User) => (
+			<div className="flex flex-col gap-3 relative z-10 flex-1">
+				{staff.slice(0, 5).map((member: User) => (
 					<div
 						key={member.id}
-						className="flex items-center justify-between p-4 rounded-2xl border border-taysir-teal/5 bg-taysir-bg/20 hover:bg-white hover:border-taysir-teal/20 hover:shadow-lg transition-all group/item"
+						className="flex items-center justify-between p-3 rounded-2xl border border-transparent hover:border-line hover:bg-surface-50 transition-all group/item"
 					>
-						<div className="flex items-center gap-3">
-							<div className="relative">
-								<div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-taysir-teal font-black text-lg uppercase overflow-hidden shadow-sm border border-taysir-teal/5">
+						<div className="flex items-center gap-3 overflow-hidden">
+							<div className="relative shrink-0">
+								<div className="w-10 h-10 rounded-xl bg-surface-50 flex items-center justify-center text-brand-900 font-bold text-sm uppercase overflow-hidden border border-line">
 									{member.avatarUrl ? (
 										<Image
 											src={member.avatarUrl}
@@ -60,56 +50,47 @@ export default async function LiveRosterWidget() {
 								</div>
 								<div
 									className={cn(
-										"absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center",
+										"absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center",
 										member.status === "ACTIVE"
-											? "bg-emerald-500"
+											? "bg-success"
 											: member.status === "ON_LEAVE"
 												? "bg-amber-500"
-												: "bg-rose-500",
+												: "bg-danger",
 									)}
-								>
-									{member.status === "ACTIVE" && (
-										<div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-									)}
-								</div>
+								/>
 							</div>
 							<div className="overflow-hidden">
-								<div className="text-[13px] font-black text-taysir-teal truncate leading-tight uppercase tracking-tight">
+								<div className="text-sm font-bold text-ink-900 truncate tracking-tight">
 									{member.firstName} {member.lastName}
 								</div>
-								<div className="flex items-center gap-1.5 mt-1">
-									<span className="text-[9px] font-black text-taysir-teal/30 uppercase tracking-[0.1em] px-1.5 py-0.5 bg-white rounded border border-taysir-teal/5 flex items-center gap-1">
-										<ShieldCheck size={8} /> {member.role}
-									</span>
+								<div className="text-[10px] font-bold text-ink-400 uppercase tracking-widest truncate mt-0.5">
+									{member.role}
 								</div>
 							</div>
 						</div>
 
-						<div className="flex flex-col gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-							<button
-								type="button"
-								className="p-2 rounded-lg bg-white text-taysir-teal hover:bg-taysir-teal hover:text-white transition-all shadow-sm"
+						<div className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+							<Link
+								href="/dashboard/staff"
+								className="p-2 rounded-xl bg-white text-ink-400 hover:text-brand-500 border border-line hover:border-brand-500/20 transition-all shadow-sm block"
 							>
-								<Mail size={12} />
-							</button>
+								<Edit2 size={14} />
+							</Link>
 						</div>
 					</div>
 				))}
 			</div>
 
-			{staff.length > 6 && (
-				<div className="text-center pt-2">
+			{staff.length > 5 && (
+				<div className="text-center pt-4 border-t border-line mt-auto">
 					<Link
 						href="/dashboard/staff"
-						className="text-[10px] font-black text-taysir-teal/40 uppercase tracking-[0.3em] hover:text-taysir-teal transition-colors"
+						className="text-[10px] font-bold text-brand-500 hover:text-brand-700 uppercase tracking-[0.2em] transition-colors"
 					>
-						{t("roster_view_more", { count: staff.length - 6 })} →
+						{t("roster_view_more", { count: staff.length - 5 })} →
 					</Link>
 				</div>
 			)}
-
-			{/* Décoration asymétrique */}
-			<div className="absolute right-[-10%] top-[-10%] w-40 h-40 bg-taysir-teal/5 rounded-full blur-3xl pointer-events-none" />
 		</div>
 	);
 }

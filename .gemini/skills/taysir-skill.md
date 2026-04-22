@@ -80,7 +80,7 @@ await page.evaluate(() => {
 
 ---
 
-## CHECKLIST PR
+## CHECKLIST pour push Github
 - [ ] Zéro `any` TypeScript
 - [ ] Coverage Vitest > 80%
 - [ ] `npm run security:agent` → Snyk vert

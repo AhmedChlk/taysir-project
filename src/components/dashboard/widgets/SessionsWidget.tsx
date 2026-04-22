@@ -11,7 +11,7 @@ export default async function SessionsWidget() {
 
 	if (!response.success) {
 		return (
-			<div className="bento-card p-8 text-red-500">{t("stats_load_error")}</div>
+			<div className="rounded-[24px] p-8 text-danger bg-rose-50 border border-rose-100">{t("stats_load_error")}</div>
 		);
 	}
 
@@ -19,72 +19,38 @@ export default async function SessionsWidget() {
 	const uniqueRooms = new Set(sessions.map((s) => s.roomId)).size;
 
 	return (
-		<div className="col-span-1 md:col-span-4 bento-card p-8 flex flex-col justify-between group hover:border-taysir-teal/20 transition-all duration-500 shadow-sm hover:shadow-xl relative overflow-hidden">
-			<div>
-				<div className="flex justify-between items-start mb-8">
-					<div className="flex items-center gap-3">
-						<div className="p-4 bg-taysir-teal/5 rounded-2xl text-taysir-teal group-hover:bg-taysir-teal group-hover:text-white transition-all duration-500 shadow-sm">
-							<Calendar size={24} />
-						</div>
-						<div>
-							<span className="font-black text-sm uppercase tracking-tighter block leading-none text-taysir-teal">
-								{t("planning")}
-							</span>
-							<span className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest mt-1 block">
-								{t("sessions_activity_realtime")}
-							</span>
-						</div>
+		<div className="h-full bg-white rounded-[24px] border border-line p-8 shadow-sm flex flex-col justify-between group hover:shadow-ts-2 transition-all duration-300 relative overflow-hidden">
+			<div className="relative z-10 flex flex-col h-full">
+				<div className="flex items-center justify-between mb-8">
+					<div className="p-3 bg-brand-50 rounded-xl text-brand-500 border border-brand-100 group-hover:bg-brand-500 group-hover:text-white transition-all duration-500 shadow-sm">
+						<Calendar size={20} strokeWidth={2} />
 					</div>
-					<span className="text-taysir-light font-black text-[10px] flex items-center gap-1 bg-taysir-teal/5 px-3 py-1 rounded-full uppercase tracking-widest border border-taysir-teal/5">
+					<div className="bg-brand-50 text-brand-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-brand-100 flex items-center gap-1.5">
+						<div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
 						{t("today_agenda")}
+					</div>
+				</div>
+
+				<div className="mb-8 flex-1">
+					<div className="text-4xl font-bold text-ink-900 tracking-tight transition-transform group-hover:scale-105 origin-left flex items-baseline gap-1.5 tabular-nums mb-2">
+						{sessions.length.toString().padStart(2, "0")}
+					</div>
+					<span className="text-brand-500 text-sm font-bold uppercase tracking-widest block">
+						Séances du jour
 					</span>
 				</div>
 
-				<div className="mt-4">
-					<div className="text-6xl font-black text-taysir-teal tracking-tighter mb-1 transition-transform group-hover:scale-105 origin-left">
-						{sessions.length.toString().padStart(2, "0")}
-					</div>
-					<h3 className="text-lg font-bold text-taysir-teal/80 uppercase tracking-tighter">
-						{t("today_sessions")}
-					</h3>
-					<div className="flex items-center gap-4 mt-3">
-						<div className="flex items-center gap-1.5 text-xs font-bold text-taysir-teal/50 uppercase">
-							<MapPin size={12} strokeWidth={2.5} /> {uniqueRooms} {t("rooms")}
-						</div>
-						<div className="w-1 h-1 rounded-full bg-taysir-teal/20" />
-						<div className="text-xs font-bold text-taysir-teal/50 uppercase">
-							{sessions.length > 0
-								? t("sessions_flux_normal")
-								: t("sessions_journee_calme")}
-						</div>
-					</div>
-				</div>
+				<Link
+					href="?drawer=new-session"
+					className="w-full py-4 bg-brand-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-brand-700 shadow-lg shadow-brand-500/20"
+				>
+					<span>{t("sessions_planifier")}</span>
+					<Plus size={16} strokeWidth={2.5} />
+				</Link>
 			</div>
 
-			<div className="mt-10 space-y-4 relative z-10">
-				<div className="grid grid-cols-1 gap-3">
-					<Link
-						href="?drawer=sessions"
-						className="flex items-center justify-between py-3.5 px-5 rounded-2xl bg-white border-2 border-taysir-teal/5 text-taysir-teal font-black text-[11px] uppercase tracking-widest hover:border-taysir-teal/20 hover:bg-taysir-teal/5 transition-all group/btn"
-					>
-						<span>{t("view_all_schedule")}</span>
-						<ArrowUpRight
-							size={16}
-							className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform"
-						/>
-					</Link>
-					<Link
-						href="?drawer=new-session"
-						className="flex items-center justify-center gap-2 py-4 px-5 rounded-2xl bg-taysir-teal text-white font-black text-[11px] uppercase tracking-widest hover:shadow-lg hover:shadow-taysir-teal/20 hover:scale-[1.01] active:scale-95 transition-all"
-					>
-						<Plus size={16} strokeWidth={3} />
-						<span>{t("sessions_planifier")}</span>
-					</Link>
-				</div>
-			</div>
-
-			{/* Décoration de fond */}
-			<div className="absolute -left-10 -bottom-10 w-40 h-40 bg-taysir-teal/[0.02] rounded-full blur-3xl group-hover:bg-taysir-teal/[0.05] transition-colors" />
+			{/* Decorative Elements */}
+			<div className="absolute -right-12 -bottom-12 w-48 h-48 bg-brand-500/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-brand-500/10 transition-colors duration-1000" />
 		</div>
 	);
 }

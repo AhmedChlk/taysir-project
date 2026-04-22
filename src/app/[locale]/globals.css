@@ -1,72 +1,248 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Taysir — Design tokens (from Taysir Design System)
+   ========================================================================== */
+
 :root {
-	--background: #f8fafb;
-	--foreground: #004d4a; /* Taysir Teal Darker */
-	--primary: #006a67; /* Taysir Teal 2026 */
-	--secondary: #008b87; /* Taysir Teal Light */
-	--accent: #fe7f2d; /* Accent Corail */
-	--accent-foreground: #ffffff;
+  /* ---------- Brand color ---------- */
+  --brand-900: #0F515C;   /* Dark Teal — hero, footer */
+  --brand-700: #145F6C;   /* Primary button hover */
+  --brand-500: #1A7A89;   /* Teal Accent — CTAs, active, sliders */
+  --brand-300: #79B3BC;   /* Disabled / subtle */
+  --brand-50:  #E6F2F4;   /* Wash — soft badges, hover halo */
+
+  /* ---------- Ink / text ---------- */
+  --ink-900:   #0B1220;
+  --ink-800:   #1F2937;
+  --ink-700:   #384152;
+  --ink-500:   #6B7280;
+  --ink-400:   #9CA3AF;
+
+  /* ---------- Surfaces ---------- */
+  --surface-0:  #FFFFFF;
+  --surface-50: #F9FAFB;
+  --surface-100:#F3F4F6;
+
+  /* ---------- Lines ---------- */
+  --line:      #E5E7EB;
+  --line-dark: rgba(255, 255, 255, 0.12);
+
+  /* ---------- Semantic ---------- */
+  --success: #16A34A;
+  --success-50: #DCFCE7;
+  --danger:  #DC2626;
+
+  /* ---------- Foreground aliases ---------- */
+  --fg1: var(--ink-900);          /* Primary text on light */
+  --fg2: var(--ink-700);          /* Secondary */
+  --fg3: var(--ink-500);          /* Muted */
+  --fg-on-brand: #FFFFFF;
+  --fg-on-brand-muted: rgba(255, 255, 255, 0.72);
+
+  /* ---------- Type ---------- */
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --t-display:  72px;
+  --t-display-lh: 76px;
+  --t-h1:       48px;
+  --t-h1-lh:    54px;
+  --t-h2:       32px;
+  --t-h2-lh:    40px;
+  --t-h3:       22px;
+  --t-h3-lh:    30px;
+  --t-body-lg:  18px;
+  --t-body-lg-lh: 28px;
+  --t-body:     16px;
+  --t-body-lh:  26px;
+  --t-small:    14px;
+  --t-small-lh: 22px;
+  --t-eyebrow:  12px;
+  --t-eyebrow-lh: 16px;
+
+  --tracking-tight: -0.02em;
+  --tracking-snug:  -0.01em;
+  --tracking-wide:   0.12em;
+
+  /* ---------- Spacing (8pt base, 4pt quarter steps) ---------- */
+  --s-0:   0;
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:   12px;
+  --s-4:   16px;
+  --s-5:   20px;
+  --s-6:   24px;
+  --s-8:   32px;
+  --s-10:  40px;
+  --s-12:  56px;
+  --s-16:  80px;
+  --s-20:  96px;
+  --s-24:  128px;
+
+  /* ---------- Radius ---------- */
+  --r-sm:   6px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   24px;
+  --r-full: 999px;
+
+  /* ---------- Shadow ---------- */
+  --shadow-1: 0 1px 2px rgba(15, 81, 92, 0.06), 0 1px 1px rgba(15, 81, 92, 0.04);
+  --shadow-2: 0 8px 24px -6px rgba(15, 81, 92, 0.12), 0 2px 6px -2px rgba(15, 81, 92, 0.06);
+  --shadow-3: 0 24px 60px -12px rgba(15, 81, 92, 0.22), 0 6px 16px -4px rgba(15, 81, 92, 0.12);
+
+  /* ---------- Motion ---------- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-micro: 120ms;
+  --dur-small: 220ms;
+  --dur-med:   400ms;
+
+  /* ---------- Layout ---------- */
+  --container: 1200px;
+  --nav-h: 72px;
+
+  /* Legacy aliases for compatibility */
+  --background: var(--surface-0);
+  --foreground: var(--ink-900);
+  --primary: var(--brand-500);
+  --secondary: var(--brand-700);
 }
 
 @theme {
-	--color-taysir-teal: #006a67;
-	--color-taysir-light: #008b87;
-	--color-taysir-accent: #fe7f2d;
-	--color-taysir-bg: #f8fafb;
-	--color-taysir-white: #ffffff;
+  --color-brand-900: var(--brand-900);
+  --color-brand-700: var(--brand-700);
+  --color-brand-500: var(--brand-500);
+  --color-brand-300: var(--brand-300);
+  --color-brand-50: var(--brand-50);
 
-	/* Alias pour la compatibilité avec le code existant */
-	--color-primary-teal: #006a67;
-	--color-accent-teal: #008b87;
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+
+  --color-surface-0: var(--surface-0);
+  --color-surface-50: var(--surface-50);
+  --color-surface-100: var(--surface-100);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-ts-1: var(--shadow-1);
+  --shadow-ts-2: var(--shadow-2);
+  --shadow-ts-3: var(--shadow-3);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-size: var(--t-body);
+    line-height: var(--t-body-lh);
+    background-color: var(--surface-0);
+  }
+
+  h1, .t-h1 {
+    font-size: var(--t-h1);
+    line-height: var(--t-h1-lh);
+    font-weight: 700;
+    letter-spacing: var(--tracking-snug);
+  }
+  h2, .t-h2 {
+    font-size: var(--t-h2);
+    line-height: var(--t-h2-lh);
+    font-weight: 600;
+    letter-spacing: var(--tracking-snug);
+  }
+  h3, .t-h3 {
+    font-size: var(--t-h3);
+    line-height: var(--t-h3-lh);
+    font-weight: 600;
+  }
 }
 
 @layer components {
-	.btn-primary {
-		@apply bg-taysir-teal text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
-	}
+  .t-display {
+    font-size: var(--t-display);
+    line-height: var(--t-display-lh);
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+  }
 
-	.btn-secondary {
-		@apply bg-taysir-light text-white px-6 py-2.5 rounded-xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-sm;
-	}
+  .t-body-lg {
+    font-size: var(--t-body-lg);
+    line-height: var(--t-body-lg-lh);
+  }
 
-	.btn-ghost {
-		@apply bg-transparent text-taysir-teal px-6 py-2.5 rounded-xl font-bold transition-all hover:bg-taysir-teal/5 active:scale-95;
-	}
-}
+  .t-small {
+    font-size: var(--t-small);
+    line-height: var(--t-small-lh);
+  }
 
-body {
-	background-color: var(--background);
-	color: var(--foreground);
-	font-family: var(--font-inter), "Helvetica Neue", sans-serif;
-	-webkit-font-smoothing: antialiased;
-}
+  .t-eyebrow {
+    font-size: var(--t-eyebrow);
+    line-height: var(--t-eyebrow-lh);
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--brand-500);
+  }
 
-/* Bento Box ERP Style */
-.bento-card {
-	background-color: white;
-	border-radius: 24px;
-	box-shadow: 0 4px 20px -2px rgba(15, 81, 92, 0.08);
-	border: 1px solid rgba(15, 81, 92, 0.1);
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-semibold transition-all cursor-pointer;
+    gap: 8px;
+  }
 
-.bento-card:hover {
-	transform: translateY(-4px);
-	box-shadow: 0 12px 30px -4px rgba(15, 81, 92, 0.12);
-}
+  .btn--lg {
+    @apply px-8 py-4 text-lg;
+    border-radius: var(--r-md);
+  }
 
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-	width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-	background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-	background: rgba(15, 81, 92, 0.1);
-	border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: rgba(15, 81, 92, 0.2);
+  .btn--md {
+    @apply px-6 py-2.5 text-base;
+    border-radius: var(--r-sm);
+  }
+
+  .btn--primary {
+    background-color: var(--brand-500);
+    color: #fff;
+    box-shadow: var(--shadow-1);
+  }
+  .btn--primary:hover {
+    background-color: var(--brand-700);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-2);
+  }
+
+  .btn--secondary {
+    background-color: var(--brand-50);
+    color: var(--brand-900);
+  }
+
+  .btn--ghost {
+    background-color: transparent;
+    color: var(--fg2);
+  }
+  .btn--ghost:hover {
+    background-color: var(--surface-50);
+    color: var(--fg1);
+  }
+
+  .surface-dark { background: var(--brand-900); color: var(--fg-on-brand); }
+  .surface-light { background: var(--surface-0); color: var(--fg1); }
+  .surface-soft  { background: var(--surface-50); color: var(--fg1); }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(15, 81, 92, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(15, 81, 92, 0.2); }
 }

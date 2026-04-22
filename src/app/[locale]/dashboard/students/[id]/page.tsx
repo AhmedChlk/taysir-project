@@ -11,6 +11,8 @@ import {
 	User,
 	Users,
 	Wallet,
+    Download,
+    ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -39,14 +41,15 @@ type StudentFullProfile = NonNullable<
 import AddDocumentButton from "@/components/dashboard/students/AddDocumentButton";
 import DownloadStudentProfile from "@/components/dashboard/students/DownloadStudentProfile";
 import { Link } from "@/i18n/routing";
-import { formatFullName } from "@/utils/format";
+import { formatFullName, formatDate, formatTime } from "@/utils/format";
+import { clsx } from "clsx";
 
 interface PageProps {
 	params: Promise<{ id: string; locale: string }>;
 }
 
 export default async function StudentProfilePage({ params }: PageProps) {
-	const { id } = await params;
+	const { id, locale } = await params;
 	const [response, t] = await Promise.all([
 		getStudentFullProfileAction({ id }),
 		getTranslations(),
@@ -57,149 +60,157 @@ export default async function StudentProfilePage({ params }: PageProps) {
 	}
 
 	const student = response.data as StudentFullProfile;
+    const totalRemaining = student.paymentPlans.reduce(
+        (acc: number, p) => acc + (p.totalAmount - p.paidAmount),
+        0
+    );
 
 	return (
-		<div className="space-y-8 pb-20">
-			{/* Header / Back Button */}
+		<div className="space-y-10 pb-24 pt-4 font-sans antialiased">
+			{/* Breadcrumbs & Header */}
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-				<div className="flex items-center gap-4">
+				<div className="flex items-center gap-5">
 					<Link
 						href="/dashboard/students"
-						className="w-12 h-12 rounded-2xl bg-white border border-taysir-teal/5 flex items-center justify-center text-taysir-teal hover:bg-taysir-teal hover:text-white transition-all shadow-sm group"
+						className="w-12 h-12 rounded-2xl bg-white border border-line flex items-center justify-center text-ink-400 hover:text-brand-500 hover:border-brand-500/20 hover:shadow-sm transition-all group shrink-0"
 					>
 						<ArrowLeft
-							size={24}
+							size={20}
 							className="group-hover:-translate-x-1 transition-transform"
 						/>
 					</Link>
 					<div>
-						<div className="flex items-center gap-2 mb-0.5">
-							<span className="text-[10px] font-black tracking-[0.3em] text-taysir-teal/40 uppercase">
-								{t("student_academic_file")}
-							</span>
-							<div className="w-1 h-1 rounded-full bg-taysir-accent animate-pulse" />
-						</div>
-						<h1 className="text-3xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
-							{t("student_profile_title")}
-							<span className="text-taysir-accent">.</span>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold tracking-[0.2em] text-ink-400 uppercase">
+                                Dossier Académique
+                            </span>
+                            <ChevronRight size={10} className="text-ink-300" />
+                            <span className="text-[10px] font-bold tracking-[0.2em] text-brand-500 uppercase">
+                                Profil Étudiant
+                            </span>
+                        </div>
+						<h1 className="text-3xl font-bold text-ink-900 tracking-tight leading-none">
+							{formatFullName(student.firstName, student.lastName)}
 						</h1>
 					</div>
 				</div>
 
-				<DownloadStudentProfile
-					student={student as unknown as Student & { groups: Group[] }}
-				/>
+                <div className="flex gap-3">
+                    <DownloadStudentProfile
+                        student={student as unknown as Student & { groups: Group[] }}
+                    />
+                </div>
 			</div>
 
-			{/* Top Section : Bio & Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-				<div className="col-span-1 md:col-span-8 bento-card p-8 flex flex-col md:flex-row gap-8 items-center md:items-start bg-gradient-to-br from-white to-taysir-bg/30 relative overflow-hidden">
-					<div className="relative w-40 h-40 rounded-[48px] overflow-hidden border-4 border-white shadow-2xl shrink-0 bg-taysir-teal/5 flex items-center justify-center group/photo">
-						{student.photoUrl ? (
-							<Image
-								src={student.photoUrl}
-								alt={student.firstName}
-								fill
-								className="object-cover"
-							/>
-						) : (
-							<User size={80} className="text-taysir-teal/10" />
-						)}
-						<div className="absolute inset-0 bg-taysir-teal/20 opacity-0 group-hover/photo:opacity-100 transition-opacity" />
-					</div>
-
-					<div className="flex-1 text-center md:text-left relative z-10">
-						<div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-							<h2 className="text-4xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
-								{formatFullName(student.firstName, student.lastName)}
-							</h2>
-							<span
-								className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest self-center md:self-auto border ${
-									student.isActive
-										? "bg-emerald-50 text-emerald-600 border-emerald-100"
-										: "bg-rose-50 text-rose-600 border-rose-100"
-								}`}
-							>
-								{student.isActive
-									? t("student_active_file")
-									: t("student_inactive_file")}
-							</span>
+			{/* Main Bio Card */}
+			<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+				<div className="col-span-1 lg:col-span-8 bg-white rounded-[24px] border border-line p-8 md:p-10 shadow-sm relative overflow-hidden group">
+					<div className="relative z-10 flex flex-col md:flex-row gap-10 items-center md:items-start">
+						<div className="relative w-44 h-44 rounded-[40px] overflow-hidden border-4 border-white shadow-ts-3 shrink-0 bg-surface-100 flex items-center justify-center">
+							{student.photoUrl ? (
+								<Image
+									src={student.photoUrl}
+									alt={student.firstName}
+									fill
+									className="object-cover"
+								/>
+							) : (
+								<User size={80} className="text-ink-200" />
+							)}
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 mt-6">
-							<div className="flex items-center gap-3 text-sm font-bold text-taysir-teal/70">
-								<div className="p-2 bg-white rounded-lg shadow-sm">
-									<Mail size={16} className="text-taysir-teal/30" />
-								</div>
-								<span>{student.email || t("student_not_provided")}</span>
-							</div>
-							<div className="flex items-center gap-3 text-sm font-bold text-taysir-teal/70">
-								<div className="p-2 bg-white rounded-lg shadow-sm">
-									<Phone size={16} className="text-taysir-teal/30" />
-								</div>
-								<span>
-									{student.isMinor
-										? student.parentPhone
-										: student.phone || "N/A"}
+						<div className="flex-1 text-center md:text-left">
+							<div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
+								<h2 className="text-4xl font-bold text-ink-900 tracking-tight leading-none">
+									{formatFullName(student.firstName, student.lastName)}
+								</h2>
+								<span
+									className={clsx(
+                                        "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border shrink-0",
+                                        student.isActive
+                                            ? "bg-success-50 text-success border-success/10"
+                                            : "bg-rose-50 text-danger border-danger/10"
+                                    )}
+								>
+									{student.isActive ? "Dossier Actif" : "Dossier Inactif"}
 								</span>
+                                {student.isMinor && (
+                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100 shrink-0">
+                                        Étudiant Mineur
+                                    </span>
+                                )}
 							</div>
-							<div className="flex items-center gap-3 text-sm font-bold text-taysir-teal/70">
-								<div className="p-2 bg-white rounded-lg shadow-sm">
-									<Calendar size={16} className="text-taysir-teal/30" />
-								</div>
-								<span>
-									{t("student_enrolled_on")}{" "}
-									{new Date(student.registrationDate).toLocaleDateString()}
-								</span>
-							</div>
-							<div className="flex items-center gap-3 text-sm font-bold text-taysir-teal/70">
-								<div className="p-2 bg-white rounded-lg shadow-sm">
-									<MapPin size={16} className="text-taysir-teal/30" />
-								</div>
-								<span className="truncate max-w-[200px]">
-									{student.address || t("student_no_address")}
-								</span>
-							</div>
-						</div>
 
-						{student.isMinor && (
-							<div className="mt-8 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center gap-4">
-								<div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-amber-600 shadow-sm font-black">
-									P
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-10">
+								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
+									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
+										<Mail size={18} />
+									</div>
+									<span className="truncate">{student.email || "—"}</span>
 								</div>
-								<div>
-									<p className="text-[10px] font-black text-amber-600/60 uppercase tracking-widest leading-none mb-1">
-										{t("student_legal_guardian")}
-									</p>
-									<p className="text-sm font-black text-amber-700 uppercase tracking-tight">
-										{student.parentName}
-									</p>
+								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
+									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
+										<Phone size={18} />
+									</div>
+									<span className="tabular-nums">
+										{student.isMinor ? student.parentPhone : student.phone || "—"}
+									</span>
+								</div>
+								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
+									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
+										<Calendar size={18} />
+									</div>
+									<span>Inscrit le {formatDate(student.registrationDate, locale)}</span>
+								</div>
+								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
+									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
+										<MapPin size={18} />
+									</div>
+									<span className="truncate line-clamp-1">{student.address || "Adresse non saisie"}</span>
 								</div>
 							</div>
-						)}
+
+							{student.isMinor && (
+								<div className="mt-10 p-5 bg-amber-50/30 rounded-[20px] border border-amber-200/50 flex items-center gap-5">
+									<div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-amber-600 shadow-sm border border-amber-100 font-bold shrink-0">
+										P
+									</div>
+									<div className="overflow-hidden">
+										<p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest leading-none mb-1.5">
+											Responsable Légal
+										</p>
+										<p className="text-base font-bold text-ink-900 truncate">
+											{student.parentName}
+										</p>
+									</div>
+								</div>
+							)}
+						</div>
 					</div>
 
-					{/* Background decoration */}
-					<div className="absolute -right-20 -bottom-20 w-80 h-80 bg-taysir-accent/5 rounded-full blur-[100px]" />
+					{/* Decorative Filigree */}
+					<div className="absolute -right-16 -bottom-16 opacity-5 rotate-12 pointer-events-none group-hover:rotate-0 transition-transform duration-1000">
+						<User size={280} strokeWidth={1} />
+					</div>
 				</div>
 
-				<div className="col-span-1 md:col-span-4 grid grid-cols-1 gap-4">
-					<div className="bento-card p-8 bg-taysir-teal text-white border-none relative overflow-hidden group">
+				<div className="col-span-1 lg:col-span-4 grid grid-cols-1 gap-6">
+					<div className="bg-brand-900 rounded-[24px] p-8 text-white relative overflow-hidden shadow-ts-3 group">
 						<div className="relative z-10 flex flex-col justify-between h-full">
 							<div className="flex justify-between items-start">
-								<div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-									<Clock size={24} className="text-taysir-light" />
+								<div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 text-white">
+									<Clock size={24} />
 								</div>
-								<span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
-									{t("student_sessions_label")}
+								<span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+									Assiduité
 								</span>
 							</div>
-							<div className="mt-6">
-								<div className="text-5xl font-black tracking-tighter leading-none">
+							<div className="mt-8">
+								<div className="text-5xl font-bold tracking-tighter leading-none tabular-nums">
 									{student.attendance.length}
 								</div>
-								<div className="text-[10px] font-black uppercase tracking-widest opacity-60 mt-2">
-									{t("student_attendance_recorded")}
+								<div className="text-[10px] font-bold uppercase tracking-widest text-brand-300 mt-2">
+									Présences validées
 								</div>
 							</div>
 						</div>
@@ -208,28 +219,26 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						</div>
 					</div>
 
-					<div className="bento-card p-8 bg-white border border-taysir-teal/5 relative overflow-hidden group">
+					<div className="bg-white rounded-[24px] border border-line p-8 relative overflow-hidden shadow-sm group hover:shadow-ts-2 transition-all">
 						<div className="relative z-10 flex flex-col justify-between h-full">
 							<div className="flex justify-between items-start">
-								<div className="p-3 bg-rose-50 rounded-2xl text-rose-500">
+								<div className="p-3 bg-rose-50 rounded-2xl border border-rose-100 text-danger shadow-sm">
 									<Wallet size={24} />
 								</div>
-								<span className="text-[10px] font-black uppercase tracking-[0.2em] text-taysir-teal/30">
-									{t("student_treasury")}
+								<span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-400">
+									Trésorerie
 								</span>
 							</div>
-							<div className="mt-6">
-								<div className="text-4xl font-black text-taysir-teal tracking-tighter leading-none">
-									{student.paymentPlans
-										.reduce(
-											(acc: number, p) => acc + (p.totalAmount - p.paidAmount),
-											0,
-										)
-										.toLocaleString()}{" "}
-									<span className="text-sm">DZD</span>
+							<div className="mt-8">
+								<div className="text-4xl font-bold text-ink-900 tracking-tighter leading-none tabular-nums flex items-baseline gap-2">
+									{totalRemaining.toLocaleString("fr-DZ")}
+									<span className="text-lg text-ink-400 opacity-40">DA</span>
 								</div>
-								<div className="text-[10px] font-black uppercase tracking-widest text-rose-500 mt-2">
-									{t("student_current_debit")}
+								<div className={clsx(
+                                    "text-[10px] font-bold uppercase tracking-widest mt-2",
+                                    totalRemaining > 0 ? "text-danger" : "text-success"
+                                )}>
+									Solde débiteur actuel
 								</div>
 							</div>
 						</div>
@@ -237,199 +246,190 @@ export default async function StudentProfilePage({ params }: PageProps) {
 				</div>
 			</div>
 
-			{/* Mid Section : Documents & Groupes */}
-			<div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-				{/* Groupes & Affectations */}
-				<div className="col-span-1 md:col-span-5 space-y-6">
-					<div className="flex items-center gap-3">
-						<div className="p-2 bg-taysir-teal/5 rounded-xl text-taysir-teal">
-							<Users size={20} />
-						</div>
-						<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-							{t("student_group_enrollments")}
-						</h3>
-					</div>
-					<div className="grid grid-cols-1 gap-3">
-						{student.groups.length > 0 ? (
-							student.groups.map((group) => (
-								<div
-									key={group.id}
-									className="p-5 bg-white rounded-[24px] border border-taysir-teal/5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group"
-								>
-									<div className="flex items-center gap-4">
-										<div className="w-12 h-12 rounded-2xl bg-taysir-bg flex items-center justify-center text-taysir-teal font-black text-lg group-hover:bg-taysir-teal group-hover:text-white transition-colors">
-											{group.name[0]}
-										</div>
-										<div>
-											<div className="text-sm font-black text-taysir-teal uppercase tracking-tight">
-												{group.name}
-											</div>
-											<div className="text-[9px] font-bold text-taysir-teal/30 uppercase tracking-widest">
-												{t("student_active_since")}{" "}
-												{new Date(group.createdAt).toLocaleDateString()}
-											</div>
-										</div>
-									</div>
-								</div>
-							))
-						) : (
-							<div className="py-12 text-center bg-white rounded-[32px] border-2 border-dashed border-taysir-teal/5 opacity-40">
-								<Users size={40} className="mx-auto mb-3 text-taysir-teal/20" />
-								<p className="text-xs font-black uppercase tracking-widest">
-									{t("student_no_groups")}
-								</p>
-							</div>
-						)}
-					</div>
-				</div>
-
-				{/* Documents */}
-				<div className="col-span-1 md:col-span-7 space-y-6">
-					<div className="flex items-center justify-between">
+			{/* Detailed Sections */}
+			<div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+				{/* Column 1: Groups & Docs */}
+				<div className="col-span-1 lg:col-span-5 space-y-10">
+					{/* Groupes */}
+					<div className="space-y-6">
 						<div className="flex items-center gap-3">
-							<div className="p-2 bg-taysir-teal/5 rounded-xl text-taysir-teal">
-								<FileText size={20} />
+							<div className="p-2.5 bg-brand-50 rounded-xl text-brand-500 border border-brand-100">
+								<Users size={18} strokeWidth={2.5} />
 							</div>
-							<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-								{t("student_digital_file")}
+							<h3 className="text-lg font-bold text-ink-900 tracking-tight uppercase tracking-wide">
+								Inscriptions Groupes
 							</h3>
 						</div>
-						<AddDocumentButton studentId={student.id} />
-					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						{student.documents.length > 0 ? (
-							student.documents.map((doc) => (
-								<div
-									key={doc.id}
-									className="p-5 bg-white rounded-[24px] border border-taysir-teal/5 flex items-center justify-between shadow-sm hover:border-taysir-accent/30 transition-all"
-								>
-									<div className="flex items-center gap-4">
-										<div className="p-3 bg-taysir-teal/5 rounded-2xl text-taysir-teal shadow-inner">
-											<FileText size={20} />
-										</div>
-										<div>
-											<div className="text-[11px] font-black text-taysir-teal uppercase tracking-tight truncate max-w-[120px]">
-												{doc.name}
+						<div className="flex flex-col gap-3">
+							{student.groups.length > 0 ? (
+								student.groups.map((group) => (
+									<div
+										key={group.id}
+										className="p-5 bg-white rounded-2xl border border-line flex items-center justify-between shadow-sm hover:border-brand-500/20 hover:shadow-md transition-all group"
+									>
+										<div className="flex items-center gap-4">
+											<div className="w-12 h-12 rounded-xl bg-surface-50 border border-line flex items-center justify-center text-brand-900 font-bold text-lg group-hover:bg-brand-500 group-hover:text-white transition-all">
+												{group.name[0]}
 											</div>
-											<div
-												className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md mt-1 w-fit ${
-													doc.status === "APPROVED"
-														? "bg-emerald-50 text-emerald-600"
-														: "bg-amber-50 text-amber-600"
-												}`}
-											>
-												{doc.status}
+											<div>
+												<div className="text-sm font-bold text-ink-900">
+													{group.name}
+												</div>
+												<div className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mt-0.5">
+													Depuis le {formatDate(group.createdAt, locale)}
+												</div>
 											</div>
 										</div>
 									</div>
-									<a
-										href={doc.url}
-										target="_blank"
-										className="p-2 hover:bg-taysir-teal hover:text-white rounded-xl transition-all text-taysir-teal"
-										rel="noopener noreferrer"
-									>
-										<Eye size={18} />
-									</a>
+								))
+							) : (
+								<div className="py-12 text-center bg-surface-50 rounded-[32px] border-2 border-dashed border-line opacity-60">
+									<Users size={32} className="mx-auto mb-3 text-ink-200" />
+									<p className="text-[10px] font-bold uppercase tracking-widest text-ink-400">
+										Aucun groupe affecté
+									</p>
 								</div>
-							))
-						) : (
-							<div className="col-span-2 py-16 text-center bg-white rounded-[32px] border-2 border-dashed border-taysir-teal/5 opacity-40">
-								<FileText
+							)}
+						</div>
+					</div>
+
+					{/* Documents */}
+					<div className="space-y-6">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="p-2.5 bg-brand-50 rounded-xl text-brand-500 border border-brand-100">
+									<FileText size={18} strokeWidth={2.5} />
+								</div>
+								<h3 className="text-lg font-bold text-ink-900 tracking-tight uppercase tracking-wide">
+									Dossier Numérique
+								</h3>
+							</div>
+							<AddDocumentButton studentId={student.id} />
+						</div>
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{student.documents.length > 0 ? (
+								student.documents.map((doc) => (
+									<div
+										key={doc.id}
+										className="p-5 bg-white rounded-2xl border border-line flex items-center justify-between shadow-sm hover:border-brand-500/20 transition-all group/doc"
+									>
+										<div className="flex items-center gap-4 overflow-hidden">
+											<div className="p-3 bg-surface-50 rounded-xl text-brand-500 border border-line shadow-inner group-hover/doc:bg-brand-50 transition-colors">
+												<FileText size={18} />
+											</div>
+											<div className="overflow-hidden">
+												<div className="text-[11px] font-bold text-ink-900 truncate">
+													{doc.name}
+												</div>
+												<div className={clsx(
+                                                    "text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md mt-1 w-fit border",
+                                                    doc.status === "APPROVED" 
+                                                        ? "bg-success-50 text-success border-success/10" 
+                                                        : "bg-amber-50 text-amber-600 border-amber-100"
+                                                )}>
+													{doc.status}
+												</div>
+											</div>
+										</div>
+										<a
+											href={doc.url}
+											target="_blank"
+											className="p-2.5 text-ink-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all shrink-0 border border-transparent hover:border-brand-500/20"
+											rel="noopener noreferrer"
+										>
+											<Eye size={18} />
+										</a>
+									</div>
+								))
+							) : (
+								<div className="col-span-full py-16 text-center bg-surface-50 rounded-[32px] border-2 border-dashed border-line opacity-60">
+									<FileText
+										size={40}
+										className="mx-auto mb-3 text-ink-200"
+									/>
+									<p className="text-[10px] font-bold uppercase tracking-widest text-ink-400">
+										Aucune pièce jointe
+									</p>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+
+				{/* Column 2: History & Logs */}
+				<div className="col-span-1 lg:col-span-7 space-y-6">
+					<div className="flex items-center gap-3">
+						<div className="p-2.5 bg-brand-50 rounded-xl text-brand-500 border border-brand-100">
+							<Clock size={18} strokeWidth={2.5} />
+						</div>
+						<h3 className="text-lg font-bold text-ink-900 tracking-tight uppercase tracking-wide">
+							Journal des Présences
+						</h3>
+					</div>
+					<div className="bg-white rounded-[24px] border border-line shadow-sm overflow-hidden">
+						<div className="overflow-x-auto custom-scrollbar">
+							<table className="w-full text-left border-collapse">
+								<thead>
+									<tr className="bg-surface-50 border-b border-line">
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Date & Séance</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Module / Activité</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest text-center">Statut</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Commentaires</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-line">
+									{student.attendance.map((record) => (
+										<tr
+											key={record.id}
+											className="hover:bg-surface-50/50 transition-colors group"
+										>
+											<td className="px-8 py-6">
+												<div className="text-sm font-bold text-ink-900">
+													{formatDate(record.session.startTime, locale)}
+												</div>
+												<div className="text-[10px] font-semibold text-ink-400 uppercase tracking-widest mt-1 flex items-center gap-1.5 opacity-60">
+													<Clock size={10} /> {formatTime(record.session.startTime)}
+												</div>
+											</td>
+											<td className="px-8 py-6">
+												<span className="text-[10px] font-bold text-brand-900 uppercase tracking-wider bg-brand-50 border border-brand-200 px-3 py-1.5 rounded-xl">
+													{record.session.activity.name}
+												</span>
+											</td>
+											<td className="px-8 py-6 text-center">
+												<span
+													className={clsx(
+                                                        "text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border shadow-sm inline-block min-w-[100px]",
+                                                        record.status === "PRESENT" 
+                                                            ? "bg-success-50 text-success border-success/10" 
+                                                            : record.status === "ABSENT"
+                                                                ? "bg-rose-50 text-danger border-danger/10"
+                                                                : "bg-amber-50 text-amber-600 border-amber-100"
+                                                    )}
+												>
+													{record.status}
+												</span>
+											</td>
+											<td className="px-8 py-6 text-xs text-ink-500 font-medium italic opacity-70">
+												{record.note || "Aucune observation"}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+						{student.attendance.length === 0 && (
+							<div className="py-24 text-center bg-white border-t border-line">
+								<Calendar
 									size={48}
-									className="mx-auto mb-3 text-taysir-teal/20"
+									className="mx-auto mb-4 text-ink-100"
 								/>
-								<p className="text-xs font-black uppercase tracking-widest text-taysir-teal">
-									{t("student_no_documents")}
+								<p className="font-bold uppercase tracking-widest text-[11px] text-ink-300">
+									Historique vierge
 								</p>
 							</div>
 						)}
 					</div>
-				</div>
-			</div>
-
-			{/* Bottom Section : Attendance History */}
-			<div className="space-y-6">
-				<div className="flex items-center gap-3">
-					<div className="p-2 bg-taysir-teal/5 rounded-xl text-taysir-teal">
-						<User size={20} />
-					</div>
-					<h3 className="text-lg font-black text-taysir-teal uppercase tracking-tighter">
-						{t("student_attendance_log")}
-					</h3>
-				</div>
-				<div className="bento-card p-0 overflow-hidden bg-white border border-taysir-teal/5 shadow-xl">
-					<div className="overflow-x-auto">
-						<table className="w-full text-left border-collapse">
-							<thead className="bg-taysir-bg/50 text-[10px] font-black text-taysir-teal/40 uppercase tracking-widest">
-								<tr>
-									<th className="px-8 py-5">{t("student_date_session")}</th>
-									<th className="px-8 py-5">{t("student_module_activity")}</th>
-									<th className="px-8 py-5 text-center">
-										{t("kpi_engagement")}
-									</th>
-									<th className="px-8 py-5">{t("student_comments")}</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-taysir-teal/5">
-								{student.attendance.map((record) => (
-									<tr
-										key={record.id}
-										className="hover:bg-taysir-teal/[0.01] transition-colors group"
-									>
-										<td className="px-8 py-6">
-											<div className="text-sm font-black text-taysir-teal uppercase tracking-tight">
-												{new Date(
-													record.session.startTime,
-												).toLocaleDateString()}
-											</div>
-											<div className="text-[10px] font-bold text-taysir-teal/30 uppercase tracking-widest mt-1 flex items-center gap-1">
-												<Clock size={10} />{" "}
-												{new Date(record.session.startTime).toLocaleTimeString(
-													[],
-													{
-														hour: "2-digit",
-														minute: "2-digit",
-													},
-												)}
-											</div>
-										</td>
-										<td className="px-8 py-6">
-											<span className="text-[10px] font-black text-white uppercase tracking-widest bg-taysir-teal px-3 py-1.5 rounded-xl shadow-sm">
-												{record.session.activity.name}
-											</span>
-										</td>
-										<td className="px-8 py-6 text-center">
-											<span
-												className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg border ${
-													record.status === "PRESENT"
-														? "bg-emerald-50 text-emerald-600 border-emerald-100"
-														: record.status === "ABSENT"
-															? "bg-rose-50 text-rose-600 border-rose-100"
-															: "bg-amber-50 text-amber-600 border-amber-100"
-												}`}
-											>
-												{record.status}
-											</span>
-										</td>
-										<td className="px-8 py-6 text-xs text-taysir-teal/50 font-medium italic">
-											{record.note || t("student_no_observation")}
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-					{student.attendance.length === 0 && (
-						<div className="py-20 text-center opacity-30">
-							<Calendar
-								size={64}
-								className="mx-auto mb-4 text-taysir-teal/20"
-							/>
-							<p className="font-black uppercase tracking-[0.3em] text-xs">
-								{t("student_empty_history")}
-							</p>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>

@@ -53,15 +53,12 @@ export default function DataTable<T extends { id: string | number }>({
 		const searchLower = searchTerm.toLowerCase();
 
 		return (data || []).filter((item) => {
-			// Prioritize search on keys defined in columns to be more efficient
 			return (
 				columns.some((col) => {
 					if (typeof col.accessor === "string") {
 						const val = item[col.accessor];
 						return val?.toString().toLowerCase().includes(searchLower);
 					}
-					// Accessors as functions often return ReactNodes (icons, badges) which aren't directly searchable.
-					// We fallback to a full object search if no match is found in string-based columns.
 					return false;
 				}) ||
 				Object.values(item || {}).some((val) =>
@@ -91,15 +88,15 @@ export default function DataTable<T extends { id: string | number }>({
 	}
 
 	return (
-		<div className="flex flex-col gap-10 animate-in fade-in duration-500">
-			<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-				<div className="relative w-full sm:max-w-md group">
+		<div className="flex flex-col gap-8 animate-in fade-in duration-500">
+			<div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+				<div className="relative w-full sm:max-w-lg group">
 					<div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-						<Search className="h-4 w-4 text-gray-400 group-focus-within:text-accent-teal transition-colors" />
+						<Search className="h-4 w-4 text-ink-400 group-focus-within:text-brand-500 transition-colors" />
 					</div>
 					<input
 						type="text"
-						className="block w-full rounded-xl border border-gray-200 bg-white py-2.5 ps-11 pe-4 text-sm placeholder-gray-400 focus:border-accent-teal focus:outline-none focus:ring-4 focus:ring-accent-teal/5 transition-all shadow-sm"
+						className="block w-full rounded-2xl border border-line bg-white py-3 ps-12 pe-4 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5 transition-all shadow-sm"
 						placeholder={finalSearchPlaceholder}
 						value={searchTerm}
 						onChange={(e) => {
@@ -113,23 +110,23 @@ export default function DataTable<T extends { id: string | number }>({
 					<button
 						type="button"
 						onClick={onAdd}
-						className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-primary-teal px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary-teal/20 hover:bg-accent-teal hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200"
+						className="btn btn--primary btn--md px-8 h-12 shadow-xl shadow-brand-500/10 active:scale-95"
 					>
 						{t("add")}
 					</button>
 				)}
 			</div>
 
-			<div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-				<div className="overflow-x-auto custom-scrollbar rounded-2xl">
-					<table className="w-full text-sm text-gray-600 border-collapse">
+			<div className="bg-white rounded-[24px] border border-line shadow-sm overflow-hidden">
+				<div className="overflow-x-auto custom-scrollbar">
+					<table className="w-full text-sm text-ink-700 border-collapse">
 						<thead>
-							<tr className="bg-gray-50/50">
+							<tr className="bg-surface-50 border-b border-line">
 								{columns.map((col, idx) => (
 									<th
 										key={idx}
 										className={clsx(
-											"px-6 py-4 text-start text-[11px] font-bold uppercase tracking-wider text-gray-400",
+											"px-8 py-5 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400",
 											col.className,
 										)}
 									>
@@ -137,24 +134,24 @@ export default function DataTable<T extends { id: string | number }>({
 									</th>
 								))}
 								{!hideDefaultAction && (
-									<th className="px-6 py-4 text-end text-[11px] font-bold uppercase tracking-wider text-gray-400">
+									<th className="px-8 py-5 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
 										{t("actions")}
 									</th>
 								)}
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-50">
+						<tbody className="divide-y divide-line">
 							{paginatedData.length > 0 ? (
 								paginatedData.map((item) => (
 									<tr
 										key={item.id}
-										className="group hover:bg-gray-50/50 transition-all duration-200 relative"
+										className="group hover:bg-surface-50/50 transition-all duration-200"
 									>
 										{columns.map((col, idx) => (
 											<td
 												key={idx}
 												className={clsx(
-													"px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700",
+													"px-8 py-5 whitespace-nowrap text-sm font-medium",
 													col.className,
 												)}
 											>
@@ -164,14 +161,14 @@ export default function DataTable<T extends { id: string | number }>({
 											</td>
 										))}
 										{!hideDefaultAction && (
-											<td className="px-6 py-4 text-end">
+											<td className="px-8 py-5 text-end">
 												<button
 													type="button"
 													onClick={(e) => {
 														e.stopPropagation();
 														onAction ? onAction(item) : undefined;
 													}}
-													className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-accent-teal p-2 rounded-xl hover:bg-white shadow-none hover:shadow-sm border border-transparent hover:border-gray-100 transition-all duration-200"
+													className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-brand-500 p-2 rounded-xl hover:bg-white shadow-none hover:shadow-sm border border-transparent hover:border-line transition-all duration-200"
 												>
 													<MoreVertical size={18} />
 												</button>
@@ -183,11 +180,13 @@ export default function DataTable<T extends { id: string | number }>({
 								<tr>
 									<td
 										colSpan={columns.length + 1}
-										className="px-6 py-16 text-center"
+										className="px-8 py-20 text-center"
 									>
-										<div className="flex flex-col items-center gap-2">
-											<Inbox size={40} className="text-gray-200" />
-											<p className="text-gray-400 font-medium">
+										<div className="flex flex-col items-center gap-4">
+											<div className="w-16 h-16 rounded-full bg-surface-50 flex items-center justify-center text-ink-200">
+												<Inbox size={32} strokeWidth={1.5} />
+											</div>
+											<p className="text-ink-400 font-bold uppercase tracking-widest text-[11px]">
 												{t("no_results")}
 											</p>
 										</div>
@@ -199,29 +198,29 @@ export default function DataTable<T extends { id: string | number }>({
 				</div>
 
 				{totalPages > 1 && (
-					<div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-50 bg-white px-6 py-5 gap-4">
-						<div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+					<div className="flex flex-col sm:flex-row items-center justify-between border-t border-line bg-white px-8 py-6 gap-4">
+						<div className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">
 							{t("pagination_showing")}{" "}
-							<span className="text-gray-900">{startIndex + 1}</span>{" "}
+							<span className="text-ink-900">{startIndex + 1}</span>{" "}
 							{t("pagination_to")}{" "}
-							<span className="text-gray-900">
+							<span className="text-ink-900">
 								{Math.min(startIndex + pageSize, filteredData.length)}
 							</span>{" "}
 							{t("pagination_of")}{" "}
-							<span className="text-gray-900">{filteredData.length}</span>
+							<span className="text-ink-900">{filteredData.length}</span>
 						</div>
 
-						<div className="flex items-center gap-1.5">
+						<div className="flex items-center gap-2">
 							<button
 								type="button"
 								onClick={() => goToPage(currentPage - 1)}
 								disabled={currentPage === 1}
-								className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"
+								className="h-10 w-10 flex items-center justify-center rounded-xl border border-line text-ink-400 hover:bg-surface-50 hover:text-ink-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"
 							>
-								<ChevronLeft size={18} />
+								<ChevronLeft size={20} />
 							</button>
 
-							<div className="flex items-center gap-1">
+							<div className="flex items-center gap-1.5">
 								{Array.from({ length: totalPages }, (_, i) => i + 1).map(
 									(page) => (
 										<button
@@ -229,10 +228,10 @@ export default function DataTable<T extends { id: string | number }>({
 											type="button"
 											onClick={() => goToPage(page)}
 											className={clsx(
-												"h-9 w-9 rounded-xl text-sm font-bold transition-all",
+												"h-10 min-w-[40px] px-2 rounded-xl text-sm font-bold transition-all",
 												currentPage === page
-													? "bg-primary-teal text-white shadow-lg shadow-primary-teal/20 scale-110"
-													: "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
+													? "bg-brand-500 text-white shadow-lg shadow-brand-500/20 scale-105"
+													: "text-ink-500 hover:bg-surface-50 hover:text-ink-900",
 											)}
 										>
 											{page}
@@ -245,9 +244,9 @@ export default function DataTable<T extends { id: string | number }>({
 								type="button"
 								onClick={() => goToPage(currentPage + 1)}
 								disabled={currentPage === totalPages}
-								className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"
+								className="h-10 w-10 flex items-center justify-center rounded-xl border border-line text-ink-400 hover:bg-surface-50 hover:text-ink-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all rtl:rotate-180"
 							>
-								<ChevronRight size={18} />
+								<ChevronRight size={20} />
 							</button>
 						</div>
 					</div>

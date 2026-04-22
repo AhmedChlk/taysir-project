@@ -1,14 +1,44 @@
 "use client";
 
-import { clsx } from "clsx";
-import { Loader2, Quote } from "lucide-react";
-import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import { Input } from "@/components/ui/FormInput";
 import { useRouter } from "@/i18n/routing";
+import Link from "next/link";
+
+// --- Design System Primitives ---
+
+const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
+	<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
+		<g fill={color}>
+			<rect x="26" y="6" width="12" height="52" rx="3" />
+			<rect x="6" y="26" width="52" height="12" rx="3" />
+			<rect x="26" y="26" width="12" height="12" fill="#fff" />
+			<rect x="28" y="28" width="8" height="8" fill={color} />
+		</g>
+	</svg>
+);
+
+const Logo = () => (
+	<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+		<LogoMark size={32} color="var(--brand-500)" />
+		<span
+			style={{
+				fontSize: 26,
+				fontWeight: 700,
+				letterSpacing: "-0.02em",
+				color: "var(--fg1)",
+				fontFamily: "var(--font-sans)",
+			}}
+		>
+			taysir
+		</span>
+	</div>
+);
 
 export default function LoginPage() {
 	const [email, setEmail] = useState("");
@@ -35,8 +65,6 @@ export default function LoginPage() {
 			if (result?.error) {
 				setError(t("error_invalid_credentials"));
 			} else {
-				// Le router de next-intl gère automatiquement la locale.
-				// Si on est sur /fr/login, router.push("/dashboard") devrait mener à /fr/dashboard.
 				router.push("/dashboard");
 			}
 		} catch {
@@ -48,143 +76,132 @@ export default function LoginPage() {
 
 	return (
 		<div
-			className="flex min-h-screen w-full bg-white overflow-hidden"
+			className="min-h-screen w-full bg-white font-sans antialiased flex flex-col"
 			dir={isRtl ? "rtl" : "ltr"}
 		>
-			{/* Language Switcher */}
-			<div className="absolute top-6 z-50 flex gap-2 end-6">
+			{/* Simple Header */}
+			<header className="w-full max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
+				<Link href={`/${locale}`} className="transition-opacity hover:opacity-80">
+					<Logo />
+				</Link>
 				<LanguageSwitcher />
-			</div>
+			</header>
 
-			{/* Left side: Branding Panel */}
-			<div className="hidden lg:flex lg:w-1/2 bg-primary-teal relative items-center justify-center p-12 overflow-hidden">
-				{/* Subtle CSS patterns/gradients */}
-				<div className="absolute top-0 start-0 w-full h-full opacity-20 pointer-events-none">
-					<div className="absolute -top-24 -start-24 w-96 h-96 bg-white rounded-full blur-3xl opacity-10" />
-					<div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/5 rounded-full" />
-					<div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/10 rounded-full" />
-					<div className="absolute bottom-0 end-0 w-64 h-64 bg-accent-teal rounded-full blur-3xl opacity-20" />
-				</div>
-
-				<div className="relative z-10 max-w-lg text-center lg:text-start space-y-8">
-					<div className="flex items-center gap-4 mb-12">
-						<div className="relative w-12 h-12">
-							<Image
-								src="/logo.png"
-								alt={t("brand_name")}
-								fill
-								className="object-contain invert brightness-0"
-								sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-							/>
-						</div>
-
-						<span className="text-2xl font-bold text-white tracking-wider">
-							{t("brand_name")}
-						</span>
-					</div>
-
-					<div className="space-y-6">
-						<Quote className="text-accent-teal opacity-50 w-12 h-12 flip-rtl" />
-						<h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
-							{t("login_welcome_desc")}
-						</h1>
-						<p className="text-white/70 text-lg max-w-md">
-							{t("login_welcome_long_desc")}
-						</p>
-					</div>
-
-					<div className="pt-12 grid grid-cols-2 gap-8 border-t border-white/10">
-						<div>
-							<div className="text-2xl font-bold text-white">100%</div>
-							<div className="text-sm text-white/50 capitalize">
-								{t("stat_algerian")}
-							</div>
-						</div>
-						<div>
-							<div className="text-2xl font-bold text-white">24/7</div>
-							<div className="text-sm text-white/50 capitalize">
-								{t("stat_support")}
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* Right side: Login form */}
-			<div className="flex flex-1 items-center justify-center p-8 lg:p-24 bg-white">
-				<div className="w-full max-w-md space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-					<div className="space-y-2">
-						<h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+			{/* Centered Content */}
+			<main className="flex-1 flex items-center justify-center p-6 pb-24">
+				<div className="w-full max-w-[400px] space-y-10">
+					<div className="space-y-3 text-center">
+						<motion.h1 
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							className="text-4xl font-bold text-ink-900 tracking-tight"
+						>
 							{t("login_welcome_back")}
-						</h2>
-						<p className="text-gray-500">{t("login_subtitle")}</p>
+						</motion.h1>
+						<motion.p 
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.1 }}
+							className="text-ink-500 text-lg"
+						>
+							{t("login_subtitle")}
+						</motion.p>
 					</div>
 
-					<form className="space-y-6" onSubmit={handleSubmit}>
-						{error && (
-							<div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-100 flex items-center gap-3">
-								<span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-								{error}
-							</div>
-						)}
-
-						<div className="space-y-4">
-							<Input
-								label={t("email")}
-								type="email"
-								id="email"
-								required
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								placeholder={t("placeholder_email")}
-								className="h-12"
-							/>
-
-							<div className="space-y-1">
-								<Input
-									label={t("password")}
-									type="password"
-									id="password"
-									required
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									placeholder="••••••••"
-									className="h-12"
-								/>
-								<div className="flex justify-end">
-									<button
-										type="button"
-										className="text-sm text-accent-teal hover:underline font-medium"
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.2 }}
+					>
+						<form className="space-y-6" onSubmit={handleSubmit}>
+							<AnimatePresence mode="wait">
+								{error && (
+									<motion.div 
+										initial={{ opacity: 0, scale: 0.98 }}
+										animate={{ opacity: 1, scale: 1 }}
+										exit={{ opacity: 0, scale: 0.98 }}
+										className="rounded-xl bg-rose-50 p-4 text-sm text-danger border border-rose-100 font-semibold"
 									>
-										{t("forgot_password")}
-									</button>
+										{error}
+									</motion.div>
+								)}
+							</AnimatePresence>
+
+							<div className="space-y-4">
+								<Input
+									label={t("email")}
+									type="email"
+									id="email"
+									required
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									placeholder={t("placeholder_email")}
+									autoComplete="email"
+								/>
+
+								<div className="space-y-1">
+									<Input
+										label={t("password")}
+										type="password"
+										id="password"
+										required
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										placeholder="••••••••"
+										autoComplete="current-password"
+									/>
+									<div className="flex justify-end">
+										<button
+											type="button"
+											className="text-xs text-brand-500 hover:text-brand-700 font-bold transition-colors"
+										>
+											{t("forgot_password")}
+										</button>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						<button
-							type="submit"
-							disabled={loading}
-							className={clsx(
-								"group relative flex w-full justify-center rounded-lg bg-primary-teal py-3.5 text-sm font-bold text-white shadow-lg shadow-primary-teal/20 transition-all hover:bg-accent-teal hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none",
-								loading && "cursor-not-allowed",
-							)}
+							<button
+								type="submit"
+								disabled={loading}
+								className="btn btn--primary btn--lg w-full h-[52px] shadow-sm"
+							>
+								{loading ? <Loader2 className="animate-spin" size={22} /> : t("login_button")}
+							</button>
+						</form>
+					</motion.div>
+
+					<motion.div 
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ delay: 0.4 }}
+						className="pt-8 text-center border-t border-gray-100 space-y-4"
+					>
+						<p className="text-sm text-ink-500">
+							{t("no_account_yet")}{" "}
+							<button className="text-brand-500 font-bold hover:underline">
+								{t("contact_sales")}
+							</button>
+						</p>
+						<Link 
+							href={`/${locale}`}
+							className="block text-xs text-ink-400 hover:text-ink-900 transition-colors font-medium"
 						>
-							{loading ? (
-								<Loader2 className="animate-spin" size={20} />
-							) : (
-								<span className="flex items-center gap-2">
-									{t("login_button")}
-								</span>
-							)}
-						</button>
-					</form>
-
-					<div className="pt-8 text-center border-t border-gray-100">
-						<p className="text-sm text-gray-500">{t("footer_copyright")}</p>
-					</div>
+							← Retour à la page d'accueil
+						</Link>
+					</motion.div>
 				</div>
-			</div>
+			</main>
+
+			{/* Simple Footer */}
+			<footer className="py-8 text-center text-ink-400 text-xs font-medium">
+				<div className="flex justify-center gap-6 mb-4 opacity-50 uppercase tracking-widest">
+					<span>Paris</span>
+					<span>Alger</span>
+					<span>Tunis</span>
+				</div>
+				<p>© 2026 Taysir. {t("all_rights_reserved")}</p>
+			</footer>
 		</div>
 	);
 }

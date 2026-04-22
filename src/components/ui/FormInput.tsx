@@ -48,22 +48,22 @@ export function Input({
 		<div className="w-full space-y-1.5 group">
 			<label
 				htmlFor={inputId}
-				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+				className="text-sm font-semibold text-ink-700 transition-colors group-focus-within:text-brand-500"
 			>
 				{label}
 			</label>
 			<div className="relative">
 				<motion.input
 					id={inputId}
-					whileFocus={{ scale: 1.01 }}
+					whileFocus={{ scale: 1.005 }}
 					type={inputType}
 					className={clsx(
-						"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
+						"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink-900 transition-all outline-none",
 						error
-							? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10"
+							? "border-rose-300 focus:border-rose-500 ring-rose-500/10 focus:ring-4"
 							: success
-								? "border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/10"
-								: "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
+								? "border-emerald-300 focus:border-emerald-500 ring-emerald-500/10 focus:ring-4"
+								: "border-gray-200 focus:border-brand-500 ring-brand-500/10 focus:ring-4",
 						(isPassword || suffix || error || success) && "pe-12",
 						className,
 					)}
@@ -71,24 +71,24 @@ export function Input({
 				/>
 
 				{/* Adornments */}
-				<div className="absolute end-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400">
+				<div className="absolute end-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-ink-400">
 					{success && !error && (
-						<CheckCircle2 size={18} className="text-emerald-500" />
+						<CheckCircle2 size={18} className="text-success" />
 					)}
-					{error && <AlertCircle size={18} className="text-rose-500" />}
+					{error && <AlertCircle size={18} className="text-danger" />}
 
 					{isPassword && (
 						<button
 							type="button"
 							onClick={togglePassword}
-							className="hover:text-taysir-teal transition-colors focus:outline-none"
+							className="hover:text-brand-500 transition-colors focus:outline-none"
 						>
 							{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
 						</button>
 					)}
 
 					{suffix && (
-						<span className="text-xs font-bold text-gray-400 select-none">
+						<span className="text-xs font-bold text-ink-400 select-none">
 							{suffix}
 						</span>
 					)}
@@ -101,12 +101,12 @@ export function Input({
 						initial={{ opacity: 0, y: -5 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -5 }}
-						className="text-xs font-medium text-rose-600 flex items-center gap-1"
+						className="text-xs font-medium text-danger flex items-center gap-1"
 					>
 						{error}
 					</motion.p>
 				) : helperText ? (
-					<p className="text-xs text-gray-500 italic">{helperText}</p>
+					<p className="text-xs text-ink-500 italic">{helperText}</p>
 				) : null}
 			</AnimatePresence>
 		</div>
@@ -126,12 +126,12 @@ export function FormSection({
 }) {
 	return (
 		<div className={clsx("space-y-4", className)}>
-			<div className="border-s-4 border-taysir-teal/20 ps-4">
-				<h3 className="text-lg font-bold text-taysir-teal leading-tight">
+			<div className="border-s-4 border-brand-500/20 ps-4">
+				<h3 className="text-lg font-bold text-brand-900 leading-tight">
 					{title}
 				</h3>
 				{description && (
-					<p className="text-sm text-gray-500 mt-1">{description}</p>
+					<p className="text-sm text-ink-500 mt-1">{description}</p>
 				)}
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -163,17 +163,17 @@ export function Select({
 		<div className="w-full space-y-1.5 group">
 			<label
 				htmlFor={selectId}
-				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+				className="text-sm font-semibold text-ink-700 transition-colors group-focus-within:text-brand-500"
 			>
 				{label}
 			</label>
 			<select
 				id={selectId}
 				className={clsx(
-					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
+					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink-900 transition-all outline-none focus:ring-4",
 					error
 						? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10"
-						: "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
+						: "border-gray-200 focus:border-brand-500 focus:ring-brand-500/10",
 					className,
 				)}
 				{...props}
@@ -185,7 +185,7 @@ export function Select({
 				))}
 			</select>
 			{error && (
-				<p className="text-xs font-medium text-rose-600 mt-1">{error}</p>
+				<p className="text-xs font-medium text-danger mt-1">{error}</p>
 			)}
 		</div>
 	);
@@ -205,24 +205,24 @@ export function TextArea({
 		<div className="w-full space-y-1.5 group">
 			<label
 				htmlFor={textareaId}
-				className="text-sm font-semibold text-taysir-teal transition-colors group-focus-within:text-taysir-light"
+				className="text-sm font-semibold text-ink-700 transition-colors group-focus-within:text-brand-500"
 			>
 				{label}
 			</label>
 			<textarea
 				id={textareaId}
 				className={clsx(
-					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 transition-all outline-none focus:ring-4",
+					"block w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink-900 transition-all outline-none focus:ring-4",
 					error
 						? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/10"
-						: "border-taysir-teal/15 focus:border-taysir-teal focus:ring-taysir-teal/10",
+						: "border-gray-200 focus:border-brand-500 focus:ring-brand-500/10",
 					className,
 				)}
 				rows={3}
 				{...props}
 			/>
 			{error && (
-				<p className="text-xs font-medium text-rose-600 mt-1">{error}</p>
+				<p className="text-xs font-medium text-danger mt-1">{error}</p>
 			)}
 		</div>
 	);

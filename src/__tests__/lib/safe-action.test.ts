@@ -126,4 +126,18 @@ describe("createSafeAction", () => {
 		expect(result.success).toBe(true);
 		if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
 	});
+
+	it("autorise SUPER_ADMIN avec etablissementId vide ('')", async () => {
+		vi.mocked(getServerSession).mockResolvedValue(
+			makeSession({ etablissementId: "", role: "SUPER_ADMIN" }) as never,
+		);
+		const action = createSafeAction(
+			testSchema,
+			async (_data, ctx) => ctx.tenantId,
+		);
+
+		const result = await action({ name: "x" });
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
+	});
 });

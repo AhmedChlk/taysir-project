@@ -14,6 +14,7 @@ import {
 	ShieldCheck,
 	Trash2,
 	User,
+    Plus,
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -35,6 +36,8 @@ import { useRouter } from "@/i18n/routing";
 import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
 import type { Group, Student } from "@/types/schema";
 import { formatFullName } from "@/utils/format";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
 
 type StudentWithGroups = Student & { groups: Group[] };
 
@@ -88,7 +91,7 @@ export default function StudentsClientView({
 
 	const handleEdit = (student: StudentWithGroups) => {
 		setSelectedStudent(student);
-		setIsMinor(student.isMinor || false);
+		setIsMinor(!!student.isMinor);
 		setPhotoPreview(student.photoUrl || null);
 		setSelectedGroupIds(student.groups.map((g) => g.id));
 		setIsModalOpen(true);
@@ -185,6 +188,19 @@ export default function StudentsClientView({
 				applyOptimistic({ type: "update", student: optimisticUpdated });
 				result = await updateStudentAction({ id: selectedStudent.id, ...data });
 			} else {
+                const tempId = crypto.randomUUID();
+                const optimisticNew: StudentWithGroups = {
+                    id: tempId,
+                    ...data,
+                    isActive: true,
+                    birthDate: null,
+                    registrationDate: new Date(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    etablissementId: "", // Sera remplacé par le serveur
+                    groups: selectedGroups,
+                };
+                applyOptimistic({ type: "create", student: optimisticNew });
 				result = await createStudentAction(data);
 			}
 
@@ -214,7 +230,7 @@ export default function StudentsClientView({
 			header: t("students_identity"),
 			accessor: (student: Student) => (
 				<div className="flex items-center gap-4">
-					<div className="relative w-12 h-12 rounded-[18px] overflow-hidden border-2 border-white shadow-sm shrink-0 bg-taysir-teal/5 flex items-center justify-center">
+					<div className="relative w-11 h-11 rounded-2xl overflow-hidden border border-line shadow-sm shrink-0 bg-surface-100 flex items-center justify-center">
 						{student.photoUrl ? (
 							<Image
 								src={student.photoUrl}
@@ -223,21 +239,20 @@ export default function StudentsClientView({
 								className="object-cover"
 							/>
 						) : (
-							<User size={24} className="text-taysir-teal/20" />
+							<User size={20} className="text-ink-400" />
 						)}
 					</div>
 					<div className="flex flex-col">
-						<span className="font-black text-taysir-teal uppercase tracking-tight text-sm leading-tight">
+						<span className="font-bold text-ink-900 text-sm leading-tight tracking-tight">
 							{formatFullName(student.firstName, student.lastName)}
 						</span>
-						<div className="flex items-center gap-1.5 mt-0.5">
+						<div className="flex items-center gap-2 mt-1">
 							{student.isMinor && (
-								<span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[8px] font-black uppercase border border-amber-200">
+								<span className="px-1.5 py-0.5 rounded-lg bg-amber-50 text-amber-700 text-[9px] font-bold uppercase tracking-wider border border-amber-200/50">
 									{t("student_minor")}
 								</span>
 							)}
-							<span className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
-								{t("student_enrolled_on")}{" "}
+							<span className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">
 								{new Date(student.registrationDate).toLocaleDateString()}
 							</span>
 						</div>
@@ -249,16 +264,16 @@ export default function StudentsClientView({
 			header: t("students_contact"),
 			accessor: (student: Student) => (
 				<div className="flex flex-col gap-1">
-					<div className="flex items-center gap-2 text-xs font-bold text-taysir-teal/70">
-						<Phone size={12} className="text-taysir-teal/30" />
-						<span>
-							{student.isMinor ? student.parentPhone : student.phone || "N/A"}
+					<div className="flex items-center gap-2 text-xs font-bold text-ink-700">
+						<Phone size={12} className="text-brand-500" />
+						<span className="tabular-nums">
+							{student.isMinor ? student.parentPhone : student.phone || "—"}
 						</span>
 					</div>
 					{student.email && (
-						<div className="flex items-center gap-2 text-[10px] font-medium text-taysir-teal/40">
-							<Mail size={12} className="text-taysir-teal/20" />
-							<span>{student.email}</span>
+						<div className="flex items-center gap-2 text-[10px] font-semibold text-ink-400">
+							<Mail size={12} className="opacity-40" />
+							<span className="truncate max-w-[140px]">{student.email}</span>
 						</div>
 					)}
 				</div>
@@ -267,18 +282,18 @@ export default function StudentsClientView({
 		{
 			header: t("students_assignment"),
 			accessor: (student: StudentWithGroups) => (
-				<div className="flex flex-wrap gap-1">
+				<div className="flex flex-wrap gap-1.5 max-w-[240px]">
 					{student.groups.length > 0 ? (
 						student.groups.map((g) => (
 							<span
 								key={g.id}
-								className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[9px] font-black uppercase border border-blue-100"
+								className="px-2 py-0.5 rounded-lg bg-brand-50 text-brand-900 text-[10px] font-bold uppercase tracking-wider border border-brand-100"
 							>
 								{g.name}
 							</span>
 						))
 					) : (
-						<span className="text-[10px] italic text-gray-300 font-bold uppercase">
+						<span className="text-[10px] font-bold text-ink-300 uppercase tracking-widest italic">
 							{t("students_no_group")}
 						</span>
 					)}
@@ -286,17 +301,21 @@ export default function StudentsClientView({
 			),
 		},
 		{
-			header: t("status_header"),
+			header: "Statut",
 			accessor: (student: Student) => (
 				<span
-					className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${
+					className={clsx(
+                        "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border",
 						student.isActive
-							? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-							: "bg-rose-50 text-rose-600 border border-rose-100"
-					}`}
+							? "bg-success-50 text-success border-success/10"
+							: "bg-rose-50 text-danger border-danger/10"
+					)}
 				>
 					<div
-						className={`w-1.5 h-1.5 rounded-full me-1.5 ${student.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+						className={clsx(
+                            "w-1.5 h-1.5 rounded-full me-2",
+                            student.isActive ? "bg-success animate-pulse" : "bg-danger"
+                        )}
 					/>
 					{student.isActive ? t("active") : t("inactive")}
 				</span>
@@ -305,7 +324,7 @@ export default function StudentsClientView({
 		{
 			header: "",
 			accessor: (student: StudentWithGroups) => (
-				<div className="flex justify-end pr-2">
+				<div className="flex justify-end">
 					<DropdownMenu
 						items={[
 							{
@@ -333,27 +352,33 @@ export default function StudentsClientView({
 					/>
 				</div>
 			),
-			className: "w-10 text-end",
+			className: "w-10",
 		},
 	];
 
 	return (
-		<div className="space-y-10 pb-20 pt-16">
+		<div className="space-y-10 pb-20 pt-4">
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-				<div>
-					<h1 className="text-3xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
-						{t("students_manage_title")}
-						<span className="text-taysir-accent">.</span>
+				<div className="space-y-1">
+					<div className="t-eyebrow">{t("students_manage_title")}</div>
+					<h1 className="text-4xl font-bold text-ink-900 tracking-tight">
+						Gestion des <span className="text-brand-500">Inscriptions</span>
 					</h1>
-					<p className="text-sm text-taysir-teal/50 mt-2 font-medium">
+					<p className="text-ink-500 font-medium max-w-lg leading-relaxed">
 						{t("students_manage_subtitle")}
 					</p>
 				</div>
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={handleAdd}
+                        className="btn btn--primary btn--lg shadow-xl shadow-brand-500/10 active:scale-95"
+                    >
+                        <Plus size={20} strokeWidth={2.5} />
+                        Nouveau Registre
+                    </button>
+                </div>
 			</div>
-
-			{pdfError && (
-				<p className="text-red-500 text-sm font-medium">{pdfError}</p>
-			)}
 
 			<DataTable
 				data={optimisticStudents}
@@ -375,28 +400,6 @@ export default function StudentsClientView({
 			/>
 
 			<Modal
-				isOpen={!!errorMessage}
-				onClose={() => setErrorMessage(null)}
-				title={t("students_error_title")}
-				footer={
-					<button
-						type="button"
-						onClick={() => setErrorMessage(null)}
-						className="btn-primary px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest"
-					>
-						{t("students_understood")}
-					</button>
-				}
-			>
-				<div className="flex flex-col items-center gap-4 py-4 text-center">
-					<div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
-						<AlertCircle size={32} />
-					</div>
-					<p className="text-gray-600 font-medium">{errorMessage}</p>
-				</div>
-			</Modal>
-
-			<Modal
 				isOpen={isModalOpen}
 				onClose={() => {
 					setIsModalOpen(false);
@@ -407,115 +410,112 @@ export default function StudentsClientView({
 						? t("students_update_file")
 						: t("students_new_registration")
 				}
-				footer={
-					<>
-						<button
-							type="button"
-							disabled={isPending}
-							onClick={() => setIsModalOpen(false)}
-							className="btn-ghost font-black text-xs uppercase tracking-widest text-taysir-teal/40"
-						>
-							{t("cancel")}
-						</button>
-						<button
-							form="student-form"
-							type="submit"
-							disabled={isPending}
-							className="btn-primary flex items-center gap-2 px-8 py-4 rounded-2xl"
-						>
-							{isPending && <Loader2 size={16} className="animate-spin" />}
-							<span className="font-black text-xs uppercase tracking-widest">
-								{selectedStudent
-									? t("students_confirm_update")
-									: t("students_confirm_registration")}
-							</span>
-						</button>
-					</>
-				}
 			>
 				<form
 					id="student-form"
 					onSubmit={handleSubmit}
-					className="space-y-8 p-2"
+					className="space-y-10 p-2 max-h-[75vh] overflow-y-auto custom-scrollbar"
 				>
-					<div className="flex flex-col items-center gap-6">
-						<div className="relative group">
-							<div className="w-32 h-32 rounded-[40px] overflow-hidden border-4 border-white shadow-2xl bg-taysir-bg flex items-center justify-center relative">
-								{photoPreview ? (
-									<Image
-										src={photoPreview}
-										alt="Preview"
-										fill
-										className="object-cover"
-									/>
-								) : (
-									<User size={64} className="text-taysir-teal/10" />
-								)}
-								<button
-									type="button"
-									onClick={() => fileInputRef.current?.click()}
-									className="absolute inset-0 bg-taysir-teal/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
-								>
-									<Camera size={32} />
-								</button>
-							</div>
-							<input
-								type="file"
-								ref={fileInputRef}
-								className="hidden"
-								accept="image/*"
-								onChange={handlePhotoChange}
-							/>
-							<p className="text-[10px] font-black text-center mt-3 text-taysir-teal/40 uppercase tracking-widest">
-								{t("students_portrait")}
-							</p>
-						</div>
+                    {/* Identification Section */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 text-brand-500 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-line pb-4">
+                            <User size={14} />
+                            Identification Élève
+                        </div>
+                        <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
+                            <div className="relative group shrink-0">
+                                <div className="w-28 h-28 rounded-3xl overflow-hidden border-2 border-line shadow-sm bg-surface-50 flex items-center justify-center relative transition-all group-hover:border-brand-500/30">
+                                    {photoPreview ? (
+                                        <Image
+                                            src={photoPreview}
+                                            alt="Preview"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <User size={48} className="text-ink-200" />
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute inset-0 bg-brand-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity backdrop-blur-[2px]"
+                                    >
+                                        <Camera size={24} />
+                                    </button>
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handlePhotoChange}
+                                />
+                            </div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-							<Input
-								name="firstName"
-								label={t("first_name")}
-								defaultValue={selectedStudent?.firstName}
-								placeholder="Ex: Karim"
-								required
-							/>
-							<Input
-								name="lastName"
-								label={t("last_name")}
-								defaultValue={selectedStudent?.lastName}
-								placeholder="Ex: Zidane"
-								required
-							/>
-						</div>
-					</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                                <Input
+                                    name="firstName"
+                                    label={t("first_name")}
+                                    defaultValue={selectedStudent?.firstName}
+                                    placeholder="Ex: Karim"
+                                    required
+                                />
+                                <Input
+                                    name="lastName"
+                                    label={t("last_name")}
+                                    defaultValue={selectedStudent?.lastName}
+                                    placeholder="Ex: Zidane"
+                                    required
+                                />
+                                <div className="md:col-span-2">
+                                    <Input
+                                        name="address"
+                                        label={t("student_address_label")}
+                                        defaultValue={selectedStudent?.address || ""}
+                                        placeholder="Ex: Cité 1200 logements, Bat 12, Alger"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-					<div className="flex items-center justify-between p-5 bg-gradient-to-r from-taysir-teal/5 to-transparent rounded-3xl border border-taysir-teal/5">
-						<div className="flex items-center gap-3">
-							<div className="p-2 bg-white rounded-xl shadow-sm text-taysir-teal">
-								<Baby size={20} />
+                    {/* Status & Minority */}
+					<div 
+                        onClick={() => setIsMinor(!isMinor)}
+                        className="p-6 bg-surface-50 rounded-2xl border border-line flex items-center justify-between cursor-pointer hover:bg-surface-100 transition-colors group/toggle"
+                    >
+						<div className="flex items-center gap-4">
+							<div className={clsx(
+                                "p-2.5 rounded-xl shadow-sm border transition-all duration-300",
+                                isMinor ? "bg-brand-500 text-white border-brand-500" : "bg-white text-ink-400 border-line"
+                            )}>
+								<Baby size={20} strokeWidth={2.5} />
 							</div>
 							<div>
-								<span className="text-sm font-black text-taysir-teal uppercase tracking-tight block leading-none">
-									{t("students_minor_label")}
+								<span className="text-sm font-bold text-ink-900 block">
+									{isMinor ? "Élève Mineur" : "Élève Majeur"}
 								</span>
-								<span className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
-									{t("students_minor_desc")}
+								<span className="text-xs font-medium text-ink-400">
+									{isMinor ? "Coordonnées parents obligatoires" : "Coordonnées personnelles utilisées"}
 								</span>
 							</div>
 						</div>
-						<Toggle enabled={isMinor} onChange={setIsMinor} />
+						<div className="flex items-center gap-3">
+                            <span className={clsx("text-[10px] font-bold uppercase tracking-widest transition-colors", !isMinor ? "text-brand-500" : "text-ink-300")}>Majeur</span>
+						    <Toggle enabled={isMinor} onChange={setIsMinor} />
+                            <span className={clsx("text-[10px] font-bold uppercase tracking-widest transition-colors", isMinor ? "text-brand-500" : "text-ink-300")}>Mineur</span>
+                        </div>
 					</div>
 
-					<div className="space-y-4">
-						<div className="flex items-center gap-2 mb-2">
-							<ShieldCheck size={16} className="text-taysir-accent" />
-							<h3 className="text-xs font-black text-taysir-teal uppercase tracking-widest">
-								{t("students_contact_section")}
-							</h3>
+                    {/* Contact Section */}
+					<div className="space-y-6">
+						<div className="flex items-center gap-2 text-brand-500 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-line pb-4">
+							<ShieldCheck size={14} />
+							{t("students_contact_section")}
 						</div>
 
 						{!isMinor ? (
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 								<Input
 									name="email"
 									type="email"
@@ -532,52 +532,38 @@ export default function StudentsClientView({
 								/>
 							</div>
 						) : (
-							<div className="space-y-4 p-5 bg-amber-50/50 rounded-3xl border border-amber-100/50">
-								<Input
-									name="parentName"
-									label={t("parent_name_label")}
-									defaultValue={selectedStudent?.parentName || ""}
-									placeholder="Ex: Zidane Mourad"
-									required
-								/>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<Input
-										name="parentPhone"
-										label={t("parent_phone_label")}
-										defaultValue={selectedStudent?.parentPhone || ""}
-										placeholder="0550 00 00 00"
-										required
-									/>
-									<Input
-										name="parentEmail"
-										label={t("parent_email_label")}
-										defaultValue={selectedStudent?.parentEmail || ""}
-										placeholder="parent@email.dz"
-									/>
-								</div>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 bg-amber-50/30 rounded-2xl border border-amber-100/50">
+								<div className="md:col-span-2">
+                                    <Input
+                                        name="parentName"
+                                        label={t("parent_name_label")}
+                                        defaultValue={selectedStudent?.parentName || ""}
+                                        placeholder="Ex: Zidane Mourad"
+                                        required
+                                    />
+                                </div>
+                                <Input
+                                    name="parentPhone"
+                                    label={t("parent_phone_label")}
+                                    defaultValue={selectedStudent?.parentPhone || ""}
+                                    placeholder="0550 00 00 00"
+                                    required
+                                />
+                                <Input
+                                    name="parentEmail"
+                                    label={t("parent_email_label")}
+                                    defaultValue={selectedStudent?.parentEmail || ""}
+                                    placeholder="parent@email.dz"
+                                />
 							</div>
 						)}
-
-						<div className="relative">
-							<TextArea
-								name="address"
-								label={t("student_address_label")}
-								defaultValue={selectedStudent?.address || ""}
-								placeholder="Ex: Cité 1200 logements, Bat 12, Alger"
-							/>
-							<MapPin
-								size={16}
-								className="absolute right-4 top-10 text-taysir-teal/20"
-							/>
-						</div>
 					</div>
 
-					<div className="space-y-4">
-						<div className="flex items-center gap-2 mb-2">
-							<Edit3 size={16} className="text-taysir-accent" />
-							<h3 className="text-xs font-black text-taysir-teal uppercase tracking-widest">
-								{t("students_academic_assignment")}
-							</h3>
+                    {/* Assignment Section */}
+					<div className="space-y-6">
+						<div className="flex items-center gap-2 text-brand-500 font-bold text-[10px] uppercase tracking-[0.2em] border-b border-line pb-4">
+							<Edit3 size={14} />
+							{t("students_academic_assignment")}
 						</div>
 
 						<MultiSelect
@@ -588,8 +574,57 @@ export default function StudentsClientView({
 							onChange={setSelectedGroupIds}
 						/>
 					</div>
+
+                    {/* Footer Actions */}
+                    <div className="flex justify-end gap-3 pt-6 sticky bottom-0 bg-white border-t border-line mt-10 pb-2">
+                        <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => setIsModalOpen(false)}
+                            className="btn btn--ghost btn--md px-6"
+                        >
+                            {t("cancel")}
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isPending}
+                            className="btn btn--primary btn--md px-8 shadow-lg shadow-brand-500/10"
+                        >
+                            {isPending && <Loader2 size={16} className="animate-spin" />}
+                            <span>
+                                {selectedStudent
+                                    ? t("students_confirm_update")
+                                    : t("students_confirm_registration")}
+                            </span>
+                        </button>
+                    </div>
 				</form>
 			</Modal>
+
+            <AnimatePresence>
+                {errorMessage && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-8 right-8 z-[100] max-w-md p-5 bg-white rounded-2xl shadow-ts-3 border-l-4 border-danger flex gap-4 items-start"
+                    >
+                        <div className="p-2 bg-rose-50 rounded-xl text-danger shrink-0">
+                            <AlertCircle size={20} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-sm font-bold text-ink-900 mb-1">Attention</h4>
+                            <p className="text-xs text-ink-500 leading-relaxed font-medium">{errorMessage}</p>
+                            <button 
+                                onClick={() => setErrorMessage(null)}
+                                className="mt-3 text-[10px] font-bold text-brand-500 uppercase tracking-widest hover:text-brand-700"
+                            >
+                                {t("students_understood")}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 		</div>
 	);
 }

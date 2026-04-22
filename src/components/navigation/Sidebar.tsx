@@ -14,12 +14,14 @@ import {
 	UserCheck,
 	Users,
 	Wallet,
+    ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, getPathname } from "@/i18n/routing";
 import { UserRole } from "@/types/schema";
+import { motion } from "framer-motion";
 
 interface NavItem {
 	labelKey: string;
@@ -31,7 +33,7 @@ interface NavItem {
 const navItems: NavItem[] = [
 	{
 		labelKey: "dashboard",
-		href: "/",
+		href: "/dashboard",
 		icon: LayoutDashboard,
 		roles: [
 			UserRole.ADMIN,
@@ -116,6 +118,17 @@ interface SidebarProps {
 	onClose?: () => void;
 }
 
+const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
+	<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
+		<g fill={color}>
+			<rect x="26" y="6" width="12" height="52" rx="3" />
+			<rect x="6" y="26" width="52" height="12" rx="3" />
+			<rect x="26" y="26" width="12" height="12" fill="#fff" />
+			<rect x="28" y="28" width="8" height="8" fill={color} />
+		</g>
+	</svg>
+);
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 	const { data: session } = useSession();
 	const pathname = usePathname();
@@ -137,7 +150,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 		<>
 			{isOpen && (
 				<div
-					className="fixed inset-0 z-40 bg-taysir-teal/60 backdrop-blur-sm md:hidden animate-in fade-in duration-300"
+					className="fixed inset-0 z-40 bg-brand-900/40 backdrop-blur-sm md:hidden animate-in fade-in duration-300"
 					aria-hidden="true"
 					onClick={onClose}
 				/>
@@ -145,7 +158,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 			<aside
 				className={clsx(
-					"fixed inset-y-0 start-0 z-50 flex w-72 h-screen flex-col bg-taysir-teal text-white shadow-2xl transition-transform duration-300 ease-in-out border-e border-white/5 md:relative md:translate-x-0 md:shadow-xl",
+					"fixed inset-y-0 start-0 z-50 flex w-72 h-screen flex-col bg-brand-900 text-white shadow-2xl transition-transform duration-300 ease-in-out border-e border-white/5 md:relative md:translate-x-0 md:shadow-none",
 					isOpen
 						? "translate-x-0"
 						: isRtl
@@ -153,185 +166,138 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 							: "-translate-x-full",
 				)}
 			>
-				<div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
-					<Image
-						src="/logo.png"
-						alt="Taysir"
-						width={56}
-						height={56}
-						className="object-contain brightness-0 invert"
-					/>
-					<span className="text-2xl font-black tracking-tight text-white">
-						Taysir<span className="text-taysir-accent">.</span>
+				{/* Sidebar Header */}
+				<div className="flex items-center gap-3 px-8 h-20 shrink-0 border-b border-white/5">
+					<LogoMark size={32} color="var(--brand-500)" />
+					<span className="text-2xl font-bold tracking-tight text-white font-sans">
+						taysir
 					</span>
 				</div>
 
-				<nav className="flex-1 space-y-0.5 px-4 py-2 overflow-y-auto custom-scrollbar">
-					{filteredSuperAdminItems.length > 0 && (
-						<>
-							<div className="px-4 py-2 text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
-								Administration
-							</div>
-							{filteredSuperAdminItems.map((item) => {
-								const isActive = pathname === item.href;
-								return (
-									<Link
-										key={item.href}
-										href={item.href}
-										onClick={onClose}
-										className={clsx(
-											"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
-											isActive
-												? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1"
-												: "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1",
-										)}
-									>
-										{isActive && (
-											<div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
-										)}
-										<item.icon
-											size={22}
-											strokeWidth={1.5}
+				<div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar py-6 px-4">
+					<nav className="space-y-8">
+						{/* Super Admin Section */}
+						{filteredSuperAdminItems.length > 0 && (
+							<div className="space-y-1">
+								<div className="px-4 py-2 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+									Administration
+								</div>
+								{filteredSuperAdminItems.map((item) => {
+									const isActive = pathname === item.href;
+									return (
+										<Link
+											key={item.href}
+											href={item.href}
+											onClick={onClose}
 											className={clsx(
-												"transition-all duration-300",
+												"group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 relative",
 												isActive
-													? "text-taysir-accent scale-110"
-													: "group-hover:text-white group-hover:scale-110",
-												isRtl &&
-													(item.icon === LogOut || item.icon === FileText) &&
-													"rotate-180",
-											)}
-										/>
-										<span
-											className={clsx(
-												"truncate uppercase tracking-wider text-[11px]",
-												isActive ? "font-bold" : "",
+													? "bg-brand-500 text-white shadow-lg shadow-brand-900/20"
+													: "text-white/60 hover:bg-white/5 hover:text-white",
 											)}
 										>
-											{t(item.labelKey)}
-										</span>
-									</Link>
-								);
-							})}
-							<div className="my-4 border-t border-white/5" />
-						</>
-					)}
-
-					{filteredNavItems.length > 0 && (
-						<>
-							<div className="px-4 py-2 text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
-								Gestion
-							</div>
-							{filteredNavItems.map((item) => {
-								const isActive = pathname === item.href;
-								return (
-									<Link
-										key={item.href}
-										href={item.href}
-										onClick={onClose}
-										className={clsx(
-											"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
-											isActive
-												? "bg-white/10 text-white shadow-lg ring-1 ring-white/20 translate-x-1"
-												: "text-white/50 hover:bg-white/5 hover:text-white hover:translate-x-1",
-										)}
-									>
-										{isActive && (
-											<div className="absolute inset-y-3 w-1.5 bg-taysir-accent rounded-full -start-1 shadow-[0_0_10px_rgba(26,122,137,0.5)]" />
-										)}
-										<item.icon
-											size={22}
-											strokeWidth={1.5}
-											className={clsx(
-												"transition-all duration-300",
-												isActive
-													? "text-taysir-accent scale-110"
-													: "group-hover:text-white group-hover:scale-110",
-												isRtl &&
-													(item.icon === LogOut || item.icon === FileText) &&
-													"rotate-180",
+											<item.icon
+												size={20}
+												strokeWidth={1.75}
+												className={clsx(
+													"shrink-0 transition-transform duration-200 group-hover:scale-110",
+													isActive ? "text-white" : "text-white/40 group-hover:text-white",
+												)}
+											/>
+											<span className="truncate">{t(item.labelKey)}</span>
+											{isActive && (
+												<motion.div 
+                                                    layoutId="active-indicator"
+                                                    className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white" 
+                                                />
 											)}
-										/>
-										<span
+										</Link>
+									);
+								})}
+							</div>
+						)}
+
+						{/* Main Navigation Section */}
+						{filteredNavItems.length > 0 && (
+							<div className="space-y-1">
+								<div className="px-4 py-2 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+									Menu Principal
+								</div>
+								{filteredNavItems.map((item) => {
+									const isActive = pathname === item.href;
+									return (
+										<Link
+											key={item.href}
+											href={item.href}
+											onClick={onClose}
 											className={clsx(
-												"truncate uppercase tracking-wider text-[11px]",
-												isActive ? "font-bold" : "",
+												"group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 relative",
+												isActive
+													? "bg-brand-500 text-white shadow-lg shadow-brand-900/20"
+													: "text-white/60 hover:bg-white/5 hover:text-white",
 											)}
 										>
-											{t(item.labelKey)}
-										</span>
-									</Link>
-								);
-							})}
-						</>
-					)}
-				</nav>
+											<item.icon
+												size={20}
+												strokeWidth={1.75}
+												className={clsx(
+													"shrink-0 transition-transform duration-200 group-hover:scale-110",
+													isActive ? "text-white" : "text-white/40 group-hover:text-white",
+												)}
+											/>
+											<span className="truncate">{t(item.labelKey)}</span>
+											{isActive && (
+												<motion.div 
+                                                    layoutId="active-indicator"
+                                                    className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white" 
+                                                />
+											)}
+										</Link>
+									);
+								})}
+							</div>
+						)}
+					</nav>
+				</div>
 
-				<div className="mt-auto border-t border-white/5 p-4 bg-black/20 space-y-2">
+				{/* Sidebar Footer */}
+				<div className="mt-auto p-4 border-t border-white/5 space-y-4">
 					{showSettings && (
 						<Link
 							href="/dashboard/settings"
 							onClick={onClose}
 							className={clsx(
-								"group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 ease-in-out relative",
+								"group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200",
 								pathname === "/dashboard/settings"
-									? "bg-white/10 text-white shadow-lg ring-1 ring-white/20"
-									: "text-white/50 hover:bg-white/5 hover:text-white",
+									? "bg-white/10 text-white"
+									: "text-white/60 hover:bg-white/5 hover:text-white",
 							)}
 						>
-							<Settings
-								size={22}
-								strokeWidth={1.5}
-								className={clsx(
-									"transition-all duration-300",
-									pathname === "/dashboard/settings"
-										? "text-taysir-accent scale-110"
-										: "group-hover:text-white group-hover:scale-110",
-								)}
-							/>
-							<span
-								className={clsx(
-									"truncate uppercase tracking-wider text-[11px]",
-									pathname === "/dashboard/settings" ? "font-bold" : "",
-								)}
-							>
-								{t("settings")}
-							</span>
+							<Settings size={20} strokeWidth={1.75} className="shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+							<span className="truncate">{t("settings")}</span>
 						</Link>
 					)}
 
-					<div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm">
-						<div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-taysir-light to-taysir-teal flex items-center justify-center text-sm font-black text-white shadow-xl ring-2 ring-white/10">
+					<div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+						<div className="h-10 w-10 shrink-0 rounded-xl bg-brand-500 flex items-center justify-center text-sm font-bold text-white shadow-inner">
 							{session?.user?.name?.charAt(0).toUpperCase() || "U"}
 						</div>
-						<div className="flex flex-col overflow-hidden">
-							<span className="truncate text-sm font-black text-white leading-tight">
+						<div className="flex flex-col min-w-0">
+							<span className="truncate text-sm font-bold text-white leading-tight">
 								{session?.user?.name}
 							</span>
-							<span className="truncate text-[9px] font-bold text-taysir-light/60 uppercase tracking-[0.2em] mt-1">
-								{userRole}
+							<span className="truncate text-[10px] font-semibold text-white/40 uppercase tracking-wider mt-0.5">
+								{userRole?.toLowerCase()}
 							</span>
 						</div>
+                        <button 
+                            onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
+                            className="ms-auto p-2 text-white/30 hover:text-danger transition-colors"
+                            title={t("logout")}
+                        >
+                            <LogOut size={18} />
+                        </button>
 					</div>
-
-					<button
-						type="button"
-						onClick={() => {
-							onClose?.();
-							signOut({ callbackUrl: `/${locale}/login` });
-						}}
-						className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-black text-white/40 hover:bg-red-500/15 hover:text-red-400 transition-all duration-300 ease-in-out group uppercase tracking-widest"
-					>
-						<LogOut
-							size={22}
-							strokeWidth={1.5}
-							className={clsx(
-								"transition-transform group-hover:ms-1",
-								isRtl && "rotate-180",
-							)}
-						/>
-						{t("logout")}
-					</button>
 				</div>
 			</aside>
 		</>

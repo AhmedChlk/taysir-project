@@ -40,8 +40,10 @@ export function createSafeAction<TInput, TOutput>(
 			}
 
 			// 2. Vérification de l'établissement (tenant)
-			const tenantId = session.user.etablissementId;
-			if (!tenantId && session.user.role !== RoleUser.SUPER_ADMIN) {
+			const rawTenantId = session.user.etablissementId;
+			const isSuperAdmin = session.user.role === RoleUser.SUPER_ADMIN;
+
+			if (!rawTenantId && !isSuperAdmin) {
 				throw new TaysirError(
 					"Erreur d'isolation : Aucun établissement rattaché à ce compte.",
 					ErrorCodes.ERR_TENANT_MISMATCH,
@@ -62,7 +64,7 @@ export function createSafeAction<TInput, TOutput>(
 
 			// 4. Exécution de la logique
 			const result = await handler(validation.data, {
-				tenantId: tenantId ?? (session.user.role === RoleUser.SUPER_ADMIN ? "GLOBAL_ACCESS" : ""),
+				tenantId: rawTenantId || (isSuperAdmin ? "GLOBAL_ACCESS" : ""),
 				userId: session.user.id,
 				role: session.user.role,
 			});

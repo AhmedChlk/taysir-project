@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader2, Plus, Upload } from "lucide-react";
+import { FileText, Loader2, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { addDocumentToStudentAction } from "@/actions/students.actions";
 import { uploadFileAction } from "@/actions/upload.actions";
 import { Input } from "@/components/ui/FormInput";
@@ -18,54 +18,45 @@ export default function AddDocumentButton({
 }: AddDocumentButtonProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const _t = useTranslations();
+	const [error, setError] = useState<string | null>(null);
+	const t = useTranslations();
 	const router = useRouter();
 
-	const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		setError(null);
 		const formData = new FormData(e.currentTarget);
-		const name = formData.get("name") as string;
-		const file = fileInputRef.current?.files?.[0];
+		const file = formData.get("file") as File;
 
-		if (!file) {
-			setErrorMessage("Veuillez sélectionner un fichier.");
-			return;
-		}
-
-		if (!name) {
-			setErrorMessage("Veuillez donner un nom au document.");
+		if (!file || file.size === 0) {
+			setError("Veuillez sélectionner un fichier.");
 			return;
 		}
 
 		startTransition(async () => {
-			// 1. Upload to Vercel Blob
+			// 1. Upload file
 			const uploadData = new FormData();
 			uploadData.append("file", file);
 			const uploadRes = await uploadFileAction(uploadData);
 
 			if (!uploadRes.success || !uploadRes.data?.url) {
-				setErrorMessage(
-					uploadRes.error || "Erreur lors de l'upload du fichier",
-				);
+				setError(uploadRes.error || "Erreur lors de l'envoi du fichier.");
 				return;
 			}
 
-			// 2. Save record in database
-			const result = await addDocumentToStudentAction({
+			// 2. Create document record
+			const res = await addDocumentToStudentAction({
 				studentId,
-				name,
+				name: formData.get("name") as string,
 				url: uploadRes.data.url,
 				type: file.type,
 			});
 
-			if (result.success) {
+			if (res.success) {
 				setIsOpen(false);
-				setErrorMessage(null);
 				router.refresh();
 			} else {
-				setErrorMessage(result.error.message || "Une erreur est survenue.");
+				setError(res.error.message);
 			}
 		});
 	};
@@ -73,86 +64,80 @@ export default function AddDocumentButton({
 	return (
 		<>
 			<button
-				onClick={() => setIsOpen(true)}
-				className="btn-primary flex items-center gap-2 px-4 py-2 rounded-xl"
+				type="button"
+				onClick={() => {
+					setError(null);
+					setIsOpen(true);
+				}}
+				className="btn btn--secondary btn--md px-5 h-11"
 			>
-				<Plus size={18} />
-				<span className="font-black text-[10px] uppercase tracking-widest">
-					Ajouter un document
-				</span>
+				<Plus size={16} strokeWidth={2.5} />
+				<span>Ajouter un document</span>
 			</button>
 
 			<Modal
 				isOpen={isOpen}
-				onClose={() => {
-					setIsOpen(false);
-					setErrorMessage(null);
-				}}
+				onClose={() => setIsOpen(false)}
 				title="Nouveau document"
-				footer={
-					<>
-						<button
-							onClick={() => setIsOpen(false)}
-							className="btn-ghost font-black text-xs uppercase tracking-widest text-taysir-teal/40"
-						>
-							Annuler
-						</button>
-						<button
-							form="add-document-form"
-							type="submit"
-							disabled={isPending}
-							className="btn-primary flex items-center gap-2 px-6 py-3 rounded-2xl"
-						>
-							{isPending && <Loader2 size={16} className="animate-spin" />}
-							<span className="font-black text-xs uppercase tracking-widest">
-								Téléverser
-							</span>
-						</button>
-					</>
-				}
 			>
-				<form
-					id="add-document-form"
-					onSubmit={handleUpload}
-					className="space-y-6 p-2"
-				>
-					{errorMessage && (
-						<div className="p-3 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold border border-rose-100 flex items-center gap-2">
-							<Plus size={14} className="rotate-45" />
-							{errorMessage}
+				<form onSubmit={handleSubmit} className="space-y-8 pb-4">
+					{error && (
+						<div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-danger text-xs font-bold flex items-center gap-3">
+							<X size={14} className="shrink-0" />
+							{error}
 						</div>
 					)}
 
-					<div
-						onClick={() => fileInputRef.current?.click()}
-						className="w-full py-12 border-2 border-dashed border-taysir-teal/10 rounded-[32px] flex flex-col items-center justify-center gap-4 bg-taysir-bg/30 hover:bg-taysir-teal/5 transition-all cursor-pointer group"
-					>
-						<div className="w-16 h-16 rounded-3xl bg-white shadow-sm flex items-center justify-center text-taysir-teal group-hover:scale-110 transition-transform">
-							<Upload size={32} />
-						</div>
-						<div className="text-center">
-							<p className="text-sm font-black text-taysir-teal uppercase tracking-tight">
-								Cliquer pour sélectionner
-							</p>
-							<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest mt-1">
-								PDF, JPG, PNG (max 5Mo)
-							</p>
+					<div className="space-y-6">
+						<Input
+							label="Nom du document"
+							name="name"
+							placeholder="ex: Certificat Médical, Dossier Inscription..."
+							required
+						/>
+
+						<div className="space-y-2">
+							<label className="text-sm font-bold text-ink-700 uppercase tracking-wide">
+								Fichier (PDF, Image)
+							</label>
+							<div className="relative group">
+								<input
+									type="file"
+									name="file"
+									required
+									accept=".pdf,image/*"
+									className="block w-full text-sm text-ink-500
+                                        file:mr-4 file:py-2.5 file:px-4
+                                        file:rounded-xl file:border-0
+                                        file:text-xs file:font-bold file:uppercase file:tracking-widest
+                                        file:bg-brand-50 file:text-brand-700
+                                        hover:file:bg-brand-100
+                                        cursor-pointer bg-surface-50 rounded-2xl border border-dashed border-line p-4 transition-all hover:border-brand-500/30"
+								/>
+							</div>
 						</div>
 					</div>
 
-					<input
-						type="file"
-						ref={fileInputRef}
-						className="hidden"
-						accept="image/*,application/pdf"
-					/>
-
-					<Input
-						name="name"
-						label="Nom du document"
-						placeholder="Ex: Certificat médical, CNI, etc."
-						required
-					/>
+					<div className="flex justify-end gap-3 pt-6 border-t border-line">
+						<button
+							type="button"
+							onClick={() => setIsOpen(false)}
+							className="btn btn--ghost btn--md"
+						>
+							{t("cancel")}
+						</button>
+						<button
+							type="submit"
+							disabled={isPending}
+							className="btn btn--primary btn--md px-8 shadow-lg shadow-brand-500/10 min-w-[140px]"
+						>
+							{isPending ? (
+								<Loader2 size={18} className="animate-spin" />
+							) : (
+								"Enregistrer"
+							)}
+						</button>
+					</div>
 				</form>
 			</Modal>
 		</>

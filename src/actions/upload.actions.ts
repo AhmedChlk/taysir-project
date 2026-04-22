@@ -48,9 +48,8 @@ export async function uploadFileAction(formData: FormData) {
 		const buffer = Buffer.from(bytes);
 		await writeFile(absolutePath, buffer);
 
-		// URL relative ou absolue via variable d'env
-		const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-		const url = `${appUrl}/${relativePath}`;
+		// Retourner l'URL relative commençant par / pour que le navigateur la résolve sur le host actuel
+		const url = `/${relativePath}`;
 
 		return {
 			success: true,

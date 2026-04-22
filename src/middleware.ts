@@ -32,9 +32,17 @@ export default async function middleware(req: NextRequest) {
 			return NextResponse.redirect(loginUrl);
 		}
 
-		// Role protection for superadmin
-		if (pathname.includes("/superadmin") && token.role !== "SUPER_ADMIN") {
-			const locale = pathname.split("/")[1] || "fr";
+		// Role-based redirection
+		const locale = pathname.split("/")[1] || "fr";
+		const isSuperAdmin = token.role === "SUPER_ADMIN";
+		const isDashboardPath = pathname.includes("/dashboard");
+		const isSuperAdminPath = pathname.includes("/superadmin");
+
+		if (isSuperAdmin && isDashboardPath) {
+			return NextResponse.redirect(new URL(`/${locale}/superadmin`, req.url));
+		}
+
+		if (!isSuperAdmin && isSuperAdminPath) {
 			return NextResponse.redirect(new URL(`/${locale}/dashboard`, req.url));
 		}
 	}

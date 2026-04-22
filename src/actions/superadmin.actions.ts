@@ -11,7 +11,7 @@ import * as bcrypt from "bcryptjs";
 
 const CreateTenantSchema = z.object({
 	name: z.string().min(2),
-	slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug invalide (minuscules, chiffres, tirets)"),
+	slug: z.string().min(2).transform(val => val.toLowerCase().trim().replace(/\s+/g, '-')),
 	primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
     contractEndDate: z.string().optional(),
     manager: z.object({
