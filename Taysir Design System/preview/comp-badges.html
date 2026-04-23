@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body{margin:0;padding:22px;background:#fff;font-family:var(--font-sans);color:var(--fg1)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.badge{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--font-sans);padding:4px 10px;border-radius:999px}
+.b-accent{background:var(--brand-50);color:var(--brand-900)}
+.b-solid{background:var(--brand-500);color:#fff}
+.b-success{background:#DCFCE7;color:#15803D}
+.b-neutral{background:#F3F4F6;color:var(--fg2)}
+.b-save{background:#DCFCE7;color:#15803D}
+.toggle{display:inline-flex;align-items:center;background:#F3F4F6;padding:4px;border-radius:999px;font-size:13px;font-weight:500}
+.toggle button{border:none;background:transparent;padding:6px 14px;border-radius:999px;font:inherit;color:var(--fg2);cursor:pointer}
+.toggle button.on{background:#fff;color:var(--fg1);box-shadow:var(--shadow-1)}
+.switch{position:relative;width:40px;height:22px;background:var(--brand-500);border-radius:999px;cursor:pointer}
+.switch::after{content:"";position:absolute;top:2px;left:20px;width:18px;height:18px;background:#fff;border-radius:999px;box-shadow:var(--shadow-1);transition:left 220ms var(--ease)}
+.switch.off{background:#E5E7EB}.switch.off::after{left:2px}
+.lbl{width:100%;font-size:11px;font-weight:600;color:var(--fg3);margin:0;letter-spacing:.08em;text-transform:uppercase}
+</style></head><body>
+<div class="row"><div class="lbl">Badges</div></div>
+<div class="row">
+  <span class="badge b-accent">Nouveau</span>
+  <span class="badge b-solid">Le plus populaire</span>
+  <span class="badge b-success">Actif</span>
+  <span class="badge b-neutral">Brouillon</span>
+  <span class="badge b-save">Économisez 20 %</span>
+</div>
+<div class="row"><div class="lbl">Toggles</div></div>
+<div class="row">
+  <div class="toggle"><button class="on">Mensuel</button><button>Annuel</button></div>
+  <div class="switch"></div>
+  <div class="switch off"></div>
+</div>
+</body></html>

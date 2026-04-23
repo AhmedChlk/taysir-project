@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taysir — La simplicité au service de vos équipes</title>
+<link rel="icon" type="image/png" href="../../assets/logo-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body { margin: 0; background: #fff; }
+  * { box-sizing: border-box; }
+
+  /* ---- Button system ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 600 14px var(--font-sans);
+    border-radius: var(--r-md); padding: 11px 18px;
+    border: 1px solid transparent; cursor: pointer;
+    transition: all 220ms var(--ease);
+    white-space: nowrap;
+  }
+  .btn--primary { background: var(--brand-500); color: #fff; }
+  .btn--primary:hover { background: var(--brand-700); transform: translateY(-1px); box-shadow: var(--shadow-2); }
+  .btn--primary:active { transform: none; background: var(--brand-900); }
+  .btn--primary:disabled { background: var(--brand-300); cursor: wait; transform: none; box-shadow: none; }
+
+  .btn--ghost { background: transparent; color: var(--brand-500); border-color: var(--brand-500); }
+  .btn--ghost:hover { background: rgba(26,122,137,0.06); transform: translateY(-1px); }
+
+  .btn--on-dark { background: transparent; color: #fff; border-color: rgba(255,255,255,0.35); }
+  .btn--on-dark:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.6); transform: translateY(-1px); }
+
+  .btn--sm { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+  .btn--lg { padding: 14px 22px; font-size: 16px; }
+
+  .field {
+    width: 100%; box-sizing: border-box; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: var(--r-sm);
+    font: 400 15px var(--font-sans);
+    background: #fff; color: var(--fg1);
+    transition: all 180ms var(--ease);
+  }
+  .field:focus { outline: none; border-color: var(--brand-500); box-shadow: 0 0 0 3px rgba(26,122,137,0.15); }
+
+  /* ---- Toggle pill (monthly/annual) ---- */
+  .toggle-pill { display: inline-flex; background: #F3F4F6; padding: 4px; border-radius: 999px; font-size: 14px; font-weight: 500; }
+  .toggle-pill button { border: none; background: transparent; padding: 8px 18px; border-radius: 999px; font: inherit; color: var(--fg2); cursor: pointer; transition: all 220ms var(--ease); }
+  .toggle-pill button.on { background: #fff; color: var(--fg1); box-shadow: var(--shadow-1); }
+
+  /* ---- Pricing cards ---- */
+  .pricing-card {
+    background: #fff; border-radius: var(--r-lg); padding: 32px 28px;
+    border: 1px solid var(--line); position: relative;
+    transition: all 220ms var(--ease); display: flex; flex-direction: column;
+  }
+  .pricing-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+  .pricing-card--feature { border: 1.5px solid var(--brand-500); box-shadow: var(--shadow-2); }
+  .pricing-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--brand-500); color: #fff;
+    font: 600 11px var(--font-sans); padding: 5px 12px;
+    border-radius: 999px; letter-spacing: 0.02em;
+  }
+
+  /* ---- Range input custom thumb ---- */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; border-radius: 999px;
+    background: #fff; border: 2px solid var(--brand-500);
+    box-shadow: var(--shadow-1); cursor: pointer;
+    margin-top: -7px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 999px;
+    background: #fff; border: 2px solid var(--brand-500);
+    box-shadow: var(--shadow-1); cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; }
+  input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 900px) {
+    :root { --t-display: 44px; --t-display-lh: 50px; --t-h1: 34px; --t-h1-lh: 40px; --t-h2: 26px; --t-h2-lh: 32px; }
+    [data-section="pricing"] > div > div > div:last-child { grid-template-columns: 1fr !important; }
+    [data-section="roi"] > div > div:last-child { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="./Primitives.jsx"></script>
+<script type="text/babel" src="./Navbar.jsx"></script>
+<script type="text/babel" src="./Hero.jsx"></script>
+<script type="text/babel" src="./KPIAndTabs.jsx"></script>
+<script type="text/babel" src="./MicroDemo.jsx"></script>
+<script type="text/babel" src="./ROISimulator.jsx"></script>
+<script type="text/babel" src="./Pricing.jsx"></script>
+<script type="text/babel" src="./Footer.jsx"></script>
+
+<script type="text/babel">
+  const App = () => (
+    <React.Fragment>
+      <Navbar/>
+      <Hero/>
+      <KPIBand/>
+      <MicroDemo/>
+      <PlatformTabs/>
+      <ROISimulator/>
+      <Pricing/>
+      <Footer/>
+    </React.Fragment>
+  );
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

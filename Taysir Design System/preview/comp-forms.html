@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body{margin:0;padding:22px;background:#fff;font-family:var(--font-sans);color:var(--fg1)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:620px}
+label{display:block;font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px}
+.field{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font:400 14px var(--font-sans);background:#fff;color:var(--fg1);transition:all 180ms var(--ease)}
+.field:focus{outline:none;border-color:var(--brand-500);box-shadow:0 0 0 3px rgba(26,122,137,.15)}
+.field--err{border-color:#DC2626}
+.hint{font-size:11px;color:var(--fg3);margin-top:4px}
+.hint--err{color:#DC2626}
+.chk{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--fg1)}
+.chk input{accent-color:var(--brand-500);width:16px;height:16px}
+.lbl{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--fg3);margin:0;letter-spacing:.08em;text-transform:uppercase}
+</style></head><body>
+<div class="grid">
+  <div class="lbl">Form inputs</div>
+  <div>
+    <label>Email de travail</label>
+    <input class="field" placeholder="vous@entreprise.com" value="alex@taysir.co">
+    <div class="hint">Nous ne partageons jamais votre email.</div>
+  </div>
+  <div>
+    <label>Mot de passe</label>
+    <input class="field field--err" type="password" value="xx">
+    <div class="hint hint--err">8 caractères minimum.</div>
+  </div>
+  <div style="grid-column:1/-1">
+    <label>Taille de l'équipe</label>
+    <select class="field"><option>1 – 10 personnes</option><option>11 – 50</option></select>
+  </div>
+  <div style="grid-column:1/-1"><label class="chk"><input type="checkbox" checked>Je souhaite recevoir les nouveautés produit</label></div>
+</div>
+</body></html>
