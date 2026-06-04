@@ -4,43 +4,60 @@ services:
     container_name: taysir-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: taysir_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-taysir_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d taysir_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-taysir_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    # Keep logs bounded — VPS disk is small.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: "0.5"
+          memory: 256M
 
   web:
+    # Image built locally and transferred to the VPS (docker save | ssh docker load).
+    # `build: .` kept as a fallback if you ever build on the host directly.
+    image: taysir:latest
     build: .
     container_name: taysir-app
     restart: always
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env.production
     environment:
-      POSTGRES_PRISMA_URL: postgresql://postgres:postgres@db:5432/taysir_db?schema=public
-      POSTGRES_URL_NON_POOLING: postgresql://postgres:postgres@db:5432/taysir_db?schema=public
-      NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: changeme
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # Surface more detail in logs without full debug noise.
+      NEXT_TELEMETRY_DISABLED: "1"
     ports:
       - "3000:3000"
     volumes:
       - ./public/uploads:/app/public/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1G
+          cpus: "1.0"
+          memory: 700M
 
 volumes:
   postgres_data:
