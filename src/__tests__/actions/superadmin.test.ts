@@ -44,119 +44,165 @@ import {
 	getAllTenantsAction,
 	createTenantAction,
 	toggleTenantStatusAction,
+    updateTenantAction,
 	deleteTenantAction,
 } from "@/actions/superadmin.actions";
 import { prisma } from "@/lib/prisma";
 
-const TEST_MANAGER_PASSWORD = process.env.TEST_PASSWORD as string;
+const VALID_UUID = "550e8400-e29b-41d4-a716-446655440001";
 
-const makeSuperAdminSession = () => ({
+const makeSession = (role: string, etablissementId?: string) => ({
 	user: {
-		id: "superadmin-1",
-		role: "SUPER_ADMIN",
+		id: "test-user-id",
+		role: role,
+        etablissementId: etablissementId
 	},
 	expires: "2099-01-01",
 });
 
-const makeManagerSession = () => ({
-	user: {
-		id: "manager-1",
-		role: "GERANT",
-		etablissementId: "etab-1",
-	},
-	expires: "2099-01-01",
-});
-
-describe("SuperAdmin Actions", () => {
+describe("SuperAdmin Actions Audit", () => {
 	beforeEach(() => {
         vi.clearAllMocks();
     });
 
+    describe("🔴 Le Mur de Feu (Privilege Escalation)", () => {
+        const forbiddenRoles = ["ADMIN", "GERANT", "STAFF", "STUDENT"];
+        
+        it.each(forbiddenRoles)("rejette l'accès si le rôle est %s", async (role) => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession(role, "some-etab") as never);
+            
+            const results = await Promise.all([
+                getAllTenantsAction({}),
+                createTenantAction({
+                    name: "Test",
+                    slug: "test",
+                    manager: { email: "a@b.com", firstName: "A", lastName: "B", password: process.env.TEST_PASSWORD || "password123" }
+                }),
+                toggleTenantStatusAction({ id: VALID_UUID, isActive: true }),
+                updateTenantAction({ id: VALID_UUID }),
+                deleteTenantAction({ id: VALID_UUID })
+            ]);
+
+            for (const res of results) {
+                expect(res.success).toBe(false);
+            }
+        });
+    });
+
 	describe("getAllTenantsAction", () => {
-		it("retourne tous les établissements si SUPER_ADMIN", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSuperAdminSession() as never);
-			const tenants = [{ id: "t1", name: "Etab 1" }];
-			vi.mocked(prisma.etablissement.findMany).mockResolvedValue(tenants as any);
+		it("🟢 Accès Global: récupère tous les établissements", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+			vi.mocked(prisma.etablissement.findMany).mockResolvedValue([]);
 
-			const result = await getAllTenantsAction({});
-			expect(result.success).toBe(true);
-			if (result.success) expect(result.data).toEqual(tenants);
+			await getAllTenantsAction({});
+			expect(prisma.etablissement.findMany).toHaveBeenCalled();
 		});
 
-		it("rejette si non SUPER_ADMIN", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeManagerSession() as never);
-			const result = await getAllTenantsAction({});
-			expect(result.success).toBe(false);
-			if (!result.success) expect(result.error.code).toBe("FORBIDDEN_ACCESS");
-		});
+        it("🟠 Pannes Systèmes: gère une erreur Prisma", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            vi.mocked(prisma.etablissement.findMany).mockRejectedValue(new Error("CRASH"));
+
+            const result = await getAllTenantsAction({});
+            expect(result.success).toBe(false);
+        });
 	});
 
 	describe("createTenantAction", () => {
-		const tenantData = {
-			name: "Nouvelle École",
-			slug: "nouvelle-ecole",
-			primaryColor: "#FF5733",
+		const validData = {
+			name: "Test School",
+			slug: "Test School",
+			primaryColor: "#aabbcc",
 			manager: {
-				email: "admin@nouvelle.com",
-				firstName: "Ahmed",
-				lastName: "Ben",
-				password: TEST_MANAGER_PASSWORD,
+				email: "manager@test.com",
+				firstName: "John",
+				lastName: "Doe",
+				password: process.env.TEST_PASSWORD || "password123",
 			}
 		};
 
-		it("crée un établissement et son gérant en transaction", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSuperAdminSession() as never);
+		it("Happy Path Extrême: création réussie avec contractEndDate", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
 			vi.mocked(prisma.etablissement.findUnique).mockResolvedValue(null);
 			vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-			
-			const mockTenant = { id: "new-etab-id", ...tenantData };
-			const mockManager = { id: "new-user-id", email: tenantData.manager.email };
-			
-			vi.mocked(prisma.etablissement.create).mockResolvedValue(mockTenant as any);
-			vi.mocked(prisma.user.create).mockResolvedValue(mockManager as any);
+			vi.mocked(prisma.etablissement.create).mockResolvedValue({ id: "etab-1" } as any);
 
-			const result = await createTenantAction(tenantData);
-			
+			const result = await createTenantAction({ ...validData, contractEndDate: "2030-01-01" });
 			expect(result.success).toBe(true);
-			expect(prisma.etablissement.create).toHaveBeenCalled();
-			expect(prisma.user.create).toHaveBeenCalled();
+            expect(prisma.etablissement.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ 
+                    contractEndDate: expect.any(Date),
+                    primaryColor: "#aabbcc"
+                })
+            }));
 		});
 
-		it("rejette si le slug existe déjà", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSuperAdminSession() as never);
-			vi.mocked(prisma.etablissement.findUnique).mockResolvedValue({ id: "exist" } as any);
+        it("Happy Path: création avec valeurs par défaut (no color, no contract)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            const { primaryColor, ...minimalData } = validData;
+			vi.mocked(prisma.etablissement.findUnique).mockResolvedValue(null);
+			vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
-			const result = await createTenantAction(tenantData);
-			expect(result.success).toBe(false);
-		});
+			await createTenantAction(minimalData as any);
+            expect(prisma.etablissement.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ 
+                    primaryColor: "#0F515C",
+                    contractEndDate: null
+                })
+            }));
+        });
+
+        it("rejette si slug déjà pris", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            vi.mocked(prisma.etablissement.findUnique).mockResolvedValue({ id: "exist" } as any);
+            
+            const result = await createTenantAction(validData);
+            expect(result.success).toBe(false);
+            if (!result.success) expect(result.error.message).toBe("Ce slug est déjà utilisé.");
+        });
+
+        it("rejette si email déjà pris", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            vi.mocked(prisma.etablissement.findUnique).mockResolvedValue(null);
+            vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "u1" } as any);
+
+            const result = await createTenantAction(validData);
+            expect(result.success).toBe(false);
+            if (!result.success) expect(result.error.message).toBe("Un utilisateur possède déjà cet email.");
+        });
 	});
 
-	describe("toggleTenantStatusAction", () => {
-		it("active ou désactive un établissement", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSuperAdminSession() as never);
-			const tenantId = "550e8400-e29b-41d4-a716-446655440001";
-			vi.mocked(prisma.etablissement.update).mockResolvedValue({ id: tenantId, isActive: false } as any);
+	describe("updateTenantAction", () => {
+		it("gère contractEndDate et mise à jour partielle", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            vi.mocked(prisma.etablissement.update).mockResolvedValue({} as any);
 
-			const result = await toggleTenantStatusAction({ id: tenantId, isActive: false });
+			const result = await updateTenantAction({ id: VALID_UUID, contractEndDate: "2030-01-01", name: "New" });
 			expect(result.success).toBe(true);
-			expect(prisma.etablissement.update).toHaveBeenCalledWith({
-				where: { id: tenantId },
-				data: { isActive: false }
-			});
+            expect(prisma.etablissement.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({ contractEndDate: expect.any(Date), name: "New" })
+            }));
 		});
+
+        it("gère la mise à jour sans contractEndDate", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            await updateTenantAction({ id: VALID_UUID, name: "No Date" });
+            expect(prisma.etablissement.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.not.objectContaining({ contractEndDate: expect.anything() })
+            }));
+        });
 	});
 
-	describe("deleteTenantAction", () => {
-		it("supprime un établissement", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSuperAdminSession() as never);
-			const tenantId = "550e8400-e29b-41d4-a716-446655440001";
-			vi.mocked(prisma.etablissement.delete).mockResolvedValue({ id: tenantId } as any);
+    describe("toggle et delete", () => {
+        it("toggle avec succès", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            await toggleTenantStatusAction({ id: VALID_UUID, isActive: false });
+            expect(prisma.etablissement.update).toHaveBeenCalled();
+        });
 
-			const result = await deleteTenantAction({ id: tenantId });
-			expect(result.success).toBe(true);
-			expect(prisma.etablissement.delete).toHaveBeenCalledWith({
-				where: { id: tenantId }
-			});
-		});
-	});
+        it("delete avec succès", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession("SUPER_ADMIN") as never);
+            await deleteTenantAction({ id: VALID_UUID });
+            expect(prisma.etablissement.delete).toHaveBeenCalled();
+        });
+    });
 });

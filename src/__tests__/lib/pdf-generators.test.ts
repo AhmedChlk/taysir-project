@@ -1,123 +1,132 @@
-import { describe, expect, it, vi } from "vitest";
-import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
-import { generatePaymentReceiptPDF } from "@/lib/pdf-generators/payment-receipt";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockDocInstance = {
-	setFillColor: vi.fn(),
-	rect: vi.fn(),
-	setTextColor: vi.fn(),
-	setFontSize: vi.fn(),
-	setFont: vi.fn(),
-	text: vi.fn(),
-	setDrawColor: vi.fn(),
-	line: vi.fn(),
-	splitTextToSize: vi.fn((text: string) => [text]),
-	save: vi.fn(),
-	output: vi.fn().mockReturnValue(new ArrayBuffer(0)),
+// Mock jsPDF
+const mockJsPDF = {
+    setFontSize: vi.fn().mockReturnThis(),
+    setTextColor: vi.fn().mockReturnThis(),
+    setFillColor: vi.fn().mockReturnThis(),
+    setDrawColor: vi.fn().mockReturnThis(),
+    setFont: vi.fn().mockReturnThis(),
+    text: vi.fn().mockReturnThis(),
+    line: vi.fn().mockReturnThis(),
+    rect: vi.fn().mockReturnThis(),
+    output: vi.fn().mockReturnValue(new ArrayBuffer(8)),
+    save: vi.fn(),
+    splitTextToSize: vi.fn((text) => [text]),
 };
 
-vi.mock("jspdf", () => {
-	class MockJsPDF {
-		setFillColor = vi.fn();
-		rect = vi.fn();
-		setTextColor = vi.fn();
-		setFontSize = vi.fn();
-		setFont = vi.fn();
-		text = vi.fn();
-		setDrawColor = vi.fn();
-		line = vi.fn();
-		splitTextToSize = vi.fn((text: string) => [text]);
-		save = vi.fn();
-		output = vi.fn().mockReturnValue(new ArrayBuffer(0));
-	}
-	return { jsPDF: MockJsPDF };
-});
+vi.mock("jspdf", () => ({
+    jsPDF: vi.fn().mockImplementation(function() {
+        return mockJsPDF;
+    }),
+}));
 
-const mockStudent = {
-	id: "student-1",
-	firstName: "Ahmed",
-	lastName: "Benali",
-	isActive: true,
-	isMinor: false,
-	address: "123 Rue Test",
-	phone: "0555123456",
-	email: "ahmed@test.dz",
-	parentName: null,
-	parentPhone: null,
-	parentEmail: null,
-	photoUrl: null,
-	birthDate: new Date("2000-01-01"),
-	registrationDate: new Date("2024-09-01"),
-	etablissementId: "etab-1",
-	createdAt: new Date(),
-	updatedAt: new Date(),
-	groups: [
-		{ id: "g1", name: "Groupe A", etablissementId: "etab-1", isActive: true },
-	],
-} as Parameters<typeof generateStudentProfilePDF>[0];
+import { generatePaymentReceiptPDF } from "@/lib/pdf-generators/payment-receipt";
+import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
 
-// suppress unused variable warning — mockDocInstance is kept for reference clarity
-void mockDocInstance;
+describe("PDF Generators Audit", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
-describe("generateStudentProfilePDF", () => {
-	it("génère un PDF sans lever d'exception", () => {
-		expect(() => generateStudentProfilePDF(mockStudent)).not.toThrow();
-	});
+    describe("generatePaymentReceiptPDF", () => {
+        const validData = {
+            paiementId: "pay-123-abc",
+            paiementDate: new Date("2026-04-22"),
+            amount: 15000.50,
+            method: "CASH",
+            reference: "REF-999",
+            resteSurTranche: 5000,
+            studentFirstName: "Mohamed",
+            studentLastName: "L'Arabe",
+            schoolName: "Taysir Academy",
+        };
 
-	it("retourne un objet jsPDF", () => {
-		const doc = generateStudentProfilePDF(mockStudent);
-		expect(doc).toBeDefined();
-	});
+        it("Happy Path: génère un reçu complet avec les bons montants", () => {
+            const result = generatePaymentReceiptPDF(validData);
+            
+            expect(result).toBeInstanceOf(ArrayBuffer);
+            expect(mockJsPDF.text).toHaveBeenCalledWith("Taysir Academy", 105, 20, expect.anything());
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("15000.5 DZD"), 20, 100);
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("5000 DZD"), 20, 140);
+        });
 
-	it("gère un élève mineur avec parentName", () => {
-		const minorStudent = {
-			...mockStudent,
-			isMinor: true,
-			parentName: "Karim Benali",
-			parentPhone: "0555000000",
-		};
-		expect(() => generateStudentProfilePDF(minorStudent)).not.toThrow();
-	});
+        it("Gestion du Vide: gère l'absence de référence", () => {
+            generatePaymentReceiptPDF({ ...validData, reference: null });
+            expect(mockJsPDF.text).not.toHaveBeenCalledWith(expect.stringContaining("Référence"), expect.anything(), expect.anything());
+        });
 
-	it("gère un élève sans adresse", () => {
-		const studentWithoutAddress = { ...mockStudent, address: null };
-		expect(() =>
-			generateStudentProfilePDF(studentWithoutAddress),
-		).not.toThrow();
-	});
+        it("Caractères Spéciaux: résiste aux noms contenant des accents ou apostrophes", () => {
+            generatePaymentReceiptPDF({ ...validData, studentFirstName: "Étudiant", studentLastName: "O'Conner" });
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("Étudiant O'Conner"), 20, 90);
+        });
 
-	it("gère un élève sans groupes", () => {
-		const studentWithoutGroups = { ...mockStudent, groups: [] };
-		expect(() => generateStudentProfilePDF(studentWithoutGroups)).not.toThrow();
-	});
-});
+        it("Edge Case: gère un paiementId sans tiret (Branch coverage ligne 30)", () => {
+            generatePaymentReceiptPDF({ ...validData, paiementId: "simpleid" });
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("Reçu N° : SIMPLEID"), 20, 60);
+        });
+    });
 
-describe("generatePaymentReceiptPDF", () => {
-	const mockReceiptData = {
-		paiementId: "pay-123-abc",
-		paiementDate: new Date("2024-04-20"),
-		amount: 5000,
-		method: "CASH",
-		reference: null,
-		resteSurTranche: 2000,
-		studentFirstName: "Ahmed",
-		studentLastName: "Benali",
-		schoolName: "Ecole Taysir",
-	};
+    describe("generateStudentProfilePDF", () => {
+        const student = {
+            id: "s1",
+            firstName: "Amine",
+            lastName: "Benali",
+            isActive: true,
+            isMinor: true,
+            address: "123 Rue de la Liberté, Alger, Algérie",
+            parentName: "Zohra Benali",
+            parentPhone: "0555-11-22-33",
+            registrationDate: new Date(),
+            groups: [{ id: "g1", name: "Math Grade 10" }, { id: "g2", name: "Physics" }],
+        } as any;
 
-	it("génère un reçu de paiement sans lever d'exception", () => {
-		expect(() => generatePaymentReceiptPDF(mockReceiptData)).not.toThrow();
-	});
+        it("Happy Path: génère un profil élève complet (Mineur)", () => {
+            const doc = generateStudentProfilePDF(student);
+            expect(doc).toBeDefined();
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("Zohra Benali"), 60, 135);
+            // splitTextToSize wrapping
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.arrayContaining([expect.stringContaining("Math Grade 10, Physics")]), 60, 180);
+        });
 
-	it("génère un reçu avec référence", () => {
-		expect(() =>
-			generatePaymentReceiptPDF({ ...mockReceiptData, reference: "REF-456" })
-		).not.toThrow();
-	});
+        it("Happy Path: génère un profil élève adulte (Majeur) et INACTIF", () => {
+            const adult = { ...student, isActive: false, isMinor: false, phone: "0666-77-88-99", email: "amine@test.com" };
+            generateStudentProfilePDF(adult);
+            expect(mockJsPDF.text).toHaveBeenCalledWith("INACTIF", 60, 80);
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("0666-77-88-99"), 60, 135);
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.stringContaining("amine@test.com"), 60, 145);
+        });
 
-	it("génère un reçu si paiementId est vide", () => {
-		expect(() =>
-			generatePaymentReceiptPDF({ ...mockReceiptData, paiementId: "" })
-		).not.toThrow();
-	});
+        it("Gestion du Vide: gère l'absence d'adresse, de groupes et les fallbacks N/A", () => {
+            const minimal = { 
+                ...student, 
+                address: null, 
+                groups: [], 
+                parentName: null, 
+                parentPhone: null 
+            };
+            generateStudentProfilePDF(minimal);
+            expect(mockJsPDF.text).toHaveBeenCalledWith(expect.arrayContaining([expect.stringContaining("Aucun groupe")]), 60, 180);
+            expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 135); // parentName null -> N/A
+            expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 145); // parentPhone null -> N/A
+        });
+
+        it("Gestion du Vide: fallbacks N/A pour adulte", () => {
+            const adultMinimal = { 
+                ...student, 
+                isMinor: false, 
+                phone: null, 
+                email: null 
+            };
+            generateStudentProfilePDF(adultMinimal);
+            expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 135); // phone null -> N/A
+            expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 145); // email null -> N/A
+        });
+
+        it("Données Massives: vérifie la pagination/découpage de texte pour les adresses très longues", () => {
+            const longAddress = "A".repeat(500);
+            generateStudentProfilePDF({ ...student, address: longAddress });
+            expect(mockJsPDF.splitTextToSize).toHaveBeenCalled();
+        });
+    });
 });

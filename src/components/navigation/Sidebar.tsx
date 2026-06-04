@@ -291,7 +291,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 							</span>
 						</div>
                         <button 
-                            onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
+                            onClick={async () => {
+                                await signOut({ redirect: false });
+                                window.location.href = `/${locale}/login`;
+                            }}
                             className="ms-auto p-2 text-white/30 hover:text-danger transition-colors"
                             title={t("logout")}
                         >

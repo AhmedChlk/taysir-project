@@ -8,6 +8,7 @@ import { getTenantPrisma } from "@/lib/prisma";
 import { stripUndefined } from "@/lib/utils/prisma-helpers";
 import {
 	ActivitySchema,
+	BulkMarkPresenceSchema,
 	CreateGroupSchema,
 	MarkPresenceSchema,
 	RoomSchema,
@@ -275,6 +276,42 @@ export const markPresenceAction = createSafeAction(
 				etablissementId: tenantId,
 			},
 		});
+
+		revalidateTag(`attendance-${tenantId}`, "max");
+		return result;
+	},
+);
+
+export const bulkMarkPresenceAction = createSafeAction(
+	BulkMarkPresenceSchema,
+	async ({ sessionId, records }, { tenantId }) => {
+		const tenantPrisma = getTenantPrisma(tenantId);
+
+		const result = await tenantPrisma.$transaction(
+			records.map((record) =>
+				tenantPrisma.attendanceRecord.upsert({
+					where: {
+						sessionId_studentId_etablissementId: {
+							sessionId,
+							studentId: record.studentId,
+							etablissementId: tenantId,
+						},
+					},
+					create: {
+						sessionId,
+						etablissementId: tenantId,
+						studentId: record.studentId,
+						status: record.status,
+						note: record.note ?? null,
+					},
+					update: {
+						status: record.status,
+						note: record.note ?? null,
+						etablissementId: tenantId,
+					},
+				}),
+			),
+		);
 
 		revalidateTag(`attendance-${tenantId}`, "max");
 		return result;

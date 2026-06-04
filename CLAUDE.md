@@ -1,88 +1,57 @@
-# TAYSIR — AGENT INSTRUCTIONS
+# CLAUDE.md
 
-## PRIORITÉS ABSOLUES
-1. **Tokens** : Réponses ultra-concises. Zéro intro. Zéro politesse. Code ou commande uniquement.
-2. **Lecture** : `grep` chirurgical. Interdiction de lire des dossiers entiers.
-3. **Autonomie** : Pipeline self-healing obligatoire après chaque modification (voir ci-dessous).
-4. **Exécution réelle** : Interdit de déduire qu'un bug est corrigé sans test physique Playwright.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Project
 
-## CONTEXTE PROJET
-- **Stack** : Next.js 16 (App Router) · React 19 · TypeScript · Prisma · PostgreSQL · next-auth v4 · next-safe-action · next-intl · Tailwind v4
-- **Architecture** : Multi-tenant (isolation par `etablissementId`), déploiement Docker sur Oracle VPS Free Tier (1 Go RAM)
-- **Contraintes** : Zéro Vercel, zéro serverless propriétaire. Build standalone uniquement.
-- **Auth** : Session `next-auth` → `session.user.etablissementId` = clé de tenant isolation
+Taysir — multi-tenant school-management ERP (SaaS). French/Arabic UI. Built to run on a **resource-constrained Oracle VPS Free Tier (~1 GB RAM) via Docker**, NOT Vercel/serverless. Keep code framework-portable: `output: "standalone"`, classic Node.js runtime, no proprietary serverless APIs.
 
----
+## Commands
 
-## PIPELINE SELF-HEALING (obligatoire après chaque modif)
-
-```
-1. npm run security:agent   → Snyk code scan
-2. npm run build:agent      → Next.js build (grep errors/warnings)
-3. npm run test:agent       → Vitest (coverage > 80%)
-4. E2E Playwright           → Test physique UI (voir protocole ci-dessous)
+```bash
+npm run dev            # dev server (next dev)
+npm run build          # prisma generate + next build
+npm run build:agent    # clean + prisma generate + tsc --noEmit + next build (full gate)
+npm run test:agent     # vitest run --reporter=verbose
+npm run e2e:agent      # playwright test
+npm run lint           # next lint
+npm run db:push        # prisma db push (sync schema, no migration files)
+npm run qa:full        # build:agent + test:agent + e2e:agent
 ```
 
-Si une étape échoue → corriger immédiatement avant de passer à la suivante. Ne jamais sauter.
+Single test: `npx vitest run path/to/file.test.ts` or `-t "test name"`.
+Formatter/linter is **Biome** (`biome.json`) — tab indent, run `npx biome check --write .`.
+Prisma seed: `npx prisma db seed` (ts-node).
 
----
+## Architecture
 
-## PROTOCOLE PLAYWRIGHT (E2E PHYSIQUE)
+**Stack**: Next.js 16 App Router · React 19 · TypeScript · Prisma 6 / PostgreSQL · next-auth v4 (JWT, Credentials) · next-safe-action · next-intl · Tailwind v4.
 
-```
-mcp__playwright__navigate   → Aller sur la page cible
-mcp__playwright__fill       → Remplir les formulaires
-mcp__playwright__click      → Cliquer boutons / liens
-mcp__playwright__screenshot → Capturer si doute UI
-mcp__playwright__evaluate   → Inspecter DOM / logs réseau
-```
+### Multi-tenant isolation (the core invariant)
+Every tenant-owned model carries `etablissementId`. Isolation is enforced at the Prisma layer — **do not hand-write `where: { etablissementId }`**, use the tenant client:
 
-**Séquence CRUD obligatoire :**
-1. Naviguer sur la liste
-2. Créer un élément via formulaire → vérifier apparition dans tableau
-3. Modifier → vérifier persistance
-4. Supprimer → attendre `state: 'detached'` pour confirmer suppression DOM réelle
+- `src/lib/prisma.ts` → `getTenantPrisma(tenantId)` returns a `$extends`-wrapped client that auto-injects `etablissementId` into every read/write/upsert. Clients cached per-tenant (5 min TTL, probabilistic eviction).
+- `Etablissement` is the only global model (skips injection). SuperAdmin uses sentinel `tenantId === "GLOBAL_ACCESS"`, which returns a restricted client that throws on any non-`Etablissement` model.
 
----
+### Server Actions pattern
+All mutations are Server Actions wrapped by `createSafeAction` (`src/lib/actions/safe-action.ts`):
+- Pipeline: session check → optional `requiredRole` check → tenant resolution → Zod validation → handler.
+- Handler signature: `(data, { tenantId, userId, role }) => Promise<T>`. Returns discriminated `ActionResponse<T>` (`{success, data}` | `{success, error}`).
+- Inside handlers always go through `getTenantPrisma(tenantId)`. Use `revalidateTag(\`etab_${tenantId}_<scope>\`)` after mutations.
+- Throw `TaysirError(message, ErrorCodes.X, status, details?)` (`src/lib/errors.ts`) for typed failures.
+- Actions live in `src/actions/*.actions.ts`; Zod schemas in `src/lib/validations.ts`.
 
-## PATTERN SERVER ACTION (anti-regression)
+### Auth & routing
+- `src/middleware.ts`: chains auth gate + next-intl. Protects `/dashboard` and `/superadmin`; redirects SUPER_ADMIN→`/superadmin`, others→`/dashboard`. Locale is the first path segment.
+- Roles (`RoleUser` enum): `SUPER_ADMIN, ADMIN, GERANT, SECRETAIRE, INTERVENANT, PARTICIPANT, RESPONSABLE`. `session.user.{id,role,etablissementId}` populated via JWT callbacks in `src/lib/auth.ts`.
+- Routes: `src/app/[locale]/...` (dashboard feature dirs: students, staff, groups, payments, schedule, attendance, activities, rooms, settings; plus `superadmin/`). Locales `fr` (default) / `ar`; messages in `messages/{fr,ar}.json`.
 
-```ts
-export const myAction = createSafeAction(Schema, async (data) => {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return { error: "Unauthorized" };
+### Layout
+- `src/actions` server actions · `src/lib` (auth, prisma, errors, validations, queries, pdf-generators) · `src/services/api.ts` · `src/components` · `src/i18n` · `src/utils`.
 
-  const tenantId = session.user.etablissementId;
-  return await tenantPrisma(tenantId).model.update({
-    where: { id: data.id, etablissementId: tenantId }, // isolation tenant OBLIGATOIRE
-    data,
-  });
-});
-```
+## Conventions
 
-**Règles :**
-- Toujours filtrer par `etablissementId` dans chaque requête Prisma
-- Utiliser `React.cache` pour les lectures répétées
-- Zéro `any` TypeScript
-
----
-
-## RÈGLES AUDIT
-- Corriger **UN bug à la fois** — interdiction de modifier > 3 fichiers simultanément
-- Après chaque correction : build + test physique Playwright avant de passer au suivant
-- Chaque PR doit satisfaire : zéro `any` · coverage > 80% · Snyk vert · flux UI vérifié
-
----
-
-## SCRIPTS DISPONIBLES
-
-| Commande | Rôle |
-|---|---|
-| `npm run dev` | Serveur de développement |
-| `npm run build:agent` | Build Next.js filtré erreurs/warnings |
-| `npm run test:agent` | Vitest + nettoyage cache |
-| `npm run e2e:agent` | Playwright E2E |
-| `npm run security:agent` | Snyk code scan |
-| `npm run lint` | ESLint |
+- **Tenant filter is mandatory** on every tenant model query — rely on `getTenantPrisma`, never the bare `prisma` singleton for tenant data.
+- **Zero `any`** in TypeScript (existing Prisma-extension casts are the documented exception).
+- Wrap repeated reads in `React.cache` to spare the 1 GB-RAM DB.
+- Security headers + CSP are defined in `next.config.ts` — update there when adding external image/connect sources.

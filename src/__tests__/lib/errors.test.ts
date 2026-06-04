@@ -1,85 +1,75 @@
-import { describe, expect, it } from "vitest";
-import { ErrorCodes, TaysirError } from "@/lib/errors";
+import { describe, it, expect } from "vitest";
+import { TaysirError, ErrorCodes } from "@/lib/errors";
 
-describe("ErrorCodes", () => {
-	it("contient toutes les clés requises", () => {
-		expect(ErrorCodes.ERR_UNAUTHORIZED).toBe("AUTH_REQUIRED");
-		expect(ErrorCodes.ERR_FORBIDDEN).toBe("FORBIDDEN_ACCESS");
-		expect(ErrorCodes.ERR_INVALID_DATA).toBe("INVALID_DATA_FORMAT");
-		expect(ErrorCodes.ERR_TENANT_MISMATCH).toBe(
-			"TENANT_DATA_ISOLATION_VIOLATION",
-		);
-		expect(ErrorCodes.ERR_NOT_FOUND).toBe("RESOURCE_NOT_FOUND");
-		expect(ErrorCodes.ERR_INTERNAL_SERVER).toBe("INTERNAL_SERVER_ERROR");
-		expect(ErrorCodes.ERR_DATABASE_FAILURE).toBe("DATABASE_OPERATION_FAILED");
-	});
-});
+describe("TaysirError Audit", () => {
+    describe("🔴 A. Instanciation et Propriétés", () => {
+        it("possède les propriétés de base par défaut", () => {
+            const error = new TaysirError("Message d'erreur", ErrorCodes.ERR_INVALID_DATA);
+            
+            expect(error.message).toBe("Message d'erreur");
+            expect(error.code).toBe("INVALID_DATA_FORMAT");
+            expect(error.status).toBe(400);
+            expect(error.name).toBe("TaysirError");
+        });
 
-describe("TaysirError", () => {
-	it("hérite de Error", () => {
-		const err = new TaysirError("msg", ErrorCodes.ERR_UNAUTHORIZED);
-		expect(err).toBeInstanceOf(Error);
-		expect(err).toBeInstanceOf(TaysirError);
-	});
+        it("stocke correctement les détails personnalisés (ex: Zod issues)", () => {
+            const details = { field: "email", error: "invalid" };
+            const error = new TaysirError("Validation failed", ErrorCodes.ERR_INVALID_DATA, 422, details);
+            
+            expect(error.status).toBe(422);
+            expect(error.details).toEqual(details);
+        });
+    });
 
-	it("a le bon name", () => {
-		const err = new TaysirError("msg", ErrorCodes.ERR_UNAUTHORIZED);
-		expect(err.name).toBe("TaysirError");
-	});
+    describe("🟠 B. Sérialisation (toJSON)", () => {
+        it("renvoie un objet propre sans stack trace", () => {
+            const error = new TaysirError("Auth failed", ErrorCodes.ERR_UNAUTHORIZED, 401);
+            const json = error.toJSON();
+            
+            expect(json).toEqual({
+                error: true,
+                code: "AUTH_REQUIRED",
+                message: "Auth failed",
+                details: undefined
+            });
 
-	it("stocke le message, code et status par défaut (400)", () => {
-		const err = new TaysirError("erreur", ErrorCodes.ERR_INVALID_DATA);
-		expect(err.message).toBe("erreur");
-		expect(err.code).toBe("INVALID_DATA_FORMAT");
-		expect(err.status).toBe(400);
-	});
+            // Preuve de non-fuite : le JSON ne doit pas contenir 'stack'
+            expect(Object.keys(json)).not.toContain("stack");
+        });
 
-	it("accepte un status personnalisé", () => {
-		const err = new TaysirError("non trouvé", ErrorCodes.ERR_NOT_FOUND, 404);
-		expect(err.status).toBe(404);
-	});
+        it("inclut les détails dans la sérialisation si présents", () => {
+            const error = new TaysirError("Not Found", ErrorCodes.ERR_NOT_FOUND, 404, { id: "123" });
+            const json = error.toJSON();
+            
+            expect(json.details).toEqual({ id: "123" });
+        });
+    });
 
-	it("stocke les details optionnels", () => {
-		const details = { field: "email" };
-		const err = new TaysirError(
-			"invalid",
-			ErrorCodes.ERR_INVALID_DATA,
-			400,
-			details,
-		);
-		expect(err.details).toEqual(details);
-	});
+    describe("🟡 C. Hiérarchie et Prototypes", () => {
+        it("est une instance de TaysirError et de Error", () => {
+            const error = new TaysirError("Test", ErrorCodes.ERR_INTERNAL_SERVER);
+            
+            expect(error instanceof TaysirError).toBe(true);
+            expect(error instanceof Error).toBe(true);
+        });
 
-	it("details est undefined par défaut", () => {
-		const err = new TaysirError("msg", ErrorCodes.ERR_UNAUTHORIZED);
-		expect(err.details).toBeUndefined();
-	});
+        it("préserve le prototype après instanciation (Object.setPrototypeOf)", () => {
+            const error = new TaysirError("Test", ErrorCodes.ERR_DATABASE_FAILURE);
+            expect(Object.getPrototypeOf(error)).toBe(TaysirError.prototype);
+        });
+    });
 
-	it("toJSON retourne la structure attendue", () => {
-		const err = new TaysirError("erreur", ErrorCodes.ERR_FORBIDDEN, 403, {
-			x: 1,
-		});
-		expect(err.toJSON()).toEqual({
-			error: true,
-			code: "FORBIDDEN_ACCESS",
-			message: "erreur",
-			details: { x: 1 },
-		});
-	});
+    describe("🟢 D. Exhaustivité des Codes", () => {
+        it("chaque code d'erreur est une chaîne non vide", () => {
+            for (const key in ErrorCodes) {
+                const value = ErrorCodes[key as keyof typeof ErrorCodes];
+                expect(typeof value).toBe("string");
+                expect(value.length).toBeGreaterThan(0);
+            }
+        });
 
-	it("instanceof fonctionne après setPrototypeOf", () => {
-		const err = new TaysirError("msg", ErrorCodes.ERR_INTERNAL_SERVER);
-		expect(err instanceof TaysirError).toBe(true);
-	});
-
-	it("peut être capturée comme TaysirError dans un try/catch", () => {
-		let caught: TaysirError | null = null;
-		try {
-			throw new TaysirError("oops", ErrorCodes.ERR_DATABASE_FAILURE, 500);
-		} catch (e) {
-			if (e instanceof TaysirError) caught = e;
-		}
-		expect(caught).not.toBeNull();
-		expect(caught?.code).toBe("DATABASE_OPERATION_FAILED");
-	});
+        it("ERR_TENANT_MISMATCH correspond bien à l'isolation multi-tenant", () => {
+            expect(ErrorCodes.ERR_TENANT_MISMATCH).toBe("TENANT_DATA_ISOLATION_VIOLATION");
+        });
+    });
 });

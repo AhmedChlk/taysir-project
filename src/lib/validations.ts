@@ -42,7 +42,7 @@ export const ListUsersSchema = z.object({
 export const CreatePaymentPlanSchema = z.object({
 	studentId: z.string().uuid(),
 	activityId: z.string().uuid("L'activité est requise."),
-	totalAmount: z.number().positive(),
+	totalAmount: z.number().positive().optional(),
 	currency: z.enum(["DZD", "EUR", "USD"]).default("DZD"),
 	tranches: z
 		.array(
@@ -51,7 +51,7 @@ export const CreatePaymentPlanSchema = z.object({
 				dueDate: z.string(), // ISO Date
 			}),
 		)
-		.min(1),
+		.optional(),
 });
 
 export const RegisterPaymentSchema = z.object({
@@ -68,6 +68,17 @@ export const MarkPresenceSchema = z.object({
 	statut: z.nativeEnum(StatutPresence),
 	retard: z.number().int().min(0, "Le retard doit être positif.").optional(),
 	note: z.string().optional(),
+});
+
+export const BulkMarkPresenceSchema = z.object({
+	sessionId: z.string().uuid(),
+	records: z.array(
+		z.object({
+			studentId: z.string().uuid(),
+			status: z.nativeEnum(StatutPresence),
+			note: z.string().optional().nullable(),
+		}),
+	),
 });
 
 export const RoomSchema = z.object({
@@ -142,7 +153,7 @@ export const CreateStudentSchema = z.object({
 		.or(z.literal("")),
 	phone: z.string().optional().nullable().or(z.literal("")),
 	address: z.string().optional().nullable(),
-	photoUrl: z.string().url("Une photo est obligatoire pour l'inscription."),
+	photoUrl: z.string().min(1, "Une photo est obligatoire pour l'inscription."),
 	isMinor: z.boolean().default(false),
 	parentName: z.string().optional().nullable(),
 	parentPhone: z.string().optional().nullable(),
@@ -153,7 +164,7 @@ export const CreateStudentSchema = z.object({
 export const UpdateStudentSchema = CreateStudentSchema.extend({
 	id: z.string().uuid(),
 	isActive: z.boolean().optional(),
-	photoUrl: z.string().url().optional().nullable(),
+	photoUrl: z.string().optional().nullable(),
 });
 
 export const StudentSchema = z.object({
@@ -188,6 +199,10 @@ export const CreateSessionSchema = z
 		groupId: z.string().uuid("Groupe invalide."),
 		startTime: z.date(),
 		endTime: z.date(),
+		recurrenceType: z
+			.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"])
+			.default("NONE"),
+		recurrenceEnd: z.date().optional().nullable(),
 	})
 	.refine((data) => data.endTime > data.startTime, {
 		message: "L'heure de fin doit être après l'heure de début.",
@@ -225,7 +240,7 @@ export const SendMessageSchema = z.object({
 export const CreateDocumentSchema = z.object({
 	studentId: z.string().uuid(),
 	name: z.string().min(2, "Le nom du document est requis."),
-	url: z.string().url("URL du document invalide."),
+	url: z.string().url("URL du document invalide.").refine((val) => val.startsWith("http://") || val.startsWith("https://"), "L'URL doit être sécurisée (http/https)."),
 	type: z.string().optional().nullable(),
 });
 

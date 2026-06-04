@@ -125,10 +125,33 @@ export const getGroups = async () => {
 };
 
 // Liste des séances
-export const getSessions = async () => {
+export const getSessions = async (options?: { instructorId?: string; date?: Date }) => {
+	const session = await getServerSession(authOptions);
 	const client = await getPrisma();
+	const user = session?.user;
+
+	const where: any = {};
+	if (user?.role === "INTERVENANT") {
+		where.instructorId = user.id;
+	} else if (options?.instructorId) {
+		where.instructorId = options.instructorId;
+	}
+
+	if (options?.date) {
+		const startOfDay = new Date(options.date);
+		startOfDay.setHours(0, 0, 0, 0);
+		const endOfDay = new Date(options.date);
+		endOfDay.setHours(23, 59, 59, 999);
+		where.startTime = {
+			gte: startOfDay,
+			lte: endOfDay,
+		};
+	}
+
 	return await client.session.findMany({
+		where,
 		include: { room: true, activity: true, group: true },
+		orderBy: { startTime: "desc" },
 	});
 };
 
@@ -139,7 +162,9 @@ export const getStudents = async () => {
 
 	if (!tenantId) {
 		if (session?.user?.role === "SUPER_ADMIN") {
-			return await prisma.student.findMany({ include: { groups: true } });
+			return await prisma.student.findMany({
+				include: { groups: true, paymentPlans: true },
+			});
 		}
 		return [];
 	}
@@ -148,7 +173,7 @@ export const getStudents = async () => {
 		async () => {
 			const client = await getPrisma();
 			return await client.student.findMany({
-				include: { groups: true },
+				include: { groups: true, paymentPlans: true },
 			});
 		},
 		[`students-list-${tenantId}`],
@@ -179,6 +204,14 @@ export const getPayments = async () => {
 export const getAttendance = async () => {
 	const client = await getPrisma();
 	return await client.attendanceRecord.findMany();
+};
+
+export const getAttendanceForSessions = async (sessionIds: string[]) => {
+	const client = await getPrisma();
+	if (sessionIds.length === 0) return [];
+	return await client.attendanceRecord.findMany({
+		where: { sessionId: { in: sessionIds } },
+	});
 };
 
 // Statistiques de présence pour le graphique

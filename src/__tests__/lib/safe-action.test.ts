@@ -8,10 +8,14 @@ vi.mock("@/lib/auth", () => ({
 	authOptions: {},
 }));
 
+// Mock console.error to avoid noise in tests
+vi.spyOn(console, 'error').mockImplementation(() => {});
+
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
-import { TaysirError } from "@/lib/errors";
+import { TaysirError, ErrorCodes } from "@/lib/errors";
+import { RoleUser } from "@prisma/client";
 
 const makeSession = (override: Record<string, unknown> = {}) => ({
 	user: {
@@ -25,119 +29,153 @@ const makeSession = (override: Record<string, unknown> = {}) => ({
 
 const testSchema = z.object({ name: z.string().min(1) });
 
-describe("createSafeAction", () => {
+describe("createSafeAction - Security & Robustness Audit", () => {
 	beforeEach(() => vi.clearAllMocks());
 
-	it("retourne success:true quand tout est valide", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const action = createSafeAction(testSchema, async (data) => ({
-			greeting: `Hello ${data.name}`,
-		}));
+	describe("🔴 Authentification & Autorisation", () => {
+		it("Échec d'Authentification : rejette si pas de session", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(null);
+			const action = createSafeAction(testSchema, async () => "ok");
 
-		const result = await action({ name: "Taysir" });
-		expect(result.success).toBe(true);
-		if (result.success) expect(result.data.greeting).toBe("Hello Taysir");
-	});
-
-	it("retourne AUTH_REQUIRED si pas de session", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(null);
-		const action = createSafeAction(testSchema, async () => "ok");
-
-		const result = await action({ name: "test" });
-		expect(result.success).toBe(false);
-		if (!result.success) expect(result.error.code).toBe("AUTH_REQUIRED");
-	});
-
-	it("retourne TENANT_DATA_ISOLATION_VIOLATION si pas d'etablissementId (non SUPER_ADMIN)", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(
-			makeSession({ etablissementId: null, role: "ADMIN" }) as never,
-		);
-		const action = createSafeAction(testSchema, async () => "ok");
-
-		const result = await action({ name: "test" });
-		expect(result.success).toBe(false);
-		if (!result.success)
-			expect(result.error.code).toBe("TENANT_DATA_ISOLATION_VIOLATION");
-	});
-
-	it("retourne INVALID_DATA_FORMAT si les données Zod sont invalides", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const action = createSafeAction(testSchema, async () => "ok");
-
-		const result = await action({ name: "" }); // min(1) violated
-		expect(result.success).toBe(false);
-		if (!result.success) expect(result.error.code).toBe("INVALID_DATA_FORMAT");
-	});
-
-	it("capture une TaysirError et retourne son code", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const action = createSafeAction(testSchema, async () => {
-			throw new TaysirError("Non trouvé", "RESOURCE_NOT_FOUND", 404);
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error.code).toBe("AUTH_REQUIRED");
 		});
 
-		const result = await action({ name: "x" });
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.code).toBe("RESOURCE_NOT_FOUND");
-			expect(result.error.message).toBe("Non trouvé");
-		}
-	});
+		it("Contrôle de Rôle : rejette si le rôle requis n'est pas possédé", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession({ role: RoleUser.PARTICIPANT }) as never);
+			const action = createSafeAction(testSchema, async () => "ok", { requiredRole: RoleUser.ADMIN });
 
-	it("capture une erreur inconnue et retourne INTERNAL_SERVER_ERROR", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const action = createSafeAction(testSchema, async () => {
-			throw new Error("Unexpected crash");
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error.code).toBe("FORBIDDEN_ACCESS");
 		});
 
-		const result = await action({ name: "x" });
-		expect(result.success).toBe(false);
-		if (!result.success)
-			expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
-	});
+		it("Contrôle de Rôle : autorise si le rôle requis est possédé", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession({ role: RoleUser.ADMIN }) as never);
+			const action = createSafeAction(testSchema, async () => "ok", { requiredRole: RoleUser.ADMIN });
 
-	it("passe le bon contexte (tenantId, userId, role) au handler", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		let capturedCtx: { tenantId: string; userId: string; role: string } | null =
-			null;
-
-		const action = createSafeAction(testSchema, async (_data, ctx) => {
-			capturedCtx = ctx;
-			return "ok";
-		});
-
-		await action({ name: "x" });
-		expect(capturedCtx).toEqual({
-			tenantId: "etab-abc",
-			userId: "user-1",
-			role: "ADMIN",
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(true);
 		});
 	});
 
-	it("autorise SUPER_ADMIN sans etablissementId", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(
-			makeSession({ etablissementId: null, role: "SUPER_ADMIN" }) as never,
-		);
-		const action = createSafeAction(
-			testSchema,
-			async (_data, ctx) => ctx.tenantId,
-		);
+	describe("🟠 Intégrité du Tenant (Multi-SaaS Isolation)", () => {
+		it("Tenant Isolation : rejette si pas d'etablissementId (et non SUPER_ADMIN)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({ etablissementId: null, role: RoleUser.ADMIN }) as never,
+			);
+			const action = createSafeAction(testSchema, async () => "ok");
 
-		const result = await action({ name: "x" });
-		expect(result.success).toBe(true);
-		if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(false);
+			if (!result.success)
+				expect(result.error.code).toBe("TENANT_DATA_ISOLATION_VIOLATION");
+		});
+
+		it("SUPER_ADMIN Bypass : autorise sans etablissementId avec accès global", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({ etablissementId: null, role: RoleUser.SUPER_ADMIN }) as never,
+			);
+			const action = createSafeAction(testSchema, async (_data, ctx) => ctx.tenantId);
+
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(true);
+			if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
+		});
+
+		it("Immuabilité du Contexte : injecte les bonnes métadonnées au handler", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession({ id: "real-user", etablissementId: "real-etab", role: "GERANT" }) as never);
+			let capturedCtx: any = null;
+
+			const action = createSafeAction(testSchema, async (_data, ctx) => {
+				capturedCtx = ctx;
+				return "ok";
+			});
+
+			await action({ name: "test" });
+			expect(capturedCtx).toEqual({
+				tenantId: "real-etab",
+				userId: "real-user",
+				role: "GERANT",
+			});
+		});
 	});
 
-	it("autorise SUPER_ADMIN avec etablissementId vide ('')", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(
-			makeSession({ etablissementId: "", role: "SUPER_ADMIN" }) as never,
-		);
-		const action = createSafeAction(
-			testSchema,
-			async (_data, ctx) => ctx.tenantId,
-		);
+	describe("🟡 Validation & Erreurs", () => {
+		it("Zod Validation : rejette les données malformées", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const action = createSafeAction(testSchema, async () => "ok");
 
-		const result = await action({ name: "x" });
-		expect(result.success).toBe(true);
-		if (result.success) expect(result.data).toBe("GLOBAL_ACCESS");
+			const result = await action({ name: "" }); // Violates min(1)
+			expect(result.success).toBe(false);
+			if (!result.success) {
+                expect(result.error.code).toBe("INVALID_DATA_FORMAT");
+                expect(result.error.details).toBeDefined();
+            }
+		});
+
+		it("Capture TaysirError : renvoie l'erreur métier proprement", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const action = createSafeAction(testSchema, async () => {
+				throw new TaysirError("Business Error", ErrorCodes.ERR_INVALID_DATA, 400);
+			});
+
+			const result = await action({ name: "x" });
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.code).toBe(ErrorCodes.ERR_INVALID_DATA);
+				expect(result.error.message).toBe("Business Error");
+			}
+		});
+	});
+
+	describe("🟢 Résilience & Happy Path", () => {
+		it("Gestion des Crashs : capture les erreurs imprévues (Robustesse)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const action = createSafeAction(testSchema, async () => {
+				throw new Error("Unexpected database crash");
+			});
+
+			const result = await action({ name: "x" });
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
+                expect(console.error).toHaveBeenCalled();
+			}
+		});
+
+        it("Exception non-objet Error : robuste si le throw n'est pas une Error (ligne 98 branch coverage)", async () => {
+            vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+            const action = createSafeAction(testSchema, async () => {
+                throw "String Error"; // Not an Error object
+            });
+
+            const result = await action({ name: "x" });
+            expect(result.success).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Unknown error"));
+        });
+
+        it("Exception dans le middleware : robuste si getAuthSession throw", async () => {
+            // Simulation d'un crash grave dans le wrapper lui-même (ex: service auth en panne totale)
+            vi.mocked(getServerSession).mockRejectedValue(new Error("AUTH_SERVICE_CRASH"));
+            const action = createSafeAction(testSchema, async () => "ok");
+
+            const result = await action({ name: "test" });
+            expect(result.success).toBe(false);
+            if (!result.success) expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
+        });
+
+		it("Happy Path Extrême : succès avec toutes les données injectées", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const action = createSafeAction(testSchema, async (data, ctx) => ({ data, ctx }));
+
+			const result = await action({ name: "FullTest" });
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.data.name).toBe("FullTest");
+				expect(result.data.ctx.tenantId).toBe("etab-abc");
+			}
+		});
 	});
 });

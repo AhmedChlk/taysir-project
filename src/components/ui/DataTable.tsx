@@ -12,13 +12,13 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import EmptyState from "./EmptyState";
 
-interface Column<T> {
+export interface Column<T> {
 	header: string;
 	accessor: keyof T | ((item: T) => React.ReactNode);
 	className?: string;
 }
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
 	data: T[];
 	columns: Column<T>[];
 	searchPlaceholder?: string;
@@ -166,7 +166,7 @@ export default function DataTable<T extends { id: string | number }>({
 													type="button"
 													onClick={(e) => {
 														e.stopPropagation();
-														onAction ? onAction(item) : undefined;
+														onAction?.(item);
 													}}
 													className="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-brand-500 p-2 rounded-xl hover:bg-white shadow-none hover:shadow-sm border border-transparent hover:border-line transition-all duration-200"
 												>

@@ -41,6 +41,7 @@ const validSession = {
 	groupId: "550e8400-e29b-41d4-a716-446655440003",
 	startTime: new Date("2026-09-01T09:00:00Z"),
 	endTime: new Date("2026-09-01T11:00:00Z"),
+	recurrenceType: "NONE" as const,
 };
 
 describe("createSessionAction", () => {

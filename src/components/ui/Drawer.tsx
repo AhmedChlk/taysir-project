@@ -18,8 +18,11 @@ import PaymentPlanForm from "@/components/dashboard/forms/PaymentPlanForm";
 import SessionForm from "@/components/dashboard/forms/SessionForm";
 import { formatFullName } from "@/utils/format";
 
+import SessionDetails from "@/components/dashboard/schedule/SessionDetails";
+
 type DrawerType =
 	| "new-session"
+	| "view-session"
 	| "payments"
 	| "new-finance"
 	| "edit-staff"
@@ -49,6 +52,10 @@ interface PendingPayment {
 	student: { firstName: string; lastName: string };
 }
 
+import { ErrorCodes, TaysirError } from "@/lib/errors";
+import { getTenantPrisma } from "@/lib/prisma";
+import { Loader2 } from "lucide-react";
+
 interface DrawerFormData {
 	rooms?: { id: string; name: string; capacity: number }[];
 	activities?: { id: string; name: string; color?: string | null }[];
@@ -56,6 +63,7 @@ interface DrawerFormData {
 	groups?: { id: string; name: string }[];
 	students?: { id: string; firstName: string; lastName: string }[];
 	todaySessions?: TodaySession[];
+	allSessions?: any[];
 	pendingPayments?: PendingPayment[];
 }
 
@@ -65,10 +73,27 @@ interface DrawerProps {
 	formData?: DrawerFormData;
 }
 
+import { getSessionAction } from "@/actions/schedule.actions";
+import { useEffect, useState } from "react";
+
 export default function Drawer({ type, onClose, formData }: DrawerProps) {
 	const searchParams = useSearchParams();
-	const _id = searchParams.get("id");
+	const sessionId = searchParams.get("id");
 	const t = useTranslations();
+	const [fetchedSession, setFetchedSession] = useState<any>(null);
+	const [isFetchingSession, setIsFetchingSession] = useState(false);
+
+	useEffect(() => {
+		if (type === "view-session" && sessionId && !fetchedSession && !isFetchingSession) {
+			setIsFetchingSession(true);
+			getSessionAction({ id: sessionId }).then(res => {
+				if (res?.success) setFetchedSession(res.data);
+				setIsFetchingSession(false);
+			});
+		}
+	}, [type, sessionId, fetchedSession, isFetchingSession]);
+
+	const currentSession = fetchedSession || (sessionId ? formData?.allSessions?.find(s => s.id === sessionId) : null);
 
 	const getTitle = () => {
 		switch (type) {
@@ -82,6 +107,8 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				return t("drawer_sessions");
 			case "new-session":
 				return t("drawer_new_session");
+			case "view-session":
+				return "Détails de la séance";
 			default:
 				return t("drawer_operational");
 		}
@@ -99,6 +126,8 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				return <Calendar size={20} />;
 			case "new-session":
 				return <PlusCircle size={20} />;
+			case "view-session":
+				return <Calendar size={20} />;
 			default:
 				return <AlertCircle size={20} />;
 		}
@@ -116,6 +145,18 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 						groups={formData?.groups ?? []}
 					/>
 				);
+			case "view-session":
+				if (!currentSession) {
+					return (
+						<div className="flex flex-col items-center justify-center h-full text-center opacity-30 py-20">
+							<Loader2 size={32} className="animate-spin text-taysir-teal mb-4" />
+							<p className="font-black text-taysir-teal uppercase tracking-tighter">
+								Chargement...
+							</p>
+						</div>
+					);
+				}
+				return <SessionDetails session={currentSession} onSuccess={onClose} />;
 			case "new-finance":
 				return (
 					<PaymentPlanForm

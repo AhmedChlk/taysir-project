@@ -26,6 +26,7 @@ export function createSafeAction<TInput, TOutput>(
 		data: TInput,
 		ctx: { tenantId: string; userId: string; role: string },
 	) => Promise<TOutput>,
+    options?: { requiredRole?: RoleUser }
 ) {
 	return async (input: TInput): Promise<ActionResponse<TOutput>> => {
 		try {
@@ -38,6 +39,15 @@ export function createSafeAction<TInput, TOutput>(
 					401,
 				);
 			}
+
+            // 1b. Vérification du rôle requis
+            if (options?.requiredRole && session.user.role !== options.requiredRole) {
+				throw new TaysirError(
+					"Accès refusé : Privilèges insuffisants.",
+					ErrorCodes.ERR_FORBIDDEN,
+					403,
+				);
+            }
 
 			// 2. Vérification de l'établissement (tenant)
 			const rawTenantId = session.user.etablissementId;
@@ -64,7 +74,7 @@ export function createSafeAction<TInput, TOutput>(
 
 			// 4. Exécution de la logique
 			const result = await handler(validation.data, {
-				tenantId: rawTenantId || (isSuperAdmin ? "GLOBAL_ACCESS" : ""),
+				tenantId: rawTenantId || "GLOBAL_ACCESS",
 				userId: session.user.id,
 				role: session.user.role,
 			});

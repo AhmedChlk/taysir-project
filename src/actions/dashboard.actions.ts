@@ -18,9 +18,9 @@ export const getDashboardStatsAction = createSafeAction(
 		const client = getTenantPrisma(tenantId);
 
 		const [totalStudents, activeStudents] = await Promise.all([
-			client.student.count({ where: { etablissementId: tenantId } }),
+			client.student.count(),
 			client.student.count({
-				where: { isActive: true, etablissementId: tenantId },
+				where: { isActive: true },
 			}),
 		]);
 
@@ -40,7 +40,6 @@ export const getTodaySessionsAction = createSafeAction(
 
 		return await client.session.findMany({
 			where: {
-				etablissementId: tenantId,
 				startTime: {
 					gte: startOfDay(now),
 					lte: endOfDay(now),
@@ -66,7 +65,6 @@ export const getPendingPaymentsAction = createSafeAction(
 
 		const pendingPlans = await client.paymentPlan.findMany({
 			where: {
-				etablissementId: tenantId,
 				status: { in: ["PENDING", "PARTIAL"] },
 			},
 			include: {

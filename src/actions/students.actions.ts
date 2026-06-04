@@ -35,7 +35,7 @@ export const createStudentAction = createSafeAction(
 		const tenantPrisma = getTenantPrisma(tenantId);
 		const { groupIds, ...studentData } = data;
 
-		if (groupIds && groupIds.length > 0) {
+		if (groupIds.length > 0) {
 			const validGroups = await tenantPrisma.groupe.findMany({
 				where: { id: { in: groupIds }, etablissementId: tenantId },
 			});
@@ -61,9 +61,7 @@ export const createStudentAction = createSafeAction(
 		const student = await tenantPrisma.student.create({
 			data: {
 				...stripUndefined(cleanedData),
-				...(groupIds && groupIds.length > 0
-					? { groups: { connect: groupIds.map((id) => ({ id })) } }
-					: {}),
+				groups: { connect: groupIds.map((id) => ({ id })) },
 			},
 		});
 
@@ -79,7 +77,7 @@ export const updateStudentAction = createSafeAction(
 	async ({ id, groupIds, ...data }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
 
-		if (groupIds && groupIds.length > 0) {
+		if (groupIds.length > 0) {
 			const validGroups = await tenantPrisma.groupe.findMany({
 				where: { id: { in: groupIds }, etablissementId: tenantId },
 			});
@@ -106,9 +104,7 @@ export const updateStudentAction = createSafeAction(
 			where: { id_etablissementId: { id, etablissementId: tenantId } },
 			data: {
 				...stripUndefined(cleanedData),
-				groups: {
-					set: groupIds?.map((id) => ({ id })) || [],
-				},
+				groups: { set: groupIds.map((id) => ({ id })) },
 			},
 		});
 

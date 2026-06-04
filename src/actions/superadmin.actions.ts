@@ -6,7 +6,6 @@ import { createSafeAction } from "@/lib/actions/safe-action";
 import { prisma } from "@/lib/prisma";
 import { RoleUser } from "@prisma/client";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { unstable_cache } from "next/cache";
 import * as bcrypt from "bcryptjs";
 
 const CreateTenantSchema = z.object({
@@ -27,11 +26,7 @@ const CreateTenantSchema = z.object({
  */
 export const getAllTenantsAction = createSafeAction(
 	z.object({}),
-	async (_, { role }) => {
-		if (role !== RoleUser.SUPER_ADMIN) {
-			throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
-		}
-
+	async () => {
         return await prisma.etablissement.findMany({
             include: {
                 _count: {
@@ -40,7 +35,8 @@ export const getAllTenantsAction = createSafeAction(
             },
             orderBy: { createdAt: "desc" }
         });
-	}
+	},
+    { requiredRole: RoleUser.SUPER_ADMIN }
 );
 
 /**
@@ -48,11 +44,7 @@ export const getAllTenantsAction = createSafeAction(
  */
 export const createTenantAction = createSafeAction(
 	CreateTenantSchema,
-	async (data, { role }) => {
-		if (role !== RoleUser.SUPER_ADMIN) {
-			throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
-		}
-
+	async (data) => {
 		const existing = await prisma.etablissement.findUnique({
 			where: { slug: data.slug }
 		});
@@ -82,7 +74,7 @@ export const createTenantAction = createSafeAction(
                 }
             });
 
-            const manager = await tx.user.create({
+            await tx.user.create({
                 data: {
                     email: data.manager.email,
                     firstName: data.manager.firstName,
@@ -93,13 +85,14 @@ export const createTenantAction = createSafeAction(
                 }
             });
 
-            return { tenant, manager };
+            return { tenant };
         });
 
 		revalidateTag("superadmin_tenants", "max");
 		revalidateTag("superadmin_stats", "max");
 		return result;
-	}
+	},
+    { requiredRole: RoleUser.SUPER_ADMIN }
 );
 
 /**
@@ -107,11 +100,7 @@ export const createTenantAction = createSafeAction(
  */
 export const toggleTenantStatusAction = createSafeAction(
     z.object({ id: z.string().uuid(), isActive: z.boolean() }),
-    async ({ id, isActive }, { role }) => {
-		if (role !== RoleUser.SUPER_ADMIN) {
-			throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
-		}
-
+    async ({ id, isActive }) => {
         const result = await prisma.etablissement.update({
             where: { id },
             data: { isActive }
@@ -120,7 +109,8 @@ export const toggleTenantStatusAction = createSafeAction(
 		revalidateTag("superadmin_tenants", "max");
 		revalidateTag("superadmin_stats", "max");
         return result;
-    }
+    },
+    { requiredRole: RoleUser.SUPER_ADMIN }
 );
 
 /**
@@ -134,11 +124,7 @@ export const updateTenantAction = createSafeAction(
         primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
         contractEndDate: z.string().optional(),
     }),
-    async ({ id, ...data }, { role }) => {
-        if (role !== RoleUser.SUPER_ADMIN) {
-            throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
-        }
-
+    async ({ id, ...data }) => {
         const updateData: any = { ...data };
         if (data.contractEndDate) {
             updateData.contractEndDate = new Date(data.contractEndDate);
@@ -151,7 +137,8 @@ export const updateTenantAction = createSafeAction(
 
         revalidateTag("superadmin_tenants", "max");
         return result;
-    }
+    },
+    { requiredRole: RoleUser.SUPER_ADMIN }
 );
 
 /**
@@ -159,11 +146,7 @@ export const updateTenantAction = createSafeAction(
  */
 export const deleteTenantAction = createSafeAction(
 	z.object({ id: z.string().uuid() }),
-	async ({ id }, { role }) => {
-		if (role !== RoleUser.SUPER_ADMIN) {
-			throw new TaysirError("Accès réservé aux super administrateurs.", ErrorCodes.ERR_FORBIDDEN, 403);
-		}
-
+	async ({ id }) => {
 		const result = await prisma.etablissement.delete({
 			where: { id }
 		});
@@ -171,5 +154,6 @@ export const deleteTenantAction = createSafeAction(
 		revalidateTag("superadmin_tenants", "max");
 		revalidateTag("superadmin_stats", "max");
 		return result;
-	}
+	},
+    { requiredRole: RoleUser.SUPER_ADMIN }
 );

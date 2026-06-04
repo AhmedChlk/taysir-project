@@ -4,146 +4,15 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { Check, ArrowR } from "./components/LandingIcons";
+import { Logo, LogoMark } from "./components/LandingLogo";
+import { LandingNavbar as Navbar } from "./components/LandingNavbar";
+
 /* ==========================================================================
    Taysir Landing Page — Implementation based on Taysir Design System
    ========================================================================== */
 
-// --- Primitives & Icons (Lucide-inspired, 1.75 stroke) ---
-
-const IconWrapper = ({ children, size = 20, ...props }: { children: React.ReactNode; size?: number; [key: string]: any }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    {children}
-  </svg>
-);
-
-const Check = (props: any) => (
-  <IconWrapper {...props}>
-    <polyline points="20 6 9 17 4 12" />
-  </IconWrapper>
-);
-
-const ArrowR = (props: any) => (
-  <IconWrapper {...props}>
-    <line x1="5" y1="12" x2="19" y2="12" />
-    <polyline points="12 5 19 12 12 19" />
-  </IconWrapper>
-);
-
-const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
-    <g fill={color}>
-      <rect x="26" y="6" width="12" height="52" rx="3" />
-      <rect x="6" y="26" width="52" height="12" rx="3" />
-      <rect x="26" y="26" width="12" height="12" fill="#fff" />
-      <rect x="28" y="28" width="8" height="8" fill={color} />
-    </g>
-  </svg>
-);
-
-const Logo = ({ color = "var(--brand-500)", textColor }: { color?: string; textColor?: string }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-    <LogoMark size={26} color={color} />
-    <span
-      style={{
-        fontSize: 22,
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        color: textColor || "var(--fg1)",
-        fontFamily: "var(--font-sans)",
-      }}
-    >
-      taysir
-    </span>
-  </div>
-);
-
 // --- Sub-components ---
-
-const Navbar = ({ locale }: { locale: string }) => {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const loginUrl = `/${locale}/login`;
-  const links = [
-    { label: "Produit", href: "#produit" },
-    { label: "Solutions", href: "#solutions" },
-    { label: "Tarifs", href: "#tarifs" },
-  ];
-
-  return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 50,
-        height: "var(--nav-h)",
-        display: "flex",
-        alignItems: "center",
-        background: scrolled ? "rgba(255,255,255,0.92)" : "#fff",
-        backdropFilter: scrolled ? "blur(10px)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(10px)" : "none",
-        borderBottom: scrolled ? "1px solid #EEF1F3" : "1px solid transparent",
-        transition: "all 220ms var(--ease)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "var(--container)",
-          margin: "0 auto",
-          padding: "0 48px",
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 32,
-        }}
-      >
-        <Link href={`/${locale}`}>
-          <Logo />
-        </Link>
-        <div style={{ display: "flex", gap: 24, marginLeft: 28, flex: 1 }}>
-          {links.map((l) => (
-            <Link
-              key={l.label}
-              href={l.href as any}
-              className="t-small"
-              style={{
-                color: "var(--fg2)",
-                fontWeight: 500,
-                textDecoration: "none",
-                padding: "8px 4px",
-                transition: "color 180ms var(--ease)",
-              }}
-            >
-              {l.label}
-            </Link>
-          ))}
-        </div>
-        <Link href={loginUrl as any} style={{ color: "var(--fg2)", fontSize: 14, fontWeight: 500, textDecoration: "none", marginRight: 4 }}>
-          Se connecter
-        </Link>
-        <Link href={loginUrl as any} className="btn btn--primary btn--md">
-          Commencer
-        </Link>
-      </div>
-    </nav>
-  );
-};
 
 const TaysirDesktopMockup = () => {
   const studentRow = (idx: number, name: string, group: string, status: string) => {

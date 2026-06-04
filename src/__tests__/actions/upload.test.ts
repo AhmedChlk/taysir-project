@@ -1,107 +1,167 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next-auth/next", () => ({ getServerSession: vi.fn() }));
-vi.mock("@/lib/auth", () => ({ authOptions: {} }));
-vi.mock("node:fs/promises", async () => {
-	const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
-	return {
-		...actual,
-		mkdir: vi.fn().mockResolvedValue(undefined),
-		writeFile: vi.fn().mockResolvedValue(undefined),
-	};
+vi.mock("node:fs/promises", () => {
+    const mock = {
+        mkdir: vi.fn(),
+        writeFile: vi.fn(),
+    };
+    return {
+        ...mock,
+        default: mock
+    };
 });
 
+vi.mock("next-auth/next", () => ({
+	getServerSession: vi.fn(),
+}));
+
+vi.mock("@/lib/auth", () => ({
+	authOptions: {},
+}));
+
+vi.spyOn(console, "error").mockImplementation(() => {});
+
 import { getServerSession } from "next-auth/next";
+import { mkdir, writeFile } from "node:fs/promises";
 import { uploadFileAction } from "@/actions/upload.actions";
 
-const makeSession = (override = {}) => ({
-	user: { id: "u1", role: "ADMIN", etablissementId: "etab-1", ...override },
+const makeSession = (override: Record<string, unknown> = {}) => ({
+	user: {
+		id: "user-1",
+		role: "ADMIN",
+		etablissementId: "etab-123",
+		...override,
+	},
 	expires: "2099-01-01",
 });
 
-const makeFormData = (fileOverride: Partial<{ name: string; size: number; type: string }> = {}) => {
-	const file = {
-		name: "test.jpg",
-		size: 1024,
-		type: "image/jpeg",
-		arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
-		...fileOverride,
-	};
-	return { get: vi.fn().mockReturnValue(file) } as unknown as FormData;
-};
-
-describe("uploadFileAction", () => {
-	beforeEach(() => vi.clearAllMocks());
-
-	it("upload un fichier JPEG valide", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-
-		const result = await uploadFileAction(makeFormData());
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data!.contentType).toBe("image/jpeg");
-			expect(result.data!.pathname).toContain("uploads/etab-1/");
-		}
+describe("Upload Actions Audit (Security & Resilience)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
-	it("upload un fichier PDF valide", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+	describe("🔴 A. Sécurité des Accès (Data Leakage & Auth)", () => {
+		it("Accès Non Authentifié: Bloque l'upload si pas de session", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(null);
+			const formData = new FormData();
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error).toMatch(/Non autorisé/);
+		});
 
-		const result = await uploadFileAction(makeFormData({ name: "doc.pdf", type: "application/pdf" }));
-		expect(result.success).toBe(true);
+		it("Tenant Isolation: Bloque l'upload si l'utilisateur n'a pas d'etablissementId", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({ etablissementId: null }) as never,
+			);
+			const formData = new FormData();
+            const blob = new Blob(["dummy"], { type: "image/png" });
+			formData.append("file", new File([blob], "test.png", { type: "image/png" }));
+			
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error).toMatch(/Aucun établissement/);
+		});
 	});
 
-	it("rejette sans session", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(null);
+	describe("🟠 B. Sécurité des Fichiers (Malicious Uploads & Path Traversal)", () => {
+        it("Payload invalide: Aucun fichier fourni", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const formData = new FormData();
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error).toMatch(/Aucun fichier/);
+		});
 
-		const result = await uploadFileAction(makeFormData());
-		expect(result.success).toBe(false);
-		expect(result.error).toBe("Non autorisé");
+		it("Validation du Type: Rejette les fichiers exécutables (MIME falsifié ou non autorisé)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const formData = new FormData();
+			// Falsification MIME ou type interdit
+			const blob = new Blob(["bad script"], { type: "application/x-sh" });
+			formData.append("file", new File([blob], "script.sh", { type: "application/x-sh" }));
+
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error).toMatch(/Type de fichier non supporté/);
+		});
+
+		it("Limite de Taille: Rejette un fichier > 5MB", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const formData = new FormData();
+            
+            // Simule un vrai gros fichier en mémoire (6MB)
+            const bigArray = new Uint8Array(6 * 1024 * 1024);
+            const blob = new Blob([bigArray], { type: "image/png" });
+			formData.append("file", new File([blob], "big.png", { type: "image/png" }));
+
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) expect(result.error).toMatch(/trop volumineux/);
+		});
+
+		it("Path Traversal (Sanitisation): Nettoie le nom de fichier des caractères ../", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const formData = new FormData();
+			const blob = new Blob(["test"], { type: "application/pdf" });
+            // Nom de fichier malveillant
+			formData.append("file", new File([blob], "../../../etc/passwd.pdf", { type: "application/pdf" }));
+
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(true);
+
+            // Vérifie que le writeFile a été appelé avec un nom "sain" (basename retire les dossiers)
+			if (result.success) {
+				const callPath = vi.mocked(writeFile).mock.calls[0]![0]! as string;
+				expect(callPath).not.toMatch(/\.\.\//);
+                expect(callPath).toMatch(/uploads\/etab-123\/\d+-passwd\.pdf/);
+			}
+		});
 	});
 
-	it("rejette si etablissementId manquant", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(
-			makeSession({ etablissementId: undefined }) as never,
-		);
+	describe("🟡 C. Résilience et Désastres", () => {
+		it("Échec du FileSystem: Capture l'erreur et retourne un fallback", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const formData = new FormData();
+			const blob = new Blob(["dummy"], { type: "image/png" });
+			formData.append("file", new File([blob], "test.png", { type: "image/png" }));
 
-		const result = await uploadFileAction(makeFormData());
-		expect(result.success).toBe(false);
-		expect(result.error).toContain("établissement");
+			// Simule un crash disque (ex: disque plein, droits manquants)
+			vi.mocked(mkdir).mockRejectedValue(new Error("ENOSPC: no space left on device"));
+
+			const result = await uploadFileAction(formData);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error).toMatch(/Erreur lors de l'upload local/);
+                expect(console.error).toHaveBeenCalled();
+			}
+		});
 	});
 
-	it("rejette si aucun fichier dans FormData", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const emptyFd = { get: vi.fn().mockReturnValue(null) } as unknown as FormData;
+	describe("🟢 D. Happy Path & Structure", () => {
+		it("Upload réussi avec le bon etablissementId injecté dans le dossier", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+            vi.mocked(mkdir).mockResolvedValue(undefined);
+            vi.mocked(writeFile).mockResolvedValue(undefined);
 
-		const result = await uploadFileAction(emptyFd);
-		expect(result.success).toBe(false);
-		expect(result.error).toBe("Aucun fichier fourni");
-	});
+			const formData = new FormData();
+			const blob = new Blob(["dummy content"], { type: "image/jpeg" });
+			const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
+            
+            // Forcer l'implémentation de arrayBuffer pour Vitest jsdom/node
+            file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(10));
+			formData.append("file", file);
 
-	it("rejette un fichier trop volumineux (>5Mo)", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const result = await uploadFileAction(formData);
+            if (!result.success) console.log("UPLOAD ERROR:", result.error);
+			expect(result.success).toBe(true);
 
-		const result = await uploadFileAction(makeFormData({ size: 6 * 1024 * 1024 }));
-		expect(result.success).toBe(false);
-		expect(result.error).toContain("volumineux");
-	});
+			if (result.success) {
+				expect(result.data!.url).toMatch(/^\/uploads\/etab-123\/\d+-profile\.jpg$/);
+				expect(result.data!.contentType).toBe("image/jpeg");
 
-	it("rejette un type non autorisé (text/html)", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-
-		const result = await uploadFileAction(makeFormData({ type: "text/html" }));
-		expect(result.success).toBe(false);
-		expect(result.error).toContain("Type de fichier");
-	});
-
-	it("sanitise le nom de fichier (caractères spéciaux → _)", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-
-		const result = await uploadFileAction(makeFormData({ name: "mon fichier (1).jpg" }));
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data!.pathname).not.toContain(" ");
-			expect(result.data!.pathname).not.toContain("(");
-		}
+				// Le FS a bien été appelé
+				expect(mkdir).toHaveBeenCalled();
+				expect(writeFile).toHaveBeenCalled();
+			}
+		});
 	});
 });

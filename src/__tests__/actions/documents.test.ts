@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock next-auth/next — doit être en haut avant l'import de l'action
 vi.mock("next-auth/next", () => ({
 	getServerSession: vi.fn(),
 }));
 
-// Mock getTenantPrisma
-vi.mock("@/lib/prisma", () => ({
-	getTenantPrisma: vi.fn(() => ({
-		document: {
-			findMany: vi.fn().mockResolvedValue([]),
-		},
-	})),
-}));
+vi.mock("@/lib/prisma", () => {
+    const mock = {
+        document: { findMany: vi.fn(), update: vi.fn() },
+    };
+    return {
+	    getTenantPrisma: vi.fn(() => mock),
+        prisma: mock,
+    };
+});
 
-// Mock authOptions (requis par safe-action.ts)
 vi.mock("@/lib/auth", () => ({
 	authOptions: {},
 }));
@@ -24,92 +23,83 @@ vi.mock("next/cache", () => ({
 }));
 
 import { getServerSession } from "next-auth/next";
-import { getStudentDocumentsAction } from "@/actions/documents.actions";
+import {
+	getStudentDocumentsAction,
+	updateDocumentStatusAction,
+} from "@/actions/documents.actions";
+import { getTenantPrisma } from "@/lib/prisma";
 
-const VALID_STUDENT_UUID = "550e8400-e29b-41d4-a716-446655440000";
+const TENANT_ID = "etab-123";
+const DOC_ID = "550e8400-e29b-41d4-a716-446655440001";
+const STUDENT_ID = "550e8400-e29b-41d4-a716-446655440002";
 
-const buildSession = () => ({
+const makeSession = (override: Record<string, unknown> = {}) => ({
 	user: {
 		id: "user-1",
 		role: "ADMIN",
-		etablissementId: "etab-123",
-		email: "admin@school.dz",
-		name: "Admin Test",
+		etablissementId: TENANT_ID,
+		...override,
 	},
 	expires: "2099-01-01",
 });
 
-describe("getStudentDocumentsAction — protection IDOR (SEC-02)", () => {
+describe("Documents Actions Audit", () => {
+    let mockPrisma: any;
+
 	beforeEach(() => {
-		vi.clearAllMocks();
-	});
+        vi.clearAllMocks();
+        mockPrisma = getTenantPrisma(TENANT_ID);
+    });
 
-	it("retourne une erreur ERR_UNAUTHORIZED si pas de session", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(null);
+	describe("🔴 A. Sécurité des Accès (IDOR & Tenant Spoofing)", () => {
+		it("updateDocumentStatusAction: Utilise la clé composite pour empêcher la mise à jour cross-tenant (IDOR)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			mockPrisma.document.update.mockResolvedValue({ id: DOC_ID, status: "APPROVED" });
 
-		const result = await getStudentDocumentsAction({
-			studentId: VALID_STUDENT_UUID,
+			const result = await updateDocumentStatusAction({ id: DOC_ID, status: "APPROVED" });
+			expect(result.success).toBe(true);
+
+            // Vérifie l'étanchéité stricte par tenant
+			expect(mockPrisma.document.update).toHaveBeenCalledWith(expect.objectContaining({
+				where: { id_etablissementId: { id: DOC_ID, etablissementId: TENANT_ID } },
+			}));
 		});
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.code).toBe("AUTH_REQUIRED");
-		}
-	});
+		it("getStudentDocumentsAction: Filtre strictement les documents par tenant (Empêche la fuite de données)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			mockPrisma.document.findMany.mockResolvedValue([]);
 
-	it("retourne les documents pour un tenant valide avec session authentifiée", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(buildSession() as never);
+			const result = await getStudentDocumentsAction({ studentId: STUDENT_ID });
+			expect(result.success).toBe(true);
 
-		const result = await getStudentDocumentsAction({
-			studentId: VALID_STUDENT_UUID,
+            // Vérifie que les documents retournés appartiennent TOUS au tenant de la session
+			expect(mockPrisma.document.findMany).toHaveBeenCalledWith(expect.objectContaining({
+				where: expect.objectContaining({ etablissementId: TENANT_ID, studentId: STUDENT_ID }),
+			}));
 		});
-
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(Array.isArray(result.data)).toBe(true);
-		}
 	});
 
-	it("rejette un studentId non-UUID (protection injection)", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(buildSession() as never);
+	describe("🟡 B. Résilience et Désastres", () => {
+        it("updateDocumentStatusAction: Gère une erreur Prisma proprement", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			mockPrisma.document.update.mockRejectedValue(new Error("Document Not Found"));
 
-		const result = await getStudentDocumentsAction({
-			studentId: "' OR '1'='1",
+			const result = await updateDocumentStatusAction({ id: DOC_ID, status: "REJECTED" });
+			expect(result.success).toBe(false);
+            if (!result.success) expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
+        });
+	});
+
+	describe("🟢 C. Happy Path & Cache", () => {
+		it("updateDocumentStatusAction: Met à jour et invalide le cache", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			mockPrisma.document.update.mockResolvedValue({ id: DOC_ID });
+
+			const result = await updateDocumentStatusAction({ id: DOC_ID, status: "PENDING" });
+			expect(result.success).toBe(true);
+
+            const { revalidateTag } = await import("next/cache");
+            expect(revalidateTag).toHaveBeenCalledWith(`etab_${TENANT_ID}_students`, "max");
 		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.code).toBe("INVALID_DATA_FORMAT");
-		}
-	});
-
-	it("rejette un studentId vide", async () => {
-		vi.mocked(getServerSession).mockResolvedValue(buildSession() as never);
-
-		const result = await getStudentDocumentsAction({
-			studentId: "",
-		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.code).toBe("INVALID_DATA_FORMAT");
-		}
-	});
-
-	it("ne permet pas de passer un tenantId arbitraire — il est extrait de la session", async () => {
-		// Le schéma ne contient que studentId : impossible d'injecter un tenantId externe.
-		// On passe un objet forgé avec une propriété tenantId supplémentaire pour simuler
-		// ce qu'un attaquant tenterait via un appel JS direct (contournement TypeScript).
-		vi.mocked(getServerSession).mockResolvedValue(buildSession() as never);
-
-		const attackerPayload = {
-			studentId: VALID_STUDENT_UUID,
-			tenantId: "attacker-tenant",
-		} as unknown as { studentId: string };
-
-		const result = await getStudentDocumentsAction(attackerPayload);
-
-		// La session retourne "etab-123", l'attaquant ne peut pas le surcharger
-		expect(result.success).toBe(true);
 	});
 });

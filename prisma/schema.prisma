@@ -14,12 +14,12 @@ model Etablissement {
   name            String
   slug            String             @unique
   logoUrl         String?
-  address         String?
   primaryColor    String?            @default("#0F515C")
-  isActive        Boolean            @default(true)
-  contractEndDate DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
+  address         String?
+  isActive        Boolean            @default(true)
+  contractEndDate DateTime?
   activities      Activity[]
   attendance      AttendanceRecord[]
   documents       Document[]
@@ -81,8 +81,8 @@ model Activity {
   updatedAt       DateTime      @updatedAt
   etablissementId String
   etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
-  sessions        Session[]
   paymentPlans    PaymentPlan[]
+  sessions        Session[]
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
@@ -109,7 +109,6 @@ model Student {
   lastName         String
   email            String?
   phone            String?
-  address          String?
   birthDate        DateTime?
   registrationDate DateTime           @default(now())
   isActive         Boolean            @default(true)
@@ -121,6 +120,7 @@ model Student {
   updatedAt        DateTime           @updatedAt
   etablissementId  String
   photoUrl         String?
+  address          String?
   attendance       AttendanceRecord[]
   documents        Document[]
   paymentPlans     PaymentPlan[]
@@ -132,7 +132,7 @@ model Student {
 }
 
 /// *
-///  * PaymentPlan : Le contrat financier global (ex: Frais annuels).
+/// * PaymentPlan : Le contrat financier global (ex: Frais annuels).
 model PaymentPlan {
   id              String            @id @default(uuid())
   totalAmount     Float
@@ -142,8 +142,8 @@ model PaymentPlan {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   studentId       String
-  activityId      String
   etablissementId String
+  activityId      String
   activity        Activity          @relation(fields: [activityId], references: [id])
   etablissement   Etablissement     @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   student         Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -155,7 +155,7 @@ model PaymentPlan {
 }
 
 /// *
-///  * Tranche : Une échéance prévue dans le plan de paiement.
+/// * Tranche : Une échéance prévue dans le plan de paiement.
 model Tranche {
   id              String        @id @default(uuid())
   amount          Float
@@ -175,7 +175,7 @@ model Tranche {
 }
 
 /// *
-///  * Paiement : Un flux financier réel (reçu).
+/// * Paiement : Un flux financier réel (reçu).
 model Paiement {
   id              String        @id @default(uuid())
   amount          Float
@@ -197,27 +197,30 @@ model Paiement {
 }
 
 model Session {
-  id              String             @id @default(uuid())
-  startTime       DateTime
-  endTime         DateTime
-  status          StatusSession      @default(SCHEDULED)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  activityId      String
-  roomId          String
-  instructorId    String
-  groupId         String
-  etablissementId String
-  attendance      AttendanceRecord[]
-  activity        Activity           @relation(fields: [activityId], references: [id])
-  etablissement   Etablissement      @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
-  group           Groupe             @relation(fields: [groupId], references: [id])
-  instructor      User               @relation("InstructorSessions", fields: [instructorId], references: [id])
-  room            Room               @relation(fields: [roomId], references: [id])
+  id                String             @id @default(uuid())
+  startTime         DateTime
+  endTime           DateTime
+  status            StatusSession      @default(SCHEDULED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  activityId        String
+  roomId            String
+  instructorId      String
+  groupId           String
+  etablissementId   String
+  recurrenceGroupId String?
+  recurrenceRule    String?
+  attendance        AttendanceRecord[]
+  activity          Activity           @relation(fields: [activityId], references: [id])
+  etablissement     Etablissement      @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  group             Groupe             @relation(fields: [groupId], references: [id])
+  instructor        User               @relation("InstructorSessions", fields: [instructorId], references: [id])
+  room              Room               @relation(fields: [roomId], references: [id])
 
   @@unique([id, etablissementId])
   @@index([etablissementId])
   @@index([startTime])
+  @@index([recurrenceGroupId])
 }
 
 model AttendanceRecord {

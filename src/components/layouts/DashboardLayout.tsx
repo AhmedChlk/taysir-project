@@ -10,9 +10,14 @@ import {
 	Menu,
 	Settings,
 	User,
+	Users,
+	Calendar,
+	PlusCircle,
+	AlertCircle,
+	Wallet
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
@@ -20,7 +25,7 @@ import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Sidebar from "@/components/navigation/Sidebar";
 import Drawer from "@/components/ui/Drawer";
-import { Link, getPathname } from "@/i18n/routing";
+import { useRouter, Link, getPathname, usePathname } from "@/i18n/routing";
 
 export default function DashboardLayout({
 	children,
@@ -36,6 +41,7 @@ export default function DashboardLayout({
 
 	const searchParams = useSearchParams();
 	const router = useRouter();
+	const pathname = usePathname();
 	const activeDrawer = searchParams.get("drawer");
 
 	type DashboardFormData = Extract<
@@ -60,7 +66,11 @@ export default function DashboardLayout({
 		const params = new URLSearchParams(searchParams.toString());
 		params.delete("drawer");
 		params.delete("id");
-		router.push(`?${params.toString()}`, { scroll: false });
+		params.delete("start");
+		params.delete("end");
+		params.delete("date");
+		const queryString = params.toString();
+		router.push(pathname + (queryString ? `?${queryString}` : ""), { scroll: false });
 	};
 
 	if (status === "loading") {
@@ -151,8 +161,10 @@ export default function DashboardLayout({
 
 							{isUserMenuOpen && (
 								<>
-									<div
-										className="fixed inset-0 z-40"
+									<button
+										type="button"
+										aria-label="Close user menu"
+										className="fixed inset-0 z-40 cursor-default bg-transparent w-full h-full"
 										onClick={() => setIsUserMenuOpen(false)}
 									/>
 									<div
@@ -182,9 +194,9 @@ export default function DashboardLayout({
 										</div>
 										<div className="h-px bg-taysir-teal/5 my-2 mx-3" />
 										<button
-											onClick={() => {
-												const callbackUrl = getPathname({ locale, href: "/login" });
-												signOut({ callbackUrl });
+											onClick={async () => {
+												await signOut({ redirect: false });
+												window.location.href = `/${locale}/login`;
 											}}
 											className="flex w-full items-center gap-3 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
 										>
@@ -203,11 +215,12 @@ export default function DashboardLayout({
 				</div>
 			</main>
 
-			<AnimatePresence>
+			<AnimatePresence mode="wait">
 				{activeDrawer && (
 					<Suspense fallback={null}>
 						<Drawer
-							type={activeDrawer}
+							key={activeDrawer + (searchParams.get("id") || "")}
+							type={activeDrawer as any}
 							onClose={closeDrawer}
 							{...(formData ? { formData } : {})}
 						/>

@@ -180,6 +180,12 @@
   "parent_phone_label": "هاتف الولي",
   "parent_email_label": "البريد الإلكتروني للولي",
   "student_address_label": "عنوان الإقامة",
+  "address": "العنوان",
+  "students_upload_photo": "تحميل الصورة",
+  "student_under_18": "أقل من 18 سنة",
+  "student_secure_file": "ملف مؤمن",
+  "students_register": "تسجيل الطالب",
+  "student_guardian_info": "معلومات الولي",
   "payments_subtitle": "الإدارة المالية والمواعيد",
   "payments_export_csv": "تصدير CSV",
   "payments_new_plan": "خطة مالية جديدة",
@@ -246,5 +252,9 @@
   "no_account_yet": "ليس لديك حساب بعد؟",
   "contact_sales": "اتصل بنا",
   "confirm_delete": "تأكيد الحذف",
-  "confirm_delete_desc": "هل أنت متأكد d'أنك تريد حذف هذا العنصر؟ هذا الإجراء غير قابل للتراجع."
+  "confirm_delete_desc": "هل أنت متأكد d'أنك تريد حذف هذا العنصر؟ هذا الإجراء غير قابل للتراجع.",
+  "today_agenda": "جدول اليوم",
+  "student_guardian_name": "اسم الولي",
+  "student_guardian_phone": "هاتف الولي",
+  "student_guardian_email": "البريد الإلكتروني للولي"
 }

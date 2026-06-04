@@ -61,8 +61,8 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 		startTransition(async () => {
 			const result = await deleteAccountAction({});
 			if (result.success) {
-				const callbackUrl = getPathname({ locale, href: "/login" });
-				signOut({ callbackUrl });
+				await signOut({ redirect: false });
+				window.location.href = `/${locale}/login`;
 			} else {
 				alert(result.error.message);
 			}

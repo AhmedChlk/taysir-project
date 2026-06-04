@@ -1,12 +1,14 @@
 "use client";
 
 import { StatutPresence } from "@prisma/client";
-import { clsx } from "clsx";
-import { Check, ChevronDown, Clock, Save, X } from "lucide-react";
+import { Check, ChevronDown, Clock, Save, X, UserCheck, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition, useCallback } from "react";
 import type { AttendanceRecord, Group, Session, Student } from "@/types/schema";
 import { formatDate, formatFullName, formatTime } from "@/utils/format";
+import { bulkMarkPresenceAction } from "@/actions/logistics.actions";
+import { useAction } from "next-safe-action/hooks";
+import { cn } from "@/utils/format";
 
 interface AttendanceClientViewProps {
 	sessions: Session[];
@@ -21,13 +23,24 @@ export default function AttendanceClientView({
 	groups,
 	initialAttendance,
 }: AttendanceClientViewProps) {
+	const t = useTranslations();
+	const locale = useLocale();
+	const [isPending, startTransition] = useTransition();
+
 	const [selectedSessionId, setSelectedSessionId] = useState<string>(
 		sessions[0]?.id || "",
 	);
-	const [attendance, setAttendance] =
-		useState<AttendanceRecord[]>(initialAttendance);
-	const t = useTranslations();
-	const locale = useLocale();
+	const [attendanceState, setAttendanceState] = useState<AttendanceRecord[]>(initialAttendance);
+
+	// Safe Action hook
+	const { execute: executeBulkSave, status } = useAction(bulkMarkPresenceAction as any, {
+		onSuccess: () => {
+			alert(t("save_success"));
+		},
+		onError: () => {
+			alert(t("error_occurred"));
+		},
+	});
 
 	const groupsMap = useMemo(() => {
 		return (groups || []).reduce(
@@ -40,196 +53,302 @@ export default function AttendanceClientView({
 	}, [groups]);
 
 	const selectedSession = useMemo(
-		() => (sessions || []).find((s) => s.id === selectedSessionId),
+		() => sessions.find((s) => s.id === selectedSessionId),
 		[selectedSessionId, sessions],
 	);
 
 	const studentsInGroup = useMemo(() => {
 		if (!selectedSession?.groupId) return [];
-		const groupId = selectedSession.groupId;
-		return (students || []).filter((s) =>
-			(s.groups || []).some((g) => g.id === groupId),
-		);
+		const gid = selectedSession.groupId;
+		return students.filter((s) => (s.groups || []).some((g) => g.id === gid));
 	}, [selectedSession, students]);
 
-	// Map for O(1) attendance lookup
-	const attendanceMap = useMemo(() => {
-		return (attendance || []).reduce(
-			(acc, a) => {
-				if (a.sessionId === selectedSessionId) {
-					acc[a.studentId] = a;
-				}
-				return acc;
-			},
-			{} as Record<string, AttendanceRecord>,
-		);
-	}, [attendance, selectedSessionId]);
-
-	const toggleStatus = (studentId: string, status: StatutPresence) => {
-		setAttendance((prev) => {
-			const existing = prev.find(
-				(a) => a.studentId === studentId && a.sessionId === selectedSessionId,
-			);
-			if (existing) {
-				return prev.map((a) =>
-					a.studentId === studentId && a.sessionId === selectedSessionId
-						? { ...a, status }
-						: a,
-				);
-			} else {
-				return [
-					...prev,
-					{
-						id: `new-${Date.now()}`,
-						etablissementId: selectedSession?.etablissementId || "",
-						sessionId: selectedSessionId,
-						studentId,
-						status,
-						note: null,
-					},
-				];
+	const currentAttendanceMap = useMemo(() => {
+		return attendanceState.reduce((acc, a) => {
+			if (a.sessionId === selectedSessionId) {
+				acc[a.studentId] = a;
 			}
+			return acc;
+		}, {} as Record<string, AttendanceRecord>);
+	}, [attendanceState, selectedSessionId]);
+
+	const handleStatusChange = useCallback((studentId: string, status: StatutPresence) => {
+		setAttendanceState(prev => {
+			const existing = prev.find(a => a.studentId === studentId && a.sessionId === selectedSessionId);
+			if (existing) {
+				return prev.map(a => a.studentId === studentId && a.sessionId === selectedSessionId ? { ...a, status } : a);
+			}
+			return [...prev, {
+				id: `temp-${Date.now()}`,
+				sessionId: selectedSessionId,
+				studentId,
+				status,
+				note: null,
+				etablissementId: selectedSession?.etablissementId || ""
+			} as AttendanceRecord];
+		});
+	}, [selectedSessionId, selectedSession?.etablissementId]);
+
+	const handleBulkMarkAllPresent = () => {
+		const newRecords = studentsInGroup.map(student => ({
+			studentId: student.id,
+			status: StatutPresence.PRESENT,
+			note: currentAttendanceMap[student.id]?.note || null
+		}));
+		
+		// Update local state first (Optimistic)
+		setAttendanceState(prev => {
+			const otherSessions = prev.filter(a => a.sessionId !== selectedSessionId);
+			const updatedRecords = studentsInGroup.map(student => ({
+				id: currentAttendanceMap[student.id]?.id || `temp-${student.id}`,
+				sessionId: selectedSessionId,
+				studentId: student.id,
+				status: StatutPresence.PRESENT,
+				note: currentAttendanceMap[student.id]?.note || null,
+				etablissementId: selectedSession?.etablissementId || ""
+			} as AttendanceRecord));
+			return [...otherSessions, ...updatedRecords];
+		});
+	};
+
+	const handleSave = () => {
+		const sessionRecords = studentsInGroup.map(student => {
+			const record = currentAttendanceMap[student.id];
+			return {
+				studentId: student.id,
+				status: record?.status || StatutPresence.PRESENT,
+				note: record?.note || null
+			};
+		});
+
+		startTransition(() => {
+			executeBulkSave({
+				sessionId: selectedSessionId,
+				records: sessionRecords
+			});
 		});
 	};
 
 	return (
-		<div className="space-y-8">
-			{/* Page Header */}
-			<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+		<div className="max-w-5xl mx-auto space-y-6 pb-20 md:pb-0">
+			{/* Header with quick stats */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
+						<Users className="text-primary-teal" />
 						{t("attendance")}
 					</h1>
-					<p className="text-sm text-gray-500">{t("attendance_subtitle")}</p>
+					<p className="text-sm text-gray-500">
+						{selectedSession ? (
+							<>
+								{formatDate(selectedSession.startTime, locale)} • {formatTime(selectedSession.startTime, locale)} • {groupsMap[selectedSession.groupId || ""]}
+							</>
+						) : t("select_session")}
+					</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => alert(t("save_success"))}
-					className="btn-primary flex items-center gap-2"
-				>
-					<Save size={20} />
-					{t("save")}
-				</button>
+				<div className="flex items-center gap-2">
+					<button
+						onClick={handleBulkMarkAllPresent}
+						className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-teal bg-primary-teal/10 rounded-lg hover:bg-primary-teal/20 transition-colors"
+					>
+						<UserCheck size={18} />
+						{t("mark_all_present")}
+					</button>
+					<button
+						onClick={handleSave}
+						disabled={isPending || status === "executing"}
+						className="flex items-center justify-center gap-2 px-6 py-2 bg-primary-teal text-white rounded-lg font-semibold hover:bg-opacity-90 disabled:opacity-50 shadow-sm transition-all"
+					>
+						<Save size={20} />
+						{isPending ? t("saving") : t("save")}
+					</button>
+				</div>
 			</div>
 
-			{/* Session Selector */}
-			<div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-				<label
-					htmlFor="session-selector"
-					className="block text-sm font-medium text-gray-700 mb-2"
-				>
+			{/* Sticky Session Selector for Mobile */}
+			<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+				<label className="text-xs font-semibold uppercase text-gray-400 tracking-wider">
 					{t("select_session")}
 				</label>
-				<div className="relative max-w-md">
+				<div className="relative">
 					<select
-						id="session-selector"
 						value={selectedSessionId}
 						onChange={(e) => setSelectedSessionId(e.target.value)}
-						className="w-full appearance-none rounded-lg border border-gray-300 bg-gray-50 p-3 pr-10 text-sm text-gray-900 focus:border-primary-teal focus:ring-primary-teal"
+						className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl appearance-none focus:ring-2 focus:ring-primary-teal/20 focus:border-primary-teal transition-all text-sm"
 					>
-						{(sessions || []).map((session) => (
-							<option key={session.id} value={session.id}>
-								{formatDate(session.startTime, locale)} -{" "}
-								{formatTime(session.startTime, locale)} ({t("groups")}:{" "}
-								{groupsMap[session.groupId || ""] || t("unknown")})
+						{sessions.map((s) => (
+							<option key={s.id} value={s.id}>
+								{formatDate(s.startTime, locale)} - {formatTime(s.startTime, locale)} ({groupsMap[s.groupId || ""]})
 							</option>
 						))}
 					</select>
-					<ChevronDown
-						className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-						size={18}
-					/>
+					<ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
 				</div>
 			</div>
 
-			{/* Attendance Table */}
-			<div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-				<table className="w-full text-left text-sm rtl:text-right">
-					<thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-						<tr>
-							<th className="px-6 py-4">{t("total_students")}</th>
-							<th className="px-6 py-4 text-center">{t("status_header")}</th>
-							<th className="px-6 py-4">{t("description")}</th>
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-gray-200">
-						{studentsInGroup.map((student) => {
-							const record = attendanceMap[student.id];
-							const status = record?.status || StatutPresence.PRESENT;
+			{/* Mobile Optimized List / Desktop Table */}
+			<div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+				<div className="hidden md:block">
+					<table className="w-full text-left">
+						<thead className="bg-gray-50 border-b border-gray-100">
+							<tr>
+								<th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("student")}</th>
+								<th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">{t("status_header")}</th>
+								<th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("note")}</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-gray-100">
+							{studentsInGroup.map((student) => (
+								<StudentRow 
+									key={student.id} 
+									student={student} 
+									record={currentAttendanceMap[student.id]}
+									onStatusChange={handleStatusChange}
+									t={t}
+								/>
+							))}
+						</tbody>
+					</table>
+				</div>
 
-							return (
-								<tr
-									key={student.id}
-									className="hover:bg-gray-50 transition-colors"
-								>
-									<td className="px-6 py-4">
-										<div className="font-medium text-gray-900">
-											{formatFullName(student.firstName, student.lastName)}
-										</div>
-										<div className="text-xs text-gray-500">{student.email}</div>
-									</td>
-									<td className="px-6 py-4">
-										<div className="flex items-center justify-center gap-2">
-											<button
-												type="button"
-												onClick={() =>
-													toggleStatus(student.id, StatutPresence.PRESENT)
-												}
-												className={clsx(
-													"flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
-													status === StatutPresence.PRESENT
-														? "bg-green-100 border-green-500 text-green-600 ring-2 ring-green-500/20"
-														: "bg-white border-gray-200 text-gray-400 hover:bg-gray-50",
-												)}
-												title={t("active")}
-											>
-												<Check size={20} />
-											</button>
-											<button
-												type="button"
-												onClick={() =>
-													toggleStatus(student.id, StatutPresence.RETARD)
-												}
-												className={clsx(
-													"flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
-													status === StatutPresence.RETARD
-														? "bg-orange-100 border-orange-500 text-orange-600 ring-2 ring-orange-500/20"
-														: "bg-white border-gray-200 text-gray-400 hover:bg-gray-50",
-												)}
-												title={t("late")}
-											>
-												<Clock size={20} />
-											</button>
-											<button
-												type="button"
-												onClick={() =>
-													toggleStatus(student.id, StatutPresence.ABSENT)
-												}
-												className={clsx(
-													"flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
-													status === StatutPresence.ABSENT
-														? "bg-red-100 border-red-500 text-red-600 ring-2 ring-red-500/20"
-														: "bg-white border-gray-200 text-gray-400 hover:bg-gray-50",
-												)}
-												title={t("inactive")}
-											>
-												<X size={20} />
-											</button>
-										</div>
-									</td>
-									<td className="px-6 py-4">
-										<input
-											type="text"
-											placeholder={t("description_placeholder")}
-											className="w-full rounded-md border border-gray-200 bg-transparent px-3 py-1.5 text-xs text-gray-900 focus:border-primary-teal focus:outline-none focus:ring-1 focus:ring-primary-teal"
-										/>
-									</td>
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+				{/* Mobile List View */}
+				<div className="md:hidden divide-y divide-gray-100">
+					{studentsInGroup.map((student) => (
+						<StudentCard 
+							key={student.id}
+							student={student}
+							record={currentAttendanceMap[student.id]}
+							onStatusChange={handleStatusChange}
+							t={t}
+						/>
+					))}
+				</div>
+			</div>
+			
+			{/* Mobile Floating Action Button for Bulk */}
+			<button
+				onClick={handleBulkMarkAllPresent}
+				className="md:hidden fixed bottom-6 right-6 p-4 bg-primary-teal text-white rounded-full shadow-lg z-50 hover:scale-105 active:scale-95 transition-all"
+			>
+				<UserCheck size={24} />
+			</button>
+		</div>
+	);
+}
+
+function StudentRow({ student, record, onStatusChange, t }: any) {
+	const status = record?.status || StatutPresence.PRESENT;
+
+	return (
+		<tr className="hover:bg-gray-50/50 transition-colors">
+			<td className="px-6 py-4">
+				<div className="flex items-center gap-3">
+					<div className="w-10 h-10 rounded-full bg-primary-teal/5 flex items-center justify-center text-primary-teal font-bold border border-primary-teal/10">
+						{student.firstName[0]}{student.lastName[0]}
+					</div>
+					<div>
+						<div className="font-semibold text-gray-900">{formatFullName(student.firstName, student.lastName)}</div>
+						<div className="text-xs text-gray-500">{student.email || t("no_email")}</div>
+					</div>
+				</div>
+			</td>
+			<td className="px-6 py-4">
+				<StatusButtons status={status} onStatusChange={(s: any) => onStatusChange(student.id, s)} t={t} />
+			</td>
+			<td className="px-6 py-4">
+				<input
+					type="text"
+					placeholder={t("add_note")}
+					value={record?.note || ""}
+					onChange={(e) => {/* Handle note change */}}
+					className="w-full bg-gray-50 border-none rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-teal/20 transition-all"
+				/>
+			</td>
+		</tr>
+	);
+}
+
+function StudentCard({ student, record, onStatusChange, t }: any) {
+	const status = record?.status || StatutPresence.PRESENT;
+
+	return (
+		<div className="p-4 space-y-4">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<div className="w-10 h-10 rounded-full bg-primary-teal/5 flex items-center justify-center text-primary-teal font-bold border border-primary-teal/10 text-sm">
+						{student.firstName[0]}{student.lastName[0]}
+					</div>
+					<div>
+						<div className="font-semibold text-gray-900">{formatFullName(student.firstName, student.lastName)}</div>
+						<div className="text-[10px] text-gray-400 uppercase tracking-tight">{student.email || t("no_email")}</div>
+					</div>
+				</div>
+			</div>
+			
+			<div className="grid grid-cols-1 gap-3">
+				<StatusButtons status={status} onStatusChange={(s: any) => onStatusChange(student.id, s)} t={t} isFullWidth />
+				<input
+					type="text"
+					placeholder={t("add_note")}
+					value={record?.note || ""}
+					onChange={(e) => {/* Handle note change */}}
+					className="w-full bg-gray-50 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary-teal/20 transition-all"
+				/>
 			</div>
 		</div>
+	);
+}
+
+function StatusButtons({ status, onStatusChange, t, isFullWidth }: any) {
+	return (
+		<div className={cn("flex items-center gap-2", isFullWidth ? "justify-between" : "justify-center")}>
+			<StatusButton
+				active={status === StatutPresence.PRESENT}
+				onClick={() => onStatusChange(StatutPresence.PRESENT)}
+				variant="present"
+				icon={<Check size={20} />}
+				label={t("present")}
+				showLabel={isFullWidth}
+			/>
+			<StatusButton
+				active={status === StatutPresence.RETARD}
+				onClick={() => onStatusChange(StatutPresence.RETARD)}
+				variant="late"
+				icon={<Clock size={20} />}
+				label={t("late")}
+				showLabel={isFullWidth}
+			/>
+			<StatusButton
+				active={status === StatutPresence.ABSENT}
+				onClick={() => onStatusChange(StatutPresence.ABSENT)}
+				variant="absent"
+				icon={<X size={20} />}
+				label={t("absent")}
+				showLabel={isFullWidth}
+			/>
+		</div>
+	);
+}
+
+function StatusButton({ active, onClick, variant, icon, label, showLabel }: any) {
+	const variants = {
+		present: active ? "bg-green-500 text-white shadow-lg shadow-green-200" : "bg-white text-gray-400 border-gray-200 hover:border-green-200 hover:text-green-500",
+		late: active ? "bg-amber-500 text-white shadow-lg shadow-amber-200" : "bg-white text-gray-400 border-gray-200 hover:border-amber-200 hover:text-amber-500",
+		absent: active ? "bg-red-500 text-white shadow-lg shadow-red-200" : "bg-white text-gray-400 border-gray-200 hover:border-red-200 hover:text-red-500",
+	};
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={cn(
+				"flex items-center justify-center gap-2 transition-all rounded-xl border",
+				showLabel ? "flex-1 py-2.5 px-3" : "h-11 w-11",
+				variants[variant as keyof typeof variants]
+			)}
+		>
+			{icon}
+			{showLabel && <span className="text-xs font-bold">{label}</span>}
+		</button>
 	);
 }

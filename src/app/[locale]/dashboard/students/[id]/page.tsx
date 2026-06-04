@@ -3,7 +3,7 @@ import {
 	ArrowLeft,
 	Calendar,
 	Clock,
-	Eye,
+    Eye,
 	FileText,
 	Mail,
 	MapPin,
@@ -11,14 +11,15 @@ import {
 	User,
 	Users,
 	Wallet,
-    Download,
     ChevronRight,
+    Edit3,
 } from "lucide-react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getStudentFullProfileAction } from "@/actions/students.actions";
-import type { Group, Student } from "@/types/schema";
+import { getGroups } from "@/services/api";
+import type { Group, Student, PaymentPlan } from "@/types/schema";
 
 type StudentFullProfile = NonNullable<
 	Prisma.StudentGetPayload<{
@@ -40,6 +41,7 @@ type StudentFullProfile = NonNullable<
 
 import AddDocumentButton from "@/components/dashboard/students/AddDocumentButton";
 import DownloadStudentProfile from "@/components/dashboard/students/DownloadStudentProfile";
+import EditStudentProfileButton from "@/components/dashboard/students/EditStudentProfileButton";
 import { Link } from "@/i18n/routing";
 import { formatFullName, formatDate, formatTime } from "@/utils/format";
 import { clsx } from "clsx";
@@ -50,8 +52,9 @@ interface PageProps {
 
 export default async function StudentProfilePage({ params }: PageProps) {
 	const { id, locale } = await params;
-	const [response, t] = await Promise.all([
+	const [response, groups, t] = await Promise.all([
 		getStudentFullProfileAction({ id }),
+        getGroups(),
 		getTranslations(),
 	]);
 
@@ -59,7 +62,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 		notFound();
 	}
 
-	const student = response.data as StudentFullProfile;
+	const student = response.data as unknown as StudentFullProfile;
     const totalRemaining = student.paymentPlans.reduce(
         (acc: number, p) => acc + (p.totalAmount - p.paidAmount),
         0
@@ -96,6 +99,10 @@ export default async function StudentProfilePage({ params }: PageProps) {
 				</div>
 
                 <div className="flex gap-3">
+                    <EditStudentProfileButton
+                        student={student as unknown as Student & { groups: Group[]; paymentPlans: PaymentPlan[] }}
+                        groups={groups}
+                    />
                     <DownloadStudentProfile
                         student={student as unknown as Student & { groups: Group[] }}
                     />

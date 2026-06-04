@@ -51,3 +51,13 @@ node_modules/
 
 # Claude Code local settings (may contain secrets)
 .claude/settings.json
+
+# AI agent tooling / scratch output
+.gemini/
+.gemini_security/
+.playwright-mcp/
+.snyk
+GEMINI.md
+
+# Local binaries / installers
+*.deb

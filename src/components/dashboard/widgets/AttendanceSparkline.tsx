@@ -14,8 +14,8 @@ export default function AttendanceSparkline({
 	const chartData = data.map((value, index) => ({ index, value }));
 
 	return (
-		<div className="w-full h-[40px] min-h-[40px]">
-			<ResponsiveContainer width="100%" height="100%">
+		<div className="w-full h-[40px] min-h-[40px] relative">
+			<ResponsiveContainer width="100%" height="100%" debounce={100}>
 				<LineChart data={chartData}>
 					<YAxis domain={[0, 100]} hide />
 					<Line

@@ -47,8 +47,10 @@ export default function LanguageSwitcher() {
 
 			{isOpen && (
 				<>
-					<div
-						className="fixed inset-0 z-40"
+					<button
+						type="button"
+						aria-label="Close language menu"
+						className="fixed inset-0 z-40 cursor-default bg-transparent w-full h-full"
 						onClick={() => setIsOpen(false)}
 					/>
 					<div

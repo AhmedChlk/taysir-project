@@ -2,17 +2,21 @@
   "name": "taysir",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
+"scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
-    "clean:test": "rm -rf coverage/ playwright-report/ test-results/ .next/ tsconfig.tsbuildinfo",
-    "test:agent": "npm run clean:test && vitest run --reporter=verbose",
+    "lint": "next lint --dir .",
+    "db:push": "prisma db push",
+    "clean:agent": "rm -rf coverage/ playwright-report/ test-results/ .next/ tsconfig.tsbuildinfo",
+    "build:agent": "npm run clean:agent && prisma generate && tsc --noEmit && next build",
+    "test:agent": "vitest run --reporter=verbose",
     "e2e:agent": "playwright test --reporter=list",
-    "build:agent": "npm run clean:test && ./node_modules/.bin/tsc --noEmit && next build",
-    "security:agent": "npx snyk code test"
-    },
+    "security:sast": "snyk code test",
+    "security:sca": "snyk test",
+    "sonar:agent": "sonar-scanner",
+    "qa:full": "npm run build:agent && npm run test:agent && npm run e2e:agent"
+  },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@t3-oss/env-nextjs": "^0.13.11",

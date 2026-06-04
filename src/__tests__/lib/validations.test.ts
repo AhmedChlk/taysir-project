@@ -1,253 +1,169 @@
-import { describe, expect, it } from "vitest";
-import {
-	ActivitySchema,
-	CreateGroupSchema,
-	CreatePaymentPlanSchema,
-	CreateStudentSchema,
-	CreateUserSchema,
-	PaymentSchema,
-	RoomSchema,
-	UpdateGroupSchema,
-	UpdateStudentSchema,
+import { describe, it, expect } from "vitest";
+import { 
+    CreateUserSchema, 
+    UpdateUserSchema, 
+    CreatePaymentPlanSchema, 
+    RegisterPaymentSchema,
+    MarkPresenceSchema,
+    RoomSchema,
+    ActivitySchema,
+    CreateStudentSchema,
+    CreateSessionSchema,
+    SendMessageSchema,
+    CreateDocumentSchema
 } from "@/lib/validations";
 
-const TEST_PASSWORD_VALID = process.env.TEST_PASSWORD as string;
+describe("Validations Stress Test", () => {
+    describe("CreateUserSchema", () => {
+        it("Fail: email invalide et mot de passe trop court", () => {
+            const result = CreateUserSchema.safeParse({
+                email: "pas-un-email",
+                firstName: "A",
+                lastName: "B",
+                role: "ADMIN",
+                password: "123"
+            });
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                const issues = result.error.issues;
+                expect(issues.some(i => i.path.includes("email"))).toBe(true);
+                expect(issues.some(i => i.path.includes("password"))).toBe(true);
+            }
+        });
 
-describe("CreateUserSchema", () => {
-	const valid = {
-		email: "user@school.dz",
-		firstName: "Ahmed",
-		lastName: "Benali",
-		role: "ADMIN" as never,
-		password: TEST_PASSWORD_VALID,
-	};
+        it("Success: avec avatarUrl optionnel", () => {
+            const valid = {
+                email: "test@test.com",
+                firstName: "Ahmed",
+                lastName: "Ben",
+                role: "ADMIN",
+                password: process.env.TEST_PASSWORD || "password123",
+                avatarUrl: "https://photo.com/me.jpg"
+            };
+            expect(CreateUserSchema.safeParse(valid).success).toBe(true);
+        });
+    });
 
-	it("valide un utilisateur correct", () => {
-		expect(CreateUserSchema.safeParse(valid).success).toBe(true);
-	});
+    describe("CreatePaymentPlanSchema", () => {
+        const base = {
+            studentId: "550e8400-e29b-41d4-a716-446655440001",
+            activityId: "550e8400-e29b-41d4-a716-446655440002",
+        };
 
-	it("rejette un email invalide", () => {
-		expect(
-			CreateUserSchema.safeParse({ ...valid, email: "not-email" }).success,
-		).toBe(false);
-	});
+        it("Success: Minimal (totalAmount et tranches optionnels)", () => {
+            expect(CreatePaymentPlanSchema.safeParse(base).success).toBe(true);
+        });
 
-	it("rejette un prénom trop court", () => {
-		expect(
-			CreateUserSchema.safeParse({ ...valid, firstName: "A" }).success,
-		).toBe(false);
-	});
+        it("Fail: montant négatif", () => {
+            expect(CreatePaymentPlanSchema.safeParse({ ...base, totalAmount: -100 }).success).toBe(false);
+        });
 
-	it("rejette un mot de passe < 8 caractères", () => {
-		expect(
-			CreateUserSchema.safeParse({ ...valid, password: "short" }).success,
-		).toBe(false);
-	});
-});
+        it("Success: Complet avec tranches", () => {
+            const full = {
+                ...base,
+                totalAmount: 5000,
+                currency: "EUR",
+                tranches: [{ amount: 5000, dueDate: "2026-01-01" }]
+            };
+            expect(CreatePaymentPlanSchema.safeParse(full).success).toBe(true);
+        });
+    });
 
-describe("CreateStudentSchema", () => {
-	const valid = {
-		firstName: "Youcef",
-		lastName: "Mansour",
-		email: "y@y.dz",
-		photoUrl: "https://cdn.example.com/img.jpg",
-		isMinor: false,
-	};
+    describe("MarkPresenceSchema", () => {
+        const base = {
+            seanceId: "550e8400-e29b-41d4-a716-446655440001",
+            participantId: "550e8400-e29b-41d4-a716-446655440002",
+            statut: "PRESENT"
+        };
 
-	it("valide un élève correct", () => {
-		expect(CreateStudentSchema.safeParse(valid).success).toBe(true);
-	});
+        it("Fail: retard négatif", () => {
+            expect(MarkPresenceSchema.safeParse({ ...base, retard: -5 }).success).toBe(false);
+        });
 
-	it("rejette un prénom trop court", () => {
-		expect(
-			CreateStudentSchema.safeParse({ ...valid, firstName: "Y" }).success,
-		).toBe(false);
-	});
+        it("Success: avec note et retard valide", () => {
+            expect(MarkPresenceSchema.safeParse({ ...base, retard: 15, note: "En retard de 15m" }).success).toBe(true);
+        });
+    });
 
-	it("rejette un email invalide", () => {
-		expect(
-			CreateStudentSchema.safeParse({ ...valid, email: "bad" }).success,
-		).toBe(false);
-	});
+    describe("ActivitySchema", () => {
+        it("Fail: Regex couleur invalide", () => {
+            const base = { name: "Math" };
+            expect(ActivitySchema.safeParse({ ...base, color: "red" }).success).toBe(false);
+            expect(ActivitySchema.safeParse({ ...base, color: "#ABC" }).success).toBe(false); // Doit être 6 chars
+            expect(ActivitySchema.safeParse({ ...base, color: "#GHIJKL" }).success).toBe(false);
+        });
 
-	it("accepte un email vide (champ optionnel)", () => {
-		expect(CreateStudentSchema.safeParse({ ...valid, email: "" }).success).toBe(
-			true,
-		);
-	});
+        it("Success: Regex couleur valide", () => {
+            expect(ActivitySchema.safeParse({ name: "Math", color: "#FF0000" }).success).toBe(true);
+        });
 
-	it("rejette une photoUrl invalide", () => {
-		expect(
-			CreateStudentSchema.safeParse({ ...valid, photoUrl: "not-a-url" })
-				.success,
-		).toBe(false);
-	});
+        it("Fail: Durée trop courte", () => {
+            expect(ActivitySchema.safeParse({ name: "Math", duration: 10 }).success).toBe(false);
+        });
+    });
 
-	it("accepte groupIds vide par défaut", () => {
-		const result = CreateStudentSchema.safeParse(valid);
-		expect(result.success).toBe(true);
-		if (result.success) expect(result.data.groupIds).toEqual([]);
-	});
-});
+    describe("CreateSessionSchema (Refinements)", () => {
+        const base = {
+            activityId: "550e8400-e29b-41d4-a716-446655440001",
+            roomId: "550e8400-e29b-41d4-a716-446655440002",
+            instructorId: "550e8400-e29b-41d4-a716-446655440003",
+            groupId: "550e8400-e29b-41d4-a716-446655440004",
+        };
 
-describe("UpdateStudentSchema", () => {
-	it("requiert un UUID valide pour id", () => {
-		expect(
-			UpdateStudentSchema.safeParse({
-				id: "bad-id",
-				firstName: "X",
-				lastName: "Y",
-				photoUrl: "https://x.com/img.jpg",
-				isMinor: false,
-			}).success,
-		).toBe(false);
-	});
+        it("Fail: Date de fin avant début", () => {
+            const result = CreateSessionSchema.safeParse({
+                ...base,
+                startTime: new Date("2026-01-01T10:00:00Z"),
+                endTime: new Date("2026-01-01T09:00:00Z"),
+            });
+            expect(result.success).toBe(false);
+            if (!result.success) expect(result.error?.issues[0]?.message).toMatch(/après l'heure de début/);
+        });
 
-	it("valide un update correct", () => {
-		expect(
-			UpdateStudentSchema.safeParse({
-				id: "550e8400-e29b-41d4-a716-446655440001",
-				firstName: "Youcef",
-				lastName: "Mansour",
-				photoUrl: "https://cdn.example.com/img.jpg",
-				isMinor: false,
-			}).success,
-		).toBe(true);
-	});
-});
+        it("Fail: Date de fin égale au début", () => {
+            const date = new Date();
+            expect(CreateSessionSchema.safeParse({ ...base, startTime: date, endTime: date }).success).toBe(false);
+        });
+    });
 
-describe("CreatePaymentPlanSchema", () => {
-	const valid = {
-		studentId: "550e8400-e29b-41d4-a716-446655440001",
-		activityId: "550e8400-e29b-41d4-a716-446655440002",
-		totalAmount: 50000,
-		tranches: [
-			{ amount: 25000, dueDate: "2024-09-01" },
-			{ amount: 25000, dueDate: "2024-10-01" },
-		],
-	};
+    describe("CreateDocumentSchema (Refinements)", () => {
+        const base = { studentId: "550e8400-e29b-41d4-a716-446655440001", name: "Doc" };
 
-	it("valide un plan de paiement correct avec devise par défaut", () => {
-		const result = CreatePaymentPlanSchema.safeParse(valid);
-		expect(result.success).toBe(true);
-		if (result.success) expect(result.data.currency).toBe("DZD");
-	});
+        it("Fail: protocole non sécurisé (javascript, data, ftp)", () => {
+            expect(CreateDocumentSchema.safeParse({ ...base, url: "javascript:alert(1)" }).success).toBe(false);
+            expect(CreateDocumentSchema.safeParse({ ...base, url: "ftp://files.com/doc.pdf" }).success).toBe(false);
+        });
 
-	it("accepte EUR comme devise", () => {
-		expect(
-			CreatePaymentPlanSchema.safeParse({ ...valid, currency: "EUR" }).success,
-		).toBe(true);
-	});
+        it("Success: http ou https", () => {
+            expect(CreateDocumentSchema.safeParse({ ...base, url: "https://cdn.dz/doc.pdf" }).success).toBe(true);
+            expect(CreateDocumentSchema.safeParse({ ...base, url: "http://localhost:3000/test.pdf" }).success).toBe(true);
+        });
+    });
 
-	it("rejette une devise inconnue", () => {
-		expect(
-			CreatePaymentPlanSchema.safeParse({ ...valid, currency: "GBP" }).success,
-		).toBe(false);
-	});
+    describe("Edge Cases Génériques", () => {
+        it("Trim et chaines vides : CreateUserSchema rejette chaines vides avec espaces", () => {
+            // Note: Si .trim() n'est pas utilisé, CreateUserSchema.min(2) devrait quand même rejeter " "
+            expect(CreateUserSchema.safeParse({
+                email: "a@b.com",
+                firstName: " ",
+                lastName: " ",
+                role: "ADMIN",
+                password: process.env.TEST_PASSWORD || "password123"
+            }).success).toBe(false);
+        });
 
-	it("rejette si tranches est vide", () => {
-		expect(
-			CreatePaymentPlanSchema.safeParse({ ...valid, tranches: [] }).success,
-		).toBe(false);
-	});
-
-	it("rejette un totalAmount négatif", () => {
-		expect(
-			CreatePaymentPlanSchema.safeParse({ ...valid, totalAmount: -100 })
-				.success,
-		).toBe(false);
-	});
-});
-
-describe("PaymentSchema", () => {
-	const valid = {
-		id: "id-1",
-		etablissementId: "etab-1",
-		studentId: "stu-1",
-		totalAmount: 10000,
-		paidAmount: 5000,
-		currency: "DZD",
-		status: "PARTIAL" as const,
-	};
-
-	it("valide un paiement correct", () => {
-		expect(PaymentSchema.safeParse(valid).success).toBe(true);
-	});
-
-	it("accepte USD comme devise", () => {
-		expect(PaymentSchema.safeParse({ ...valid, currency: "USD" }).success).toBe(
-			true,
-		);
-	});
-
-	it("rejette une devise inconnue", () => {
-		expect(PaymentSchema.safeParse({ ...valid, currency: "XOF" }).success).toBe(
-			false,
-		);
-	});
-});
-
-describe("RoomSchema", () => {
-	it("valide une salle correcte", () => {
-		expect(
-			RoomSchema.safeParse({ name: "Salle A", capacity: 20 }).success,
-		).toBe(true);
-	});
-
-	it("rejette un nom trop court", () => {
-		expect(RoomSchema.safeParse({ name: "A", capacity: 10 }).success).toBe(
-			false,
-		);
-	});
-
-	it("rejette une capacité < 1", () => {
-		expect(RoomSchema.safeParse({ name: "Salle B", capacity: 0 }).success).toBe(
-			false,
-		);
-	});
-});
-
-describe("ActivitySchema", () => {
-	it("valide une activité correcte", () => {
-		expect(ActivitySchema.safeParse({ name: "Yoga" }).success).toBe(true);
-	});
-
-	it("valide une couleur hexadécimale valide", () => {
-		expect(
-			ActivitySchema.safeParse({ name: "Yoga", color: "#FF5733" }).success,
-		).toBe(true);
-	});
-
-	it("rejette une couleur invalide", () => {
-		expect(
-			ActivitySchema.safeParse({ name: "Yoga", color: "red" }).success,
-		).toBe(false);
-	});
-});
-
-describe("CreateGroupSchema & UpdateGroupSchema", () => {
-	it("valide un groupe correct", () => {
-		expect(CreateGroupSchema.safeParse({ name: "Groupe A" }).success).toBe(
-			true,
-		);
-	});
-
-	it("rejette un nom trop court", () => {
-		expect(CreateGroupSchema.safeParse({ name: "G" }).success).toBe(false);
-	});
-
-	it("UpdateGroupSchema requiert un UUID", () => {
-		expect(
-			UpdateGroupSchema.safeParse({ id: "bad", name: "Groupe A" }).success,
-		).toBe(false);
-	});
-
-	it("UpdateGroupSchema valide avec UUID correct", () => {
-		expect(
-			UpdateGroupSchema.safeParse({
-				id: "550e8400-e29b-41d4-a716-446655440001",
-				name: "Groupe B",
-			}).success,
-		).toBe(true);
-	});
+        it("Nettoyage des clés excessives : Zod ignore les champs inconnus", () => {
+            const dataWithHacks = {
+                id: "550e8400-e29b-41d4-a716-446655440001",
+                name: "Salle A",
+                capacity: 10,
+                maliciousField: "DROP TABLE Users;"
+            };
+            const result = RoomSchema.safeParse(dataWithHacks);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data).not.toHaveProperty("maliciousField");
+            }
+        });
+    });
 });

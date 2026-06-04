@@ -83,6 +83,37 @@ async function main() {
   });
   console.log(`✅ Groupe créé : ${group.name}`);
 
+  // 5. Création de salles
+  const room1 = await prisma.room.create({
+    data: {
+      name: "Salle 101",
+      capacity: 20,
+      etablissementId: etablissement.id,
+    }
+  });
+  const room2 = await prisma.room.create({
+    data: {
+      name: "Salle 102",
+      capacity: 15,
+      etablissementId: etablissement.id,
+    }
+  });
+  console.log(`✅ Salles créées : ${room1.name}, ${room2.name}`);
+
+  // 6. Création d'un intervenant (en plus du gérant)
+  const instructor = await prisma.user.create({
+    data: {
+      email: "intervenant@taysir.dz",
+      password: hashedPassword,
+      firstName: "Prof",
+      lastName: "Taysir",
+      role: RoleUser.INTERVENANT,
+      etablissementId: etablissement.id,
+      status: 'ACTIVE',
+    }
+  });
+  console.log(`✅ Intervenant créé : ${instructor.email}`);
+
   console.log("✨ Seeding terminé avec succès !");
 }
 

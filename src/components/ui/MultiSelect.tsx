@@ -20,14 +20,18 @@ interface MultiSelectProps {
 
 export default function MultiSelect({
 	label,
-	options,
-	value,
+	options = [],
+	value = [],
 	onChange,
 	placeholder,
 }: MultiSelectProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const triggerId = useId();
+
+    // Ensure value is always an array
+    const safeValue = Array.isArray(value) ? value : [];
+    const safeOptions = Array.isArray(options) ? options : [];
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -43,19 +47,19 @@ export default function MultiSelect({
 	}, []);
 
 	const toggleOption = (optionValue: string) => {
-		const newValue = value.includes(optionValue)
-			? value.filter((v) => v !== optionValue)
-			: [...value, optionValue];
+		const newValue = safeValue.includes(optionValue)
+			? safeValue.filter((v) => v !== optionValue)
+			: [...safeValue, optionValue];
 		onChange(newValue);
 	};
 
 	const removeValue = (e: React.MouseEvent, optionValue: string) => {
 		e.stopPropagation();
-		onChange(value.filter((v) => v !== optionValue));
+		onChange(safeValue.filter((v) => v !== optionValue));
 	};
 
-	const _selectedLabels = options
-		.filter((opt) => value.includes(opt.value))
+	const _selectedLabels = safeOptions
+		.filter((opt) => safeValue.includes(opt.value))
 		.map((opt) => opt.label);
 
 	return (
@@ -80,10 +84,10 @@ export default function MultiSelect({
 							: "border-taysir-teal/15 hover:border-taysir-teal/30",
 					)}
 				>
-					{value.length > 0 ? (
+					{safeValue.length > 0 ? (
 						<div className="flex flex-wrap gap-1.5">
-							{options
-								.filter((opt) => value.includes(opt.value))
+							{safeOptions
+								.filter((opt) => safeValue.includes(opt.value))
 								.map((opt) => (
 									<span
 										key={opt.value}
@@ -118,11 +122,11 @@ export default function MultiSelect({
 						aria-multiselectable="true"
 						className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-black/5 custom-scrollbar"
 					>
-						{options.map((option) => (
+						{safeOptions.map((option) => (
 							<div
 								key={option.value}
 								role="option"
-								aria-selected={value.includes(option.value)}
+								aria-selected={safeValue.includes(option.value)}
 								tabIndex={-1}
 								onClick={() => toggleOption(option.value)}
 								onKeyDown={(e) => {
@@ -133,7 +137,7 @@ export default function MultiSelect({
 								}}
 								className={clsx(
 									"flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-colors cursor-pointer",
-									value.includes(option.value)
+									safeValue.includes(option.value)
 										? "bg-taysir-teal/5 text-taysir-teal"
 										: "text-gray-700 hover:bg-gray-50",
 								)}
@@ -141,10 +145,10 @@ export default function MultiSelect({
 								<span className="uppercase tracking-widest text-[10px]">
 									{option.label}
 								</span>
-								{value.includes(option.value) && <Check size={16} />}
+								{safeValue.includes(option.value) && <Check size={16} />}
 							</div>
 						))}
-						{options.length === 0 && (
+						{safeOptions.length === 0 && (
 							<div className="px-4 py-8 text-center text-xs font-bold uppercase text-gray-300 italic">
 								Aucune option disponible
 							</div>
@@ -155,3 +159,4 @@ export default function MultiSelect({
 		</div>
 	);
 }
+
