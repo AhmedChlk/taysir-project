@@ -271,3 +271,63 @@
 		background: rgba(15, 81, 92, 0.2);
 	}
 }
+
+/* Landing funnel grids */
+.taysir-pain-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+	margin: 48px 0 0;
+	padding: 0;
+}
+.taysir-steps-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 24px;
+	margin-top: 56px;
+}
+@media (max-width: 900px) {
+	.taysir-pain-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	.taysir-steps-grid {
+		grid-template-columns: 1fr;
+	}
+}
+/* Inverted CTA button: white on dark backgrounds */
+.btn.btn--invert,
+section[style*="0F515C"] .btn.btn--lg {
+	background: #fff;
+	color: #0f515c;
+	border: none;
+}
+.btn.btn--invert:hover,
+section[style*="0F515C"] .btn.btn--lg:hover {
+	background: #eef4f5;
+}
+
+/* Landing modal / overlay animations */
+@keyframes taysir-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes taysir-pop {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	[style*="taysir-fade"],
+	[style*="taysir-pop"] {
+		animation: none !important;
+	}
+}

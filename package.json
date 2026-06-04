@@ -22,6 +22,7 @@
 		"qa:full": "npm run build:agent && npm run test:agent && npm run e2e:agent"
 	},
 	"dependencies": {
+		"@gsap/react": "^2.1.2",
 		"@prisma/client": "^6.19.3",
 		"@t3-oss/env-nextjs": "^0.13.11",
 		"@vercel/blob": "^2.3.3",
@@ -29,6 +30,7 @@
 		"clsx": "^2.1.1",
 		"date-fns": "^4.1.0",
 		"framer-motion": "^12.38.0",
+		"gsap": "^3.15.0",
 		"jspdf": "^4.2.1",
 		"lucide-react": "^1.8.0",
 		"next": "^16.2.6",

@@ -7,6 +7,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowR, Check } from "./components/LandingIcons";
 import { Logo, LogoMark } from "./components/LandingLogo";
 import { LandingNavbar as Navbar } from "./components/LandingNavbar";
+import { DemoButton, DemoCtaProvider } from "./lib/DemoCta";
+import { Faq, FinalCta, HowItWorks, Problem } from "./sections/Funnel";
 
 /* ==========================================================================
    Taysir Landing Page — Implementation based on Taysir Design System
@@ -518,8 +520,7 @@ const TaysirPhoneMockup = () => {
 	);
 };
 
-const Hero = ({ locale }: { locale: string }) => {
-	const loginUrl = `/${locale}/login`;
+const Hero = ({ locale: _locale }: { locale: string }) => {
 	return (
 		<section
 			style={{
@@ -607,12 +608,12 @@ const Hero = ({ locale }: { locale: string }) => {
 							flexWrap: "wrap",
 						}}
 					>
-						<Link href={loginUrl as any} className="btn btn--primary btn--lg">
-							Essayer Taysir gratuitement <ArrowR size={18} />
-						</Link>
-						<Link href={loginUrl as any} className="btn btn--ghost btn--lg">
-							Voir une démo
-						</Link>
+						<DemoButton>
+							Réserver une démo <ArrowR size={18} />
+						</DemoButton>
+						<a href="#produit" className="btn btn--ghost btn--lg">
+							Voir le produit
+						</a>
 					</div>
 					<div
 						style={{
@@ -2254,15 +2255,21 @@ const Footer = () => (
 
 export default function LandingPage({ locale }: { locale: string }) {
 	return (
-		<div className="min-h-screen bg-white">
-			<Navbar locale={locale} />
-			<Hero locale={locale} />
-			<KPIBand />
-			<PlatformTabs />
-			<MicroDemo />
-			<ROISimulator />
-			<Pricing locale={locale} />
-			<Footer />
-		</div>
+		<DemoCtaProvider>
+			<div className="min-h-screen bg-white">
+				<Navbar locale={locale} />
+				<Hero locale={locale} />
+				<KPIBand />
+				<Problem />
+				<HowItWorks />
+				<PlatformTabs />
+				<MicroDemo />
+				<ROISimulator />
+				<Pricing locale={locale} />
+				<Faq />
+				<FinalCta />
+				<Footer />
+			</div>
+		</DemoCtaProvider>
 	);
 }
