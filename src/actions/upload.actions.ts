@@ -31,7 +31,10 @@ export async function uploadFileAction(formData: FormData) {
 
 		const tenantId = session.user.etablissementId;
 		if (!tenantId) {
-			return { success: false, error: "Aucun établissement associé à ce compte" };
+			return {
+				success: false,
+				error: "Aucun établissement associé à ce compte",
+			};
 		}
 		// Sécurisation du nom de fichier : on ne garde que le nom de base pour éviter le path traversal
 		const safeFileName = path

@@ -240,7 +240,13 @@ export const SendMessageSchema = z.object({
 export const CreateDocumentSchema = z.object({
 	studentId: z.string().uuid(),
 	name: z.string().min(2, "Le nom du document est requis."),
-	url: z.string().url("URL du document invalide.").refine((val) => val.startsWith("http://") || val.startsWith("https://"), "L'URL doit être sécurisée (http/https)."),
+	url: z
+		.string()
+		.url("URL du document invalide.")
+		.refine(
+			(val) => val.startsWith("http://") || val.startsWith("https://"),
+			"L'URL doit être sécurisée (http/https).",
+		),
 	type: z.string().optional().nullable(),
 });
 

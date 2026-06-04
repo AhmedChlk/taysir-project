@@ -1,13 +1,15 @@
 "use client";
 
+import { clsx } from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	AlertCircle,
 	Baby,
 	Camera,
 	Edit3,
+	Loader2,
 	Plus,
 	ShieldCheck,
-	Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -17,16 +19,17 @@ import {
 	updateStudentAction,
 } from "@/actions/students.actions";
 import { uploadFileAction } from "@/actions/upload.actions";
-import { Input, FormSection } from "@/components/ui/FormInput";
+import { Input } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
 import MultiSelect from "@/components/ui/MultiSelect";
 import { Toggle } from "@/components/ui/Toggle";
 import { useRouter } from "@/i18n/routing";
-import type { Group, Student, PaymentPlan } from "@/types/schema";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx } from "clsx";
+import type { Group, PaymentPlan, Student } from "@/types/schema";
 
-type StudentWithGroups = Student & { groups: Group[]; paymentPlans: PaymentPlan[] };
+type StudentWithGroups = Student & {
+	groups: Group[];
+	paymentPlans: PaymentPlan[];
+};
 
 interface StudentFormModalProps {
 	isOpen: boolean;
@@ -43,8 +46,12 @@ export default function StudentFormModal({
 }: StudentFormModalProps) {
 	const [isPending, startTransition] = useTransition();
 	const [isMinor, setIsMinor] = useState(!!student?.isMinor);
-	const [photoPreview, setPhotoPreview] = useState<string | null>(student?.photoUrl || null);
-	const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(student?.groups?.map(g => g.id) || []);
+	const [photoPreview, setPhotoPreview] = useState<string | null>(
+		student?.photoUrl || null,
+	);
+	const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
+		student?.groups?.map((g) => g.id) || [],
+	);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,16 +128,14 @@ export default function StudentFormModal({
 			isOpen={isOpen}
 			onClose={onClose}
 			title={
-				student
-					? t("students_update_file")
-					: t("students_new_registration")
+				student ? t("students_update_file") : t("students_new_registration")
 			}
 			size="xl"
 		>
 			<form onSubmit={handleSubmit} className="relative">
 				{/* Floating Header Decoration */}
 				<div className="absolute -top-24 left-1/2 -translate-x-1/2 w-full flex justify-center pointer-events-none">
-					<motion.div 
+					<motion.div
 						initial={{ y: 20, opacity: 0 }}
 						animate={{ y: 0, opacity: 1 }}
 						className="relative group/photo pointer-events-auto"
@@ -171,7 +176,7 @@ export default function StudentFormModal({
 				<div className="mt-12 space-y-12">
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 						{/* Left Column: Core Info */}
-						<motion.div 
+						<motion.div
 							initial={{ x: -20, opacity: 0 }}
 							animate={{ x: 0, opacity: 1 }}
 							transition={{ delay: 0.1 }}
@@ -182,9 +187,11 @@ export default function StudentFormModal({
 									<div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-500">
 										<Edit3 size={16} />
 									</div>
-									<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">{t("students_identity")}</h3>
+									<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">
+										{t("students_identity")}
+									</h3>
 								</div>
-								
+
 								<div className="grid grid-cols-2 gap-5">
 									<Input
 										label={t("first_name")}
@@ -215,7 +222,9 @@ export default function StudentFormModal({
 							<div className="p-8 bg-surface-50 rounded-[32px] border border-line space-y-6">
 								<div className="flex items-center gap-3">
 									<div className="w-1.5 h-5 bg-brand-500 rounded-full" />
-									<h3 className="text-xs font-black text-ink-900 uppercase tracking-widest">{t("students_academic_assignment")}</h3>
+									<h3 className="text-xs font-black text-ink-900 uppercase tracking-widest">
+										{t("students_academic_assignment")}
+									</h3>
 								</div>
 								<MultiSelect
 									label={t("students_enroll_groups")}
@@ -228,34 +237,41 @@ export default function StudentFormModal({
 						</motion.div>
 
 						{/* Right Column: Status & Contact */}
-						<motion.div 
+						<motion.div
 							initial={{ x: 20, opacity: 0 }}
 							animate={{ x: 0, opacity: 1 }}
 							transition={{ delay: 0.2 }}
 							className="space-y-10"
 						>
 							{/* Apple-style Toggle Card */}
-							<div 
-								role="button"
-								tabIndex={0}
-								onClick={() => setIsMinor(!isMinor)}
+							<div
 								className={clsx(
 									"group p-1 rounded-[32px] border transition-all duration-500 ease-out",
-									isMinor ? "bg-amber-100/50 border-amber-200" : "bg-surface-100 border-line hover:border-ink-200"
+									isMinor
+										? "bg-amber-100/50 border-amber-200"
+										: "bg-surface-100 border-line hover:border-ink-200",
 								)}
 							>
 								<div className="bg-white rounded-[30px] p-6 flex items-center justify-between shadow-sm">
 									<div className="flex items-center gap-4">
-										<div className={clsx(
-											"w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
-											isMinor ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20 rotate-12" : "bg-surface-50 text-ink-400"
-										)}>
+										<div
+											className={clsx(
+												"w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
+												isMinor
+													? "bg-amber-500 text-white shadow-lg shadow-amber-500/20 rotate-12"
+													: "bg-surface-50 text-ink-400",
+											)}
+										>
 											<Baby size={24} />
 										</div>
 										<div>
-											<p className="text-sm font-black text-ink-900 uppercase tracking-tight">{isMinor ? "Élève Mineur" : "Élève Majeur"}</p>
+											<p className="text-sm font-black text-ink-900 uppercase tracking-tight">
+												{isMinor ? "Élève Mineur" : "Élève Majeur"}
+											</p>
 											<p className="text-[10px] font-bold text-ink-400 uppercase tracking-tighter mt-0.5">
-												{isMinor ? "Tuteur obligatoire" : "Coordonnées directes"}
+												{isMinor
+													? "Tuteur obligatoire"
+													: "Coordonnées directes"}
 											</p>
 										</div>
 									</div>
@@ -276,7 +292,9 @@ export default function StudentFormModal({
 											<div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
 												<ShieldCheck size={16} />
 											</div>
-											<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">{t("student_guardian_info")}</h3>
+											<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">
+												{t("student_guardian_info")}
+											</h3>
 										</div>
 										<div className="grid grid-cols-2 gap-5">
 											<div className="col-span-2">
@@ -316,7 +334,9 @@ export default function StudentFormModal({
 											<div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-500">
 												<ShieldCheck size={16} />
 											</div>
-											<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">{t("students_contact")}</h3>
+											<h3 className="text-sm font-black text-ink-900 uppercase tracking-[0.15em]">
+												{t("students_contact")}
+											</h3>
 										</div>
 										<div className="grid grid-cols-2 gap-5">
 											<Input
@@ -334,13 +354,13 @@ export default function StudentFormModal({
 											/>
 										</div>
 									</motion.div>
-								)
-							}</AnimatePresence>
+								)}
+							</AnimatePresence>
 						</motion.div>
 					</div>
 
 					{/* Action Footer */}
-					<motion.div 
+					<motion.div
 						initial={{ y: 20, opacity: 0 }}
 						animate={{ y: 0, opacity: 1 }}
 						transition={{ delay: 0.3 }}
@@ -361,9 +381,14 @@ export default function StudentFormModal({
 							{isPending ? (
 								<Loader2 size={20} className="animate-spin" />
 							) : (
-								<Plus size={20} className="group-hover:rotate-90 transition-transform duration-500" />
+								<Plus
+									size={20}
+									className="group-hover:rotate-90 transition-transform duration-500"
+								/>
 							)}
-							{student ? t("students_confirm_update") : t("students_confirm_registration")}
+							{student
+								? t("students_confirm_update")
+								: t("students_confirm_registration")}
 						</button>
 					</motion.div>
 				</div>
@@ -372,7 +397,7 @@ export default function StudentFormModal({
 			{/* Error Notification */}
 			<AnimatePresence>
 				{errorMessage && (
-					<motion.div 
+					<motion.div
 						initial={{ opacity: 0, y: 100 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 100 }}
@@ -383,8 +408,10 @@ export default function StudentFormModal({
 						</div>
 						<div className="flex-1">
 							<h4 className="text-sm font-bold text-ink-900 mb-1">Attention</h4>
-							<p className="text-xs text-ink-500 leading-relaxed font-medium">{errorMessage}</p>
-							<button 
+							<p className="text-xs text-ink-500 leading-relaxed font-medium">
+								{errorMessage}
+							</p>
+							<button
 								onClick={() => setErrorMessage(null)}
 								className="mt-3 text-[10px] font-bold text-brand-500 uppercase tracking-widest hover:text-brand-700"
 							>

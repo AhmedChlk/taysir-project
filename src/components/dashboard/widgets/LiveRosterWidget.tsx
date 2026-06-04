@@ -1,4 +1,4 @@
-import { Edit2, Mail, ShieldCheck, Users } from "lucide-react";
+import { Edit2, Users } from "lucide-react";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";

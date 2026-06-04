@@ -5,13 +5,13 @@ vi.mock("next-auth/next", () => ({
 }));
 
 vi.mock("@/lib/prisma", () => {
-    const mock = {
-        message: { create: vi.fn(), findMany: vi.fn() },
-    };
-    return {
-	    getTenantPrisma: vi.fn(() => mock),
-        prisma: mock,
-    };
+	const mock = {
+		message: { create: vi.fn(), findMany: vi.fn() },
+	};
+	return {
+		getTenantPrisma: vi.fn(() => mock),
+		prisma: mock,
+	};
 });
 
 vi.mock("@/lib/auth", () => ({
@@ -45,96 +45,114 @@ const makeSession = (override: Record<string, unknown> = {}) => ({
 });
 
 describe("Messages Actions Audit", () => {
-    let mockPrisma: any;
+	let mockPrisma: any;
 
 	beforeEach(() => {
-        vi.clearAllMocks();
-        mockPrisma = getTenantPrisma(TENANT_ID);
-    });
+		vi.clearAllMocks();
+		mockPrisma = getTenantPrisma(TENANT_ID);
+	});
 
 	describe("🔴 A. Sécurité et Confidentialité (Privacy & Spoofing)", () => {
 		it("Usurpation d'Expéditeur: Écrase le senderId avec celui de la session (pas d'usurpation)", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.message.create.mockResolvedValue({ id: "msg-1" });
 
-			const result = await sendMessageAction({ 
-                content: "Bonjour",
-                // Payload malveillant qui tenterait d'usurper l'identité
-                senderId: "hacker-user-id" 
-            } as any);
+			const result = await sendMessageAction({
+				content: "Bonjour",
+				// Payload malveillant qui tenterait d'usurper l'identité
+				senderId: "hacker-user-id",
+			} as any);
 
 			expect(result.success).toBe(true);
-            
-            // Le senderId est fermement lié à la session
-			expect(mockPrisma.message.create).toHaveBeenCalledWith(expect.objectContaining({
-				data: expect.objectContaining({ senderId: USER_ID }),
-			}));
+
+			// Le senderId est fermement lié à la session
+			expect(mockPrisma.message.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({ senderId: USER_ID }),
+				}),
+			);
 		});
 
-        it("Faille d'Isolation: Injecte rigoureusement le etablissementId de la session", async () => {
+		it("Faille d'Isolation: Injecte rigoureusement le etablissementId de la session", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.message.create.mockResolvedValue({ id: "msg-1" });
 
 			await sendMessageAction({ content: "Isolation" });
-            
-			expect(mockPrisma.message.create).toHaveBeenCalledWith(expect.objectContaining({
-				data: expect.objectContaining({ etablissementId: TENANT_ID }),
-			}));
-        });
 
-        it("Lecture Non Autorisée: Bloque la lecture des messages d'un autre utilisateur", async () => {
-            vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-            mockPrisma.message.findMany.mockResolvedValue([]);
+			expect(mockPrisma.message.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({ etablissementId: TENANT_ID }),
+				}),
+			);
+		});
 
-            // Même si on tente d'envoyer un recipientId différent, le userId de session est utilisé comme filtre unique
-            await getReceivedMessagesAction({ recipientId: "autre-utilisateur" } as any);
-            expect(mockPrisma.message.findMany).toHaveBeenCalledWith(expect.objectContaining({
-                where: { recipientId: USER_ID } // strict sur USER_ID de la session
-            }));
-            
-            await getSentMessagesAction({ senderId: "autre-utilisateur" } as any);
-            expect(mockPrisma.message.findMany).toHaveBeenCalledWith(expect.objectContaining({
-                where: { senderId: USER_ID } // strict sur USER_ID de la session
-            }));
-        });
+		it("Lecture Non Autorisée: Bloque la lecture des messages d'un autre utilisateur", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			mockPrisma.message.findMany.mockResolvedValue([]);
+
+			// Même si on tente d'envoyer un recipientId différent, le userId de session est utilisé comme filtre unique
+			await getReceivedMessagesAction({
+				recipientId: "autre-utilisateur",
+			} as any);
+			expect(mockPrisma.message.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { recipientId: USER_ID }, // strict sur USER_ID de la session
+				}),
+			);
+
+			await getSentMessagesAction({ senderId: "autre-utilisateur" } as any);
+			expect(mockPrisma.message.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { senderId: USER_ID }, // strict sur USER_ID de la session
+				}),
+			);
+		});
 	});
 
 	describe("🟠 B. Résilience et Désastres", () => {
-        it("Crash Prisma: Gère un échec système (ex: destinataire n'existe pas -> Contrainte ForeignKey)", async () => {
+		it("Crash Prisma: Gère un échec système (ex: destinataire n'existe pas -> Contrainte ForeignKey)", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-			mockPrisma.message.create.mockRejectedValue(new Error("Foreign key constraint failed"));
+			mockPrisma.message.create.mockRejectedValue(
+				new Error("Foreign key constraint failed"),
+			);
 
-			const result = await sendMessageAction({ content: "Test", recipientId: RECIPIENT_ID });
+			const result = await sendMessageAction({
+				content: "Test",
+				recipientId: RECIPIENT_ID,
+			});
 			expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
-            }
-        });
+			if (!result.success) {
+				expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
+			}
+		});
 	});
 
 	describe("🟡 C. Validations et Cas Limites (Unhappy Paths)", () => {
 		it("Contenu Vide ou Trop Court: Zod rejette", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-            mockPrisma.message.create.mockResolvedValue({ id: "msg-1" }); // Reset mock
-			
+			mockPrisma.message.create.mockResolvedValue({ id: "msg-1" }); // Reset mock
+
 			const result = await sendMessageAction({ content: "" }); // Envoi vide
 			expect(result.success).toBe(false);
-			if (!result.success) expect(result.error.code).toBe("INVALID_DATA_FORMAT");
+			if (!result.success)
+				expect(result.error.code).toBe("INVALID_DATA_FORMAT");
 		});
 
-        it("XSS / Injection: Le texte brut est passé à Prisma sans être interprété", async () => {
+		it("XSS / Injection: Le texte brut est passé à Prisma sans être interprété", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.message.create.mockResolvedValue({ id: "msg-xss" });
 
-            const payload = "<script>alert('XSS')</script> DROP TABLE Users;";
+			const payload = "<script>alert('XSS')</script> DROP TABLE Users;";
 			const result = await sendMessageAction({ content: payload });
-			
-            expect(result.success).toBe(true);
-            // On vérifie que le contenu n'a pas déclenché d'erreur SQL et est bien passé à l'ORM
-            expect(mockPrisma.message.create).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ content: payload })
-            }));
-        });
+
+			expect(result.success).toBe(true);
+			// On vérifie que le contenu n'a pas déclenché d'erreur SQL et est bien passé à l'ORM
+			expect(mockPrisma.message.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({ content: payload }),
+				}),
+			);
+		});
 	});
 
 	describe("🟢 D. Happy Path & Cache", () => {
@@ -142,26 +160,36 @@ describe("Messages Actions Audit", () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.message.create.mockResolvedValue({ id: "msg-2" });
 
-			const result = await sendMessageAction({ content: "Bonjour", recipientId: RECIPIENT_ID });
+			const result = await sendMessageAction({
+				content: "Bonjour",
+				recipientId: RECIPIENT_ID,
+			});
 			expect(result.success).toBe(true);
-			expect(mockPrisma.message.create).toHaveBeenCalledWith(expect.objectContaining({
-				data: expect.objectContaining({ recipientId: RECIPIENT_ID }),
-			}));
+			expect(mockPrisma.message.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({ recipientId: RECIPIENT_ID }),
+				}),
+			);
 
-            const { revalidateTag } = await import("next/cache");
-            expect(revalidateTag).toHaveBeenCalledWith(`etab_${TENANT_ID}_messages`, "max");
+			const { revalidateTag } = await import("next/cache");
+			expect(revalidateTag).toHaveBeenCalledWith(
+				`etab_${TENANT_ID}_messages`,
+				"max",
+			);
 		});
 
-        it("Envoi réussi sans destinataire (Message Global / null fallback)", async () => {
+		it("Envoi réussi sans destinataire (Message Global / null fallback)", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.message.create.mockResolvedValue({ id: "msg-global" });
 
-            // Envoi sans recipientId
+			// Envoi sans recipientId
 			const result = await sendMessageAction({ content: "Annonce Générale" });
 			expect(result.success).toBe(true);
-			expect(mockPrisma.message.create).toHaveBeenCalledWith(expect.objectContaining({
-				data: expect.objectContaining({ recipientId: null }),
-			}));
-        });
+			expect(mockPrisma.message.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({ recipientId: null }),
+				}),
+			);
+		});
 	});
 });

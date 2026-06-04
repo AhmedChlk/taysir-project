@@ -125,7 +125,10 @@ export const getGroups = async () => {
 };
 
 // Liste des séances
-export const getSessions = async (options?: { instructorId?: string; date?: Date }) => {
+export const getSessions = async (options?: {
+	instructorId?: string;
+	date?: Date;
+}) => {
 	const session = await getServerSession(authOptions);
 	const client = await getPrisma();
 	const user = session?.user;

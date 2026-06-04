@@ -38,7 +38,10 @@ export default async function StaffAlertsWidget() {
 									className="w-full h-full object-cover"
 								/>
 							) : (
-								<span className="text-sm">{session.instructor.firstName[0]}{session.instructor.lastName[0]}</span>
+								<span className="text-sm">
+									{session.instructor.firstName[0]}
+									{session.instructor.lastName[0]}
+								</span>
 							)}
 						</div>
 						<div className="flex-1 overflow-hidden">
@@ -46,7 +49,8 @@ export default async function StaffAlertsWidget() {
 								{session.instructor.firstName} {session.instructor.lastName}
 							</div>
 							<div className="text-[11px] font-bold text-ink-400 uppercase tracking-tight flex items-center gap-1.5 mt-1">
-								<Clock size={12} className="text-brand-500" /> {formatTime(session.startTime)} •{" "}
+								<Clock size={12} className="text-brand-500" />{" "}
+								{formatTime(session.startTime)} •{" "}
 								<span className="truncate">{session.activity.name}</span>
 							</div>
 						</div>

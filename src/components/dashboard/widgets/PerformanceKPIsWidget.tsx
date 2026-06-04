@@ -1,4 +1,4 @@
-import { ArrowUpRight, DoorOpen, TrendingUp, Wallet, Zap } from "lucide-react";
+import { DoorOpen, TrendingUp, Wallet, Zap } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import {
 	getAttendanceStatsAction,
@@ -6,7 +6,6 @@ import {
 	getFinancialKPIsAction,
 	getRoomOccupancyAction,
 } from "@/actions/dashboard.actions";
-import { Link } from "@/i18n/routing";
 import AttendanceSparkline from "./AttendanceSparkline";
 
 export default async function PerformanceKPIsWidget() {
@@ -57,7 +56,9 @@ export default async function PerformanceKPIsWidget() {
 					<div>
 						<div className="text-3xl font-bold text-ink-900 tracking-tight leading-none flex items-baseline gap-1.5 tabular-nums mb-4">
 							{finance.monthlyRevenue.toLocaleString("fr-DZ")}
-							<span className="text-xs text-ink-400 font-bold opacity-50">DA</span>
+							<span className="text-xs text-ink-400 font-bold opacity-50">
+								DA
+							</span>
 						</div>
 						<div className="flex items-center gap-3">
 							<div className="h-1 flex-1 bg-success-50 rounded-full overflow-hidden">
@@ -116,7 +117,10 @@ export default async function PerformanceKPIsWidget() {
 						</div>
 					</div>
 					<div className="absolute right-0 bottom-4 w-32 opacity-20">
-						<AttendanceSparkline data={sparklineData} color="var(--brand-500)" />
+						<AttendanceSparkline
+							data={sparklineData}
+							color="var(--brand-500)"
+						/>
 					</div>
 				</div>
 			</div>

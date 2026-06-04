@@ -29,9 +29,9 @@ export default function MultiSelect({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const triggerId = useId();
 
-    // Ensure value is always an array
-    const safeValue = Array.isArray(value) ? value : [];
-    const safeOptions = Array.isArray(options) ? options : [];
+	// Ensure value is always an array
+	const safeValue = Array.isArray(value) ? value : [];
+	const safeOptions = Array.isArray(options) ? options : [];
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -159,4 +159,3 @@ export default function MultiSelect({
 		</div>
 	);
 }
-

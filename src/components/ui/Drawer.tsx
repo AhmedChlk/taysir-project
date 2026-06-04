@@ -16,9 +16,8 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import PaymentPlanForm from "@/components/dashboard/forms/PaymentPlanForm";
 import SessionForm from "@/components/dashboard/forms/SessionForm";
-import { formatFullName } from "@/utils/format";
-
 import SessionDetails from "@/components/dashboard/schedule/SessionDetails";
+import { formatFullName } from "@/utils/format";
 
 type DrawerType =
 	| "new-session"
@@ -52,8 +51,6 @@ interface PendingPayment {
 	student: { firstName: string; lastName: string };
 }
 
-import { ErrorCodes, TaysirError } from "@/lib/errors";
-import { getTenantPrisma } from "@/lib/prisma";
 import { Loader2 } from "lucide-react";
 
 interface DrawerFormData {
@@ -73,8 +70,8 @@ interface DrawerProps {
 	formData?: DrawerFormData;
 }
 
-import { getSessionAction } from "@/actions/schedule.actions";
 import { useEffect, useState } from "react";
+import { getSessionAction } from "@/actions/schedule.actions";
 
 export default function Drawer({ type, onClose, formData }: DrawerProps) {
 	const searchParams = useSearchParams();
@@ -84,16 +81,23 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 	const [isFetchingSession, setIsFetchingSession] = useState(false);
 
 	useEffect(() => {
-		if (type === "view-session" && sessionId && !fetchedSession && !isFetchingSession) {
+		if (
+			type === "view-session" &&
+			sessionId &&
+			!fetchedSession &&
+			!isFetchingSession
+		) {
 			setIsFetchingSession(true);
-			getSessionAction({ id: sessionId }).then(res => {
+			getSessionAction({ id: sessionId }).then((res) => {
 				if (res?.success) setFetchedSession(res.data);
 				setIsFetchingSession(false);
 			});
 		}
 	}, [type, sessionId, fetchedSession, isFetchingSession]);
 
-	const currentSession = fetchedSession || (sessionId ? formData?.allSessions?.find(s => s.id === sessionId) : null);
+	const currentSession =
+		fetchedSession ||
+		(sessionId ? formData?.allSessions?.find((s) => s.id === sessionId) : null);
 
 	const getTitle = () => {
 		switch (type) {
@@ -149,7 +153,10 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				if (!currentSession) {
 					return (
 						<div className="flex flex-col items-center justify-center h-full text-center opacity-30 py-20">
-							<Loader2 size={32} className="animate-spin text-taysir-teal mb-4" />
+							<Loader2
+								size={32}
+								className="animate-spin text-taysir-teal mb-4"
+							/>
 							<p className="font-black text-taysir-teal uppercase tracking-tighter">
 								Chargement...
 							</p>

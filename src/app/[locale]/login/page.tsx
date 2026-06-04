@@ -1,18 +1,24 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import { Input } from "@/components/ui/FormInput";
 import { useRouter } from "@/i18n/routing";
-import Link from "next/link";
 
 // --- Design System Primitives ---
 
-const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
+const LogoMark = ({
+	size = 28,
+	color = "var(--brand-500)",
+}: {
+	size?: number;
+	color?: string;
+}) => (
 	<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
 		<g fill={color}>
 			<rect x="26" y="6" width="12" height="52" rx="3" />
@@ -81,7 +87,10 @@ export default function LoginPage() {
 		>
 			{/* Simple Header */}
 			<header className="w-full max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-				<Link href={`/${locale}`} className="transition-opacity hover:opacity-80">
+				<Link
+					href={`/${locale}`}
+					className="transition-opacity hover:opacity-80"
+				>
 					<Logo />
 				</Link>
 				<LanguageSwitcher />
@@ -91,14 +100,14 @@ export default function LoginPage() {
 			<main className="flex-1 flex items-center justify-center p-6 pb-24">
 				<div className="w-full max-w-[400px] space-y-10">
 					<div className="space-y-3 text-center">
-						<motion.h1 
+						<motion.h1
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
 							className="text-4xl font-bold text-ink-900 tracking-tight"
 						>
 							{t("login_welcome_back")}
 						</motion.h1>
-						<motion.p 
+						<motion.p
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: 0.1 }}
@@ -116,7 +125,7 @@ export default function LoginPage() {
 						<form className="space-y-6" onSubmit={handleSubmit}>
 							<AnimatePresence mode="wait">
 								{error && (
-									<motion.div 
+									<motion.div
 										initial={{ opacity: 0, scale: 0.98 }}
 										animate={{ opacity: 1, scale: 1 }}
 										exit={{ opacity: 0, scale: 0.98 }}
@@ -166,12 +175,16 @@ export default function LoginPage() {
 								disabled={loading}
 								className="btn btn--primary btn--lg w-full h-[52px] shadow-sm"
 							>
-								{loading ? <Loader2 className="animate-spin" size={22} /> : t("login_button")}
+								{loading ? (
+									<Loader2 className="animate-spin" size={22} />
+								) : (
+									t("login_button")
+								)}
 							</button>
 						</form>
 					</motion.div>
 
-					<motion.div 
+					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						transition={{ delay: 0.4 }}
@@ -183,7 +196,7 @@ export default function LoginPage() {
 								{t("contact_sales")}
 							</button>
 						</p>
-						<Link 
+						<Link
 							href={`/${locale}`}
 							className="block text-xs text-ink-400 hover:text-ink-900 transition-colors font-medium"
 						>

@@ -1,6 +1,6 @@
+import { setRequestLocale } from "next-intl/server";
 import { getAllTenantsAction } from "@/actions/superadmin.actions";
 import SuperAdminTenantsView from "@/components/superadmin/SuperAdminTenantsView";
-import { setRequestLocale } from "next-intl/server";
 
 export default async function SuperAdminTenantsPage({
 	params,

@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, Users } from "lucide-react";
+import { ArrowRight, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getDashboardStatsAction } from "@/actions/dashboard.actions";
 import { Link } from "@/i18n/routing";
@@ -9,7 +9,9 @@ export default async function StatsWidget() {
 
 	if (!response.success) {
 		return (
-			<div className="rounded-[24px] p-8 text-danger bg-rose-50 border border-rose-100">{t("stats_load_error")}</div>
+			<div className="rounded-[24px] p-8 text-danger bg-rose-50 border border-rose-100">
+				{t("stats_load_error")}
+			</div>
 		);
 	}
 

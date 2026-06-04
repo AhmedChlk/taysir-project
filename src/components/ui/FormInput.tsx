@@ -184,9 +184,7 @@ export function Select({
 					</option>
 				))}
 			</select>
-			{error && (
-				<p className="text-xs font-medium text-danger mt-1">{error}</p>
-			)}
+			{error && <p className="text-xs font-medium text-danger mt-1">{error}</p>}
 		</div>
 	);
 }
@@ -221,9 +219,7 @@ export function TextArea({
 				rows={3}
 				{...props}
 			/>
-			{error && (
-				<p className="text-xs font-medium text-danger mt-1">{error}</p>
-			)}
+			{error && <p className="text-xs font-medium text-danger mt-1">{error}</p>}
 		</div>
 	);
 }

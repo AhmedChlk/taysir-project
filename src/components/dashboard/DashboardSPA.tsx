@@ -24,7 +24,13 @@ const springTransition = {
 	mass: 1,
 } as const;
 
-const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
+const LogoMark = ({
+	size = 28,
+	color = "var(--brand-500)",
+}: {
+	size?: number;
+	color?: string;
+}) => (
 	<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
 		<g fill={color}>
 			<rect x="26" y="6" width="12" height="52" rx="3" />
@@ -74,7 +80,10 @@ export default function DashboardSPA({
 
 				<div className="flex items-center gap-8">
 					<div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-white rounded-xl border border-line shadow-sm min-w-[320px] group focus-within:ring-4 focus-within:ring-brand-500/10 transition-all">
-						<Search size={18} className="text-ink-400 group-focus-within:text-brand-500" />
+						<Search
+							size={18}
+							className="text-ink-400 group-focus-within:text-brand-500"
+						/>
 						<input
 							type="text"
 							placeholder={t("search_placeholder")}
@@ -121,7 +130,9 @@ export default function DashboardSPA({
 
 				{/* Middle Row: Deep Dive KPIs & Live Team */}
 				<section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					<Suspense fallback={<WidgetSkeleton className="col-span-1 lg:col-span-2" />}>
+					<Suspense
+						fallback={<WidgetSkeleton className="col-span-1 lg:col-span-2" />}
+					>
 						<div className="col-span-1 lg:col-span-2 h-full">{kpis}</div>
 					</Suspense>
 
@@ -141,25 +152,19 @@ export default function DashboardSPA({
 								{t("support_desc")}
 							</p>
 							<div className="flex flex-wrap gap-4 mt-10">
-								<button
-									type="button"
-									className="btn btn--secondary btn--md"
-								>
+								<button type="button" className="btn btn--secondary btn--md">
 									{t("user_guide")}
 								</button>
-								<button
-									type="button"
-									className="btn btn--primary btn--md"
-								>
+								<button type="button" className="btn btn--primary btn--md">
 									{t("contact_support")}
 								</button>
 							</div>
 						</div>
-						
-                        {/* Decorative LogoMark Background */}
-                        <div className="absolute -right-20 -bottom-20 opacity-10 rotate-12 pointer-events-none">
-                            <LogoMark size={400} color="#fff" />
-                        </div>
+
+						{/* Decorative LogoMark Background */}
+						<div className="absolute -right-20 -bottom-20 opacity-10 rotate-12 pointer-events-none">
+							<LogoMark size={400} color="#fff" />
+						</div>
 					</div>
 				</section>
 			</main>

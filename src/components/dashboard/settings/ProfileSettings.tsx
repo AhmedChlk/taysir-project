@@ -3,7 +3,6 @@
 import { Loader2, Save, Trash2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { getPathname } from "@/i18n/routing";
 import { useState, useTransition } from "react";
 import {
 	deleteAccountAction,

@@ -1,9 +1,9 @@
 "use server";
 
+import crypto from "node:crypto";
+import { StatusSession } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import crypto from "crypto";
-import { StatusSession } from "@prisma/client";
 import { createSafeAction } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
@@ -146,8 +146,8 @@ export const createSessionAction = createSafeAction(
 		// Handle recurrence
 		const sessionsToCreate = [];
 		const recurrenceGroupId = crypto.randomUUID();
-		let currentStart = new Date(data.startTime);
-		let currentEnd = new Date(data.endTime);
+		const currentStart = new Date(data.startTime);
+		const currentEnd = new Date(data.endTime);
 		const recurrenceEnd = new Date(data.recurrenceEnd);
 
 		while (currentStart <= recurrenceEnd) {
@@ -241,11 +241,13 @@ export const updateSeriesAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
 
-		const currentSession = data.currentSessionId 
-			? await client.session.findUnique({ where: { id: data.currentSessionId, etablissementId: tenantId } })
+		const currentSession = data.currentSessionId
+			? await client.session.findUnique({
+					where: { id: data.currentSessionId, etablissementId: tenantId },
+				})
 			: null;
 
-		let whereClause: any = {
+		const whereClause: any = {
 			recurrenceGroupId: data.recurrenceGroupId,
 			etablissementId: tenantId,
 		};
@@ -263,19 +265,22 @@ export const updateSeriesAction = createSafeAction(
 			};
 		}
 
-		const { mode, currentSessionId, startTime, endTime, ...baseUpdateData } = data;
+		const { mode, currentSessionId, startTime, endTime, ...baseUpdateData } =
+			data;
 
 		if (timeShift) {
 			// Update complexe : on doit boucler ou utiliser une raw query car Prisma ne supporte pas nativement l'addition de dates en updateMany
 			const sessions = await client.session.findMany({ where: whereClause });
-			const updates = sessions.map(s => client.session.update({
-				where: { id: s.id },
-				data: {
-					...baseUpdateData,
-					startTime: new Date(s.startTime.getTime() + timeShift!.start),
-					endTime: new Date(s.endTime.getTime() + timeShift!.end),
-				} as any
-			}));
+			const updates = sessions.map((s) =>
+				client.session.update({
+					where: { id: s.id },
+					data: {
+						...baseUpdateData,
+						startTime: new Date(s.startTime.getTime() + timeShift?.start),
+						endTime: new Date(s.endTime.getTime() + timeShift?.end),
+					} as any,
+				}),
+			);
 			await Promise.all(updates);
 		} else {
 			await client.session.updateMany({
@@ -298,7 +303,7 @@ export const deleteSeriesAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
 
-		let whereClause: any = {
+		const whereClause: any = {
 			recurrenceGroupId: data.recurrenceGroupId,
 			etablissementId: tenantId,
 		};

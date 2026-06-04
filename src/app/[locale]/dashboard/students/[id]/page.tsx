@@ -2,8 +2,9 @@ import type { Prisma } from "@prisma/client";
 import {
 	ArrowLeft,
 	Calendar,
+	ChevronRight,
 	Clock,
-    Eye,
+	Eye,
 	FileText,
 	Mail,
 	MapPin,
@@ -11,15 +12,13 @@ import {
 	User,
 	Users,
 	Wallet,
-    ChevronRight,
-    Edit3,
 } from "lucide-react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getStudentFullProfileAction } from "@/actions/students.actions";
 import { getGroups } from "@/services/api";
-import type { Group, Student, PaymentPlan } from "@/types/schema";
+import type { Group, PaymentPlan, Student } from "@/types/schema";
 
 type StudentFullProfile = NonNullable<
 	Prisma.StudentGetPayload<{
@@ -39,12 +38,12 @@ type StudentFullProfile = NonNullable<
 	}>
 >;
 
+import { clsx } from "clsx";
 import AddDocumentButton from "@/components/dashboard/students/AddDocumentButton";
 import DownloadStudentProfile from "@/components/dashboard/students/DownloadStudentProfile";
 import EditStudentProfileButton from "@/components/dashboard/students/EditStudentProfileButton";
 import { Link } from "@/i18n/routing";
-import { formatFullName, formatDate, formatTime } from "@/utils/format";
-import { clsx } from "clsx";
+import { formatDate, formatFullName, formatTime } from "@/utils/format";
 
 interface PageProps {
 	params: Promise<{ id: string; locale: string }>;
@@ -52,9 +51,9 @@ interface PageProps {
 
 export default async function StudentProfilePage({ params }: PageProps) {
 	const { id, locale } = await params;
-	const [response, groups, t] = await Promise.all([
+	const [response, groups, _t] = await Promise.all([
 		getStudentFullProfileAction({ id }),
-        getGroups(),
+		getGroups(),
 		getTranslations(),
 	]);
 
@@ -63,10 +62,10 @@ export default async function StudentProfilePage({ params }: PageProps) {
 	}
 
 	const student = response.data as unknown as StudentFullProfile;
-    const totalRemaining = student.paymentPlans.reduce(
-        (acc: number, p) => acc + (p.totalAmount - p.paidAmount),
-        0
-    );
+	const totalRemaining = student.paymentPlans.reduce(
+		(acc: number, p) => acc + (p.totalAmount - p.paidAmount),
+		0,
+	);
 
 	return (
 		<div className="space-y-10 pb-24 pt-4 font-sans antialiased">
@@ -83,30 +82,35 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						/>
 					</Link>
 					<div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-bold tracking-[0.2em] text-ink-400 uppercase">
-                                Dossier Académique
-                            </span>
-                            <ChevronRight size={10} className="text-ink-300" />
-                            <span className="text-[10px] font-bold tracking-[0.2em] text-brand-500 uppercase">
-                                Profil Étudiant
-                            </span>
-                        </div>
+						<div className="flex items-center gap-2 mb-1">
+							<span className="text-[10px] font-bold tracking-[0.2em] text-ink-400 uppercase">
+								Dossier Académique
+							</span>
+							<ChevronRight size={10} className="text-ink-300" />
+							<span className="text-[10px] font-bold tracking-[0.2em] text-brand-500 uppercase">
+								Profil Étudiant
+							</span>
+						</div>
 						<h1 className="text-3xl font-bold text-ink-900 tracking-tight leading-none">
 							{formatFullName(student.firstName, student.lastName)}
 						</h1>
 					</div>
 				</div>
 
-                <div className="flex gap-3">
-                    <EditStudentProfileButton
-                        student={student as unknown as Student & { groups: Group[]; paymentPlans: PaymentPlan[] }}
-                        groups={groups}
-                    />
-                    <DownloadStudentProfile
-                        student={student as unknown as Student & { groups: Group[] }}
-                    />
-                </div>
+				<div className="flex gap-3">
+					<EditStudentProfileButton
+						student={
+							student as unknown as Student & {
+								groups: Group[];
+								paymentPlans: PaymentPlan[];
+							}
+						}
+						groups={groups}
+					/>
+					<DownloadStudentProfile
+						student={student as unknown as Student & { groups: Group[] }}
+					/>
+				</div>
 			</div>
 
 			{/* Main Bio Card */}
@@ -133,19 +137,19 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								</h2>
 								<span
 									className={clsx(
-                                        "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border shrink-0",
-                                        student.isActive
-                                            ? "bg-success-50 text-success border-success/10"
-                                            : "bg-rose-50 text-danger border-danger/10"
-                                    )}
+										"px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border shrink-0",
+										student.isActive
+											? "bg-success-50 text-success border-success/10"
+											: "bg-rose-50 text-danger border-danger/10",
+									)}
 								>
 									{student.isActive ? "Dossier Actif" : "Dossier Inactif"}
 								</span>
-                                {student.isMinor && (
-                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100 shrink-0">
-                                        Étudiant Mineur
-                                    </span>
-                                )}
+								{student.isMinor && (
+									<span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-100 shrink-0">
+										Étudiant Mineur
+									</span>
+								)}
 							</div>
 
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-10">
@@ -160,20 +164,26 @@ export default async function StudentProfilePage({ params }: PageProps) {
 										<Phone size={18} />
 									</div>
 									<span className="tabular-nums">
-										{student.isMinor ? student.parentPhone : student.phone || "—"}
+										{student.isMinor
+											? student.parentPhone
+											: student.phone || "—"}
 									</span>
 								</div>
 								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
 									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
 										<Calendar size={18} />
 									</div>
-									<span>Inscrit le {formatDate(student.registrationDate, locale)}</span>
+									<span>
+										Inscrit le {formatDate(student.registrationDate, locale)}
+									</span>
 								</div>
 								<div className="flex items-center gap-4 text-sm font-semibold text-ink-700">
 									<div className="p-2.5 bg-surface-50 rounded-xl border border-line text-ink-400">
 										<MapPin size={18} />
 									</div>
-									<span className="truncate line-clamp-1">{student.address || "Adresse non saisie"}</span>
+									<span className="truncate line-clamp-1">
+										{student.address || "Adresse non saisie"}
+									</span>
 								</div>
 							</div>
 
@@ -241,10 +251,12 @@ export default async function StudentProfilePage({ params }: PageProps) {
 									{totalRemaining.toLocaleString("fr-DZ")}
 									<span className="text-lg text-ink-400 opacity-40">DA</span>
 								</div>
-								<div className={clsx(
-                                    "text-[10px] font-bold uppercase tracking-widest mt-2",
-                                    totalRemaining > 0 ? "text-danger" : "text-success"
-                                )}>
+								<div
+									className={clsx(
+										"text-[10px] font-bold uppercase tracking-widest mt-2",
+										totalRemaining > 0 ? "text-danger" : "text-success",
+									)}
+								>
 									Solde débiteur actuel
 								</div>
 							</div>
@@ -328,12 +340,14 @@ export default async function StudentProfilePage({ params }: PageProps) {
 												<div className="text-[11px] font-bold text-ink-900 truncate">
 													{doc.name}
 												</div>
-												<div className={clsx(
-                                                    "text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md mt-1 w-fit border",
-                                                    doc.status === "APPROVED" 
-                                                        ? "bg-success-50 text-success border-success/10" 
-                                                        : "bg-amber-50 text-amber-600 border-amber-100"
-                                                )}>
+												<div
+													className={clsx(
+														"text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md mt-1 w-fit border",
+														doc.status === "APPROVED"
+															? "bg-success-50 text-success border-success/10"
+															: "bg-amber-50 text-amber-600 border-amber-100",
+													)}
+												>
 													{doc.status}
 												</div>
 											</div>
@@ -350,10 +364,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 								))
 							) : (
 								<div className="col-span-full py-16 text-center bg-surface-50 rounded-[32px] border-2 border-dashed border-line opacity-60">
-									<FileText
-										size={40}
-										className="mx-auto mb-3 text-ink-200"
-									/>
+									<FileText size={40} className="mx-auto mb-3 text-ink-200" />
 									<p className="text-[10px] font-bold uppercase tracking-widest text-ink-400">
 										Aucune pièce jointe
 									</p>
@@ -378,10 +389,18 @@ export default async function StudentProfilePage({ params }: PageProps) {
 							<table className="w-full text-left border-collapse">
 								<thead>
 									<tr className="bg-surface-50 border-b border-line">
-										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Date & Séance</th>
-										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Module / Activité</th>
-										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest text-center">Statut</th>
-										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">Commentaires</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">
+											Date & Séance
+										</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">
+											Module / Activité
+										</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest text-center">
+											Statut
+										</th>
+										<th className="px-8 py-5 text-[10px] font-bold text-ink-400 uppercase tracking-widest">
+											Commentaires
+										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-line">
@@ -395,7 +414,8 @@ export default async function StudentProfilePage({ params }: PageProps) {
 													{formatDate(record.session.startTime, locale)}
 												</div>
 												<div className="text-[10px] font-semibold text-ink-400 uppercase tracking-widest mt-1 flex items-center gap-1.5 opacity-60">
-													<Clock size={10} /> {formatTime(record.session.startTime)}
+													<Clock size={10} />{" "}
+													{formatTime(record.session.startTime)}
 												</div>
 											</td>
 											<td className="px-8 py-6">
@@ -406,13 +426,13 @@ export default async function StudentProfilePage({ params }: PageProps) {
 											<td className="px-8 py-6 text-center">
 												<span
 													className={clsx(
-                                                        "text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border shadow-sm inline-block min-w-[100px]",
-                                                        record.status === "PRESENT" 
-                                                            ? "bg-success-50 text-success border-success/10" 
-                                                            : record.status === "ABSENT"
-                                                                ? "bg-rose-50 text-danger border-danger/10"
-                                                                : "bg-amber-50 text-amber-600 border-amber-100"
-                                                    )}
+														"text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border shadow-sm inline-block min-w-[100px]",
+														record.status === "PRESENT"
+															? "bg-success-50 text-success border-success/10"
+															: record.status === "ABSENT"
+																? "bg-rose-50 text-danger border-danger/10"
+																: "bg-amber-50 text-amber-600 border-amber-100",
+													)}
 												>
 													{record.status}
 												</span>
@@ -427,10 +447,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 						</div>
 						{student.attendance.length === 0 && (
 							<div className="py-24 text-center bg-white border-t border-line">
-								<Calendar
-									size={48}
-									className="mx-auto mb-4 text-ink-100"
-								/>
+								<Calendar size={48} className="mx-auto mb-4 text-ink-100" />
 								<p className="font-bold uppercase tracking-widest text-[11px] text-ink-300">
 									Historique vierge
 								</p>

@@ -2,17 +2,22 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Calendar } from "lucide-react";
-import { useRouter } from "@/i18n/routing";
 import { useSearchParams } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createSessionAction } from "@/actions/schedule.actions";
 import { Input, Select } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { useRouter } from "@/i18n/routing";
 import { formatFullName } from "@/utils/format";
 
 type RoomOption = { id: string; name: string; capacity: number };
 type ActivityOption = { id: string; name: string; color?: string | null };
-type StaffOption = { id: string; role: string; firstName: string; lastName: string };
+type StaffOption = {
+	id: string;
+	role: string;
+	firstName: string;
+	lastName: string;
+};
 type GroupOption = { id: string; name: string };
 
 interface SessionFormProps {
@@ -70,36 +75,52 @@ export default function SessionForm({
 		recurrenceEnd: "",
 	});
 
-	const instructors = useMemo(() => staff.filter(
-		(u) =>
-			u.role === "INTERVENANT" || u.role === "GERANT" || u.role === "ADMIN",
-	), [staff]);
+	const instructors = useMemo(
+		() =>
+			staff.filter(
+				(u) =>
+					u.role === "INTERVENANT" || u.role === "GERANT" || u.role === "ADMIN",
+			),
+		[staff],
+	);
 
-	const activityOptions = useMemo(() => [
-		{ label: "Sélectionner une activité...", value: "" },
-		...activities.map((a) => ({ label: a.name, value: a.id })),
-	], [activities]);
+	const activityOptions = useMemo(
+		() => [
+			{ label: "Sélectionner une activité...", value: "" },
+			...activities.map((a) => ({ label: a.name, value: a.id })),
+		],
+		[activities],
+	);
 
-	const roomOptions = useMemo(() => [
-		{ label: "Choisir une salle...", value: "" },
-		...rooms.map((r) => ({
-			label: `${r.name} (Cap. ${r.capacity})`,
-			value: r.id,
-		})),
-	], [rooms]);
+	const roomOptions = useMemo(
+		() => [
+			{ label: "Choisir une salle...", value: "" },
+			...rooms.map((r) => ({
+				label: `${r.name} (Cap. ${r.capacity})`,
+				value: r.id,
+			})),
+		],
+		[rooms],
+	);
 
-	const instructorOptions = useMemo(() => [
-		{ label: "Choisir un intervenant...", value: "" },
-		...instructors.map((i) => ({
-			label: formatFullName(i.firstName, i.lastName),
-			value: i.id,
-		})),
-	], [instructors]);
+	const instructorOptions = useMemo(
+		() => [
+			{ label: "Choisir un intervenant...", value: "" },
+			...instructors.map((i) => ({
+				label: formatFullName(i.firstName, i.lastName),
+				value: i.id,
+			})),
+		],
+		[instructors],
+	);
 
-	const groupOptions = useMemo(() => [
-		{ label: "Choisir un groupe...", value: "" },
-		...groups.map((g) => ({ label: g.name, value: g.id })),
-	], [groups]);
+	const groupOptions = useMemo(
+		() => [
+			{ label: "Choisir un groupe...", value: "" },
+			...groups.map((g) => ({ label: g.name, value: g.id })),
+		],
+		[groups],
+	);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

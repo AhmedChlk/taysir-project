@@ -9,13 +9,13 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 // Mock console.error to avoid noise in tests
-vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
+import { RoleUser } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
-import { TaysirError, ErrorCodes } from "@/lib/errors";
-import { RoleUser } from "@prisma/client";
+import { ErrorCodes, TaysirError } from "@/lib/errors";
 
 const makeSession = (override: Record<string, unknown> = {}) => ({
 	user: {
@@ -43,8 +43,12 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 		});
 
 		it("Contrôle de Rôle : rejette si le rôle requis n'est pas possédé", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSession({ role: RoleUser.PARTICIPANT }) as never);
-			const action = createSafeAction(testSchema, async () => "ok", { requiredRole: RoleUser.ADMIN });
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({ role: RoleUser.PARTICIPANT }) as never,
+			);
+			const action = createSafeAction(testSchema, async () => "ok", {
+				requiredRole: RoleUser.ADMIN,
+			});
 
 			const result = await action({ name: "test" });
 			expect(result.success).toBe(false);
@@ -52,8 +56,12 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 		});
 
 		it("Contrôle de Rôle : autorise si le rôle requis est possédé", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSession({ role: RoleUser.ADMIN }) as never);
-			const action = createSafeAction(testSchema, async () => "ok", { requiredRole: RoleUser.ADMIN });
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({ role: RoleUser.ADMIN }) as never,
+			);
+			const action = createSafeAction(testSchema, async () => "ok", {
+				requiredRole: RoleUser.ADMIN,
+			});
 
 			const result = await action({ name: "test" });
 			expect(result.success).toBe(true);
@@ -75,9 +83,15 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 
 		it("SUPER_ADMIN Bypass : autorise sans etablissementId avec accès global", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(
-				makeSession({ etablissementId: null, role: RoleUser.SUPER_ADMIN }) as never,
+				makeSession({
+					etablissementId: null,
+					role: RoleUser.SUPER_ADMIN,
+				}) as never,
 			);
-			const action = createSafeAction(testSchema, async (_data, ctx) => ctx.tenantId);
+			const action = createSafeAction(
+				testSchema,
+				async (_data, ctx) => ctx.tenantId,
+			);
 
 			const result = await action({ name: "test" });
 			expect(result.success).toBe(true);
@@ -85,7 +99,13 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 		});
 
 		it("Immuabilité du Contexte : injecte les bonnes métadonnées au handler", async () => {
-			vi.mocked(getServerSession).mockResolvedValue(makeSession({ id: "real-user", etablissementId: "real-etab", role: "GERANT" }) as never);
+			vi.mocked(getServerSession).mockResolvedValue(
+				makeSession({
+					id: "real-user",
+					etablissementId: "real-etab",
+					role: "GERANT",
+				}) as never,
+			);
 			let capturedCtx: any = null;
 
 			const action = createSafeAction(testSchema, async (_data, ctx) => {
@@ -110,15 +130,19 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 			const result = await action({ name: "" }); // Violates min(1)
 			expect(result.success).toBe(false);
 			if (!result.success) {
-                expect(result.error.code).toBe("INVALID_DATA_FORMAT");
-                expect(result.error.details).toBeDefined();
-            }
+				expect(result.error.code).toBe("INVALID_DATA_FORMAT");
+				expect(result.error.details).toBeDefined();
+			}
 		});
 
 		it("Capture TaysirError : renvoie l'erreur métier proprement", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			const action = createSafeAction(testSchema, async () => {
-				throw new TaysirError("Business Error", ErrorCodes.ERR_INVALID_DATA, 400);
+				throw new TaysirError(
+					"Business Error",
+					ErrorCodes.ERR_INVALID_DATA,
+					400,
+				);
 			});
 
 			const result = await action({ name: "x" });
@@ -141,34 +165,42 @@ describe("createSafeAction - Security & Robustness Audit", () => {
 			expect(result.success).toBe(false);
 			if (!result.success) {
 				expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
-                expect(console.error).toHaveBeenCalled();
+				expect(console.error).toHaveBeenCalled();
 			}
 		});
 
-        it("Exception non-objet Error : robuste si le throw n'est pas une Error (ligne 98 branch coverage)", async () => {
-            vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-            const action = createSafeAction(testSchema, async () => {
-                throw "String Error"; // Not an Error object
-            });
+		it("Exception non-objet Error : robuste si le throw n'est pas une Error (ligne 98 branch coverage)", async () => {
+			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
+			const action = createSafeAction(testSchema, async () => {
+				throw "String Error"; // Not an Error object
+			});
 
-            const result = await action({ name: "x" });
-            expect(result.success).toBe(false);
-            expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Unknown error"));
-        });
+			const result = await action({ name: "x" });
+			expect(result.success).toBe(false);
+			expect(console.error).toHaveBeenCalledWith(
+				expect.stringContaining("Unknown error"),
+			);
+		});
 
-        it("Exception dans le middleware : robuste si getAuthSession throw", async () => {
-            // Simulation d'un crash grave dans le wrapper lui-même (ex: service auth en panne totale)
-            vi.mocked(getServerSession).mockRejectedValue(new Error("AUTH_SERVICE_CRASH"));
-            const action = createSafeAction(testSchema, async () => "ok");
+		it("Exception dans le middleware : robuste si getAuthSession throw", async () => {
+			// Simulation d'un crash grave dans le wrapper lui-même (ex: service auth en panne totale)
+			vi.mocked(getServerSession).mockRejectedValue(
+				new Error("AUTH_SERVICE_CRASH"),
+			);
+			const action = createSafeAction(testSchema, async () => "ok");
 
-            const result = await action({ name: "test" });
-            expect(result.success).toBe(false);
-            if (!result.success) expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
-        });
+			const result = await action({ name: "test" });
+			expect(result.success).toBe(false);
+			if (!result.success)
+				expect(result.error.code).toBe("INTERNAL_SERVER_ERROR");
+		});
 
 		it("Happy Path Extrême : succès avec toutes les données injectées", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-			const action = createSafeAction(testSchema, async (data, ctx) => ({ data, ctx }));
+			const action = createSafeAction(testSchema, async (data, ctx) => ({
+				data,
+				ctx,
+			}));
 
 			const result = await action({ name: "FullTest" });
 			expect(result.success).toBe(true);

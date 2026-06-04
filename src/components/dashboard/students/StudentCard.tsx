@@ -1,13 +1,24 @@
 import { clsx } from "clsx";
-import { Download, Edit3, Eye, Mail, Phone, Trash2, User, Wallet } from "lucide-react";
+import {
+	Download,
+	Edit3,
+	Eye,
+	Phone,
+	Trash2,
+	User,
+	Wallet,
+} from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import DropdownMenu from "@/components/ui/DropdownMenu";
 import { Link } from "@/i18n/routing";
-import type { Group, Student, PaymentPlan } from "@/types/schema";
+import type { Group, PaymentPlan, Student } from "@/types/schema";
 import { formatFullName } from "@/utils/format";
 
-type StudentWithGroups = Student & { groups: Group[]; paymentPlans: PaymentPlan[] };
+type StudentWithGroups = Student & {
+	groups: Group[];
+	paymentPlans: PaymentPlan[];
+};
 
 interface StudentCardProps {
 	student: StudentWithGroups;

@@ -1,27 +1,25 @@
 "use client";
 
 import { clsx } from "clsx";
+import { motion } from "framer-motion";
 import {
 	BookOpen,
 	Calendar,
 	FileText,
 	LayoutDashboard,
 	LogOut,
-	ShieldCheck,
 	type LucideIcon,
 	MapPin,
 	Settings,
+	ShieldCheck,
 	UserCheck,
 	Users,
 	Wallet,
-    ChevronRight,
 } from "lucide-react";
-import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname, getPathname } from "@/i18n/routing";
+import { Link, usePathname } from "@/i18n/routing";
 import { UserRole } from "@/types/schema";
-import { motion } from "framer-motion";
 
 interface NavItem {
 	labelKey: string;
@@ -118,7 +116,13 @@ interface SidebarProps {
 	onClose?: () => void;
 }
 
-const LogoMark = ({ size = 28, color = "var(--brand-500)" }: { size?: number; color?: string }) => (
+const LogoMark = ({
+	size = 28,
+	color = "var(--brand-500)",
+}: {
+	size?: number;
+	color?: string;
+}) => (
 	<svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
 		<g fill={color}>
 			<rect x="26" y="6" width="12" height="52" rx="3" />
@@ -201,15 +205,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 												strokeWidth={1.75}
 												className={clsx(
 													"shrink-0 transition-transform duration-200 group-hover:scale-110",
-													isActive ? "text-white" : "text-white/40 group-hover:text-white",
+													isActive
+														? "text-white"
+														: "text-white/40 group-hover:text-white",
 												)}
 											/>
 											<span className="truncate">{t(item.labelKey)}</span>
 											{isActive && (
-												<motion.div 
-                                                    layoutId="active-indicator"
-                                                    className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white" 
-                                                />
+												<motion.div
+													layoutId="active-indicator"
+													className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white"
+												/>
 											)}
 										</Link>
 									);
@@ -242,15 +248,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 												strokeWidth={1.75}
 												className={clsx(
 													"shrink-0 transition-transform duration-200 group-hover:scale-110",
-													isActive ? "text-white" : "text-white/40 group-hover:text-white",
+													isActive
+														? "text-white"
+														: "text-white/40 group-hover:text-white",
 												)}
 											/>
 											<span className="truncate">{t(item.labelKey)}</span>
 											{isActive && (
-												<motion.div 
-                                                    layoutId="active-indicator"
-                                                    className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white" 
-                                                />
+												<motion.div
+													layoutId="active-indicator"
+													className="absolute end-2 w-1.5 h-1.5 rounded-full bg-white"
+												/>
 											)}
 										</Link>
 									);
@@ -273,7 +281,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 									: "text-white/60 hover:bg-white/5 hover:text-white",
 							)}
 						>
-							<Settings size={20} strokeWidth={1.75} className="shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+							<Settings
+								size={20}
+								strokeWidth={1.75}
+								className="shrink-0 opacity-40 group-hover:opacity-100 transition-opacity"
+							/>
 							<span className="truncate">{t("settings")}</span>
 						</Link>
 					)}
@@ -290,16 +302,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 								{userRole?.toLowerCase()}
 							</span>
 						</div>
-                        <button 
-                            onClick={async () => {
-                                await signOut({ redirect: false });
-                                window.location.href = `/${locale}/login`;
-                            }}
-                            className="ms-auto p-2 text-white/30 hover:text-danger transition-colors"
-                            title={t("logout")}
-                        >
-                            <LogOut size={18} />
-                        </button>
+						<button
+							onClick={async () => {
+								await signOut({ redirect: false });
+								window.location.href = `/${locale}/login`;
+							}}
+							className="ms-auto p-2 text-white/30 hover:text-danger transition-colors"
+							title={t("logout")}
+						>
+							<LogOut size={18} />
+						</button>
 					</div>
 				</div>
 			</aside>

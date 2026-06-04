@@ -1,5 +1,6 @@
 "use client";
 
+import type { Etablissement } from "@prisma/client";
 import { clsx } from "clsx";
 import {
 	Bell,
@@ -13,8 +14,6 @@ import PreferencesSettings from "./PreferencesSettings";
 import ProfileSettings from "./ProfileSettings";
 import SchoolSettings from "./SchoolSettings";
 import SecuritySettings from "./SecuritySettings";
-
-import type { Etablissement } from "@prisma/client";
 
 type CurrentUser = {
 	id: string;

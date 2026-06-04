@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { addDocumentToStudentAction } from "@/actions/students.actions";

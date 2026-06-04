@@ -1,8 +1,8 @@
 "use client";
 
+import { Bell, Menu, Search, Shield } from "lucide-react";
 import { useState } from "react";
 import Sidebar from "@/components/navigation/Sidebar";
-import { Menu, Bell, Search, Shield } from "lucide-react";
 
 export default function SuperAdminLayout({
 	children,
@@ -27,7 +27,10 @@ export default function SuperAdminLayout({
 							<Menu size={24} />
 						</button>
 						<div className="hidden md:flex items-center gap-3 px-4 py-2 bg-surface-50 rounded-xl border border-line w-96 group focus-within:ring-4 focus-within:ring-brand-500/10 transition-all">
-							<Search size={18} className="text-ink-400 group-focus-within:text-brand-500" />
+							<Search
+								size={18}
+								className="text-ink-400 group-focus-within:text-brand-500"
+							/>
 							<input
 								type="text"
 								placeholder="Rechercher un établissement..."
@@ -41,8 +44,14 @@ export default function SuperAdminLayout({
 							<Shield size={12} strokeWidth={2.5} />
 							Super Admin
 						</div>
-						<button type="button" className="relative p-2.5 hover:bg-surface-50 rounded-xl text-ink-400 transition-all group">
-							<Bell size={20} className="group-hover:text-brand-500 transition-colors" />
+						<button
+							type="button"
+							className="relative p-2.5 hover:bg-surface-50 rounded-xl text-ink-400 transition-all group"
+						>
+							<Bell
+								size={20}
+								className="group-hover:text-brand-500 transition-colors"
+							/>
 							<span className="absolute top-2.5 right-2.5 w-2 h-2 bg-danger rounded-full border-2 border-white shadow-sm" />
 						</button>
 					</div>

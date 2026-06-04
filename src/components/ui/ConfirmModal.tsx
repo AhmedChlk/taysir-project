@@ -13,7 +13,7 @@ interface ConfirmModalProps {
 	cancelLabel?: string;
 	variant?: "danger" | "primary";
 	isLoading?: boolean;
-    size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+	size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 }
 
 export default function ConfirmModal({
@@ -26,14 +26,14 @@ export default function ConfirmModal({
 	cancelLabel = "Annuler",
 	variant = "primary",
 	isLoading = false,
-    size = "md",
+	size = "md",
 }: ConfirmModalProps) {
 	return (
 		<Modal
 			isOpen={isOpen}
 			onClose={onClose}
 			title={title}
-            size={size}
+			size={size}
 			footer={
 				<div className="flex gap-3 w-full sm:w-auto">
 					<button

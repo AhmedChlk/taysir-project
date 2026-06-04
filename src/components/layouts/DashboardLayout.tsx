@@ -10,11 +10,6 @@ import {
 	Menu,
 	Settings,
 	User,
-	Users,
-	Calendar,
-	PlusCircle,
-	AlertCircle,
-	Wallet
 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -25,7 +20,7 @@ import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Sidebar from "@/components/navigation/Sidebar";
 import Drawer from "@/components/ui/Drawer";
-import { useRouter, Link, getPathname, usePathname } from "@/i18n/routing";
+import { Link, usePathname, useRouter } from "@/i18n/routing";
 
 export default function DashboardLayout({
 	children,
@@ -70,7 +65,9 @@ export default function DashboardLayout({
 		params.delete("end");
 		params.delete("date");
 		const queryString = params.toString();
-		router.push(pathname + (queryString ? `?${queryString}` : ""), { scroll: false });
+		router.push(pathname + (queryString ? `?${queryString}` : ""), {
+			scroll: false,
+		});
 	};
 
 	if (status === "loading") {

@@ -1,39 +1,40 @@
 "use client";
 
+import { clsx } from "clsx";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	AlertCircle,
 	Download,
 	Edit3,
 	Eye,
+	LayoutGrid,
+	List,
+	Mail,
 	Phone,
-    Mail,
+	Plus,
 	Trash2,
 	User,
-    Plus,
-    Wallet,
-    LayoutGrid,
-    List,
+	Wallet,
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import {
-	deleteStudentAction,
-} from "@/actions/students.actions";
+import { deleteStudentAction } from "@/actions/students.actions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import DropdownMenu from "@/components/ui/DropdownMenu";
 import { useRouter } from "@/i18n/routing";
-import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
-import type { Group, Student, PaymentPlan } from "@/types/schema";
-import { formatFullName } from "@/utils/format";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx } from "clsx";
 import { useDashboardView } from "@/lib/hooks/useDashboardView";
+import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
+import type { Group, PaymentPlan, Student } from "@/types/schema";
+import { formatFullName } from "@/utils/format";
 import StudentCard from "./StudentCard";
 import StudentFormModal from "./StudentFormModal";
 
-type StudentWithGroups = Student & { groups: Group[]; paymentPlans: PaymentPlan[] };
+type StudentWithGroups = Student & {
+	groups: Group[];
+	paymentPlans: PaymentPlan[];
+};
 
 interface StudentsClientViewProps {
 	initialStudents: StudentWithGroups[];
@@ -59,12 +60,11 @@ export default function StudentsClientView({
 		startTransition,
 		optimisticItems: optimisticStudents,
 		applyOptimistic,
-		handleOpenCreate,
 		handleOpenDelete,
 	} = useDashboardView<StudentWithGroups>(initialStudents);
 
 	const [pdfError, setPdfError] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+	const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
 	const t = useTranslations();
 	const router = useRouter();
@@ -74,10 +74,10 @@ export default function StudentsClientView({
 		setIsModalOpen(true);
 	};
 
-    const handleAdd = () => {
-        setSelectedStudent(null);
-        setIsModalOpen(true);
-    };
+	const handleAdd = () => {
+		setSelectedStudent(null);
+		setIsModalOpen(true);
+	};
 
 	const confirmDelete = async () => {
 		if (!itemToDelete) return;
@@ -117,11 +117,14 @@ export default function StudentsClientView({
 								alt={student.firstName}
 								fill
 								className="object-cover"
-                                onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    target.parentElement?.insertAdjacentHTML('beforeend', '<div class="flex items-center justify-center w-full h-full text-ink-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>');
-                                }}
+								onError={(e) => {
+									const target = e.target as HTMLImageElement;
+									target.style.display = "none";
+									target.parentElement?.insertAdjacentHTML(
+										"beforeend",
+										'<div class="flex items-center justify-center w-full h-full text-ink-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>',
+									);
+								}}
 							/>
 						) : (
 							<User size={20} className="text-ink-400" />
@@ -185,39 +188,48 @@ export default function StudentsClientView({
 				</div>
 			),
 		},
-        {
-            header: "Solde",
-            accessor: (student: StudentWithGroups) => {
-                const totalDue = student.paymentPlans?.reduce((acc, p) => acc + (p.totalAmount - p.paidAmount), 0) || 0;
-                return (
-                    <div className="flex items-center gap-2">
-                        <Wallet size={14} className={clsx(totalDue > 0 ? "text-danger" : "text-success")} />
-                        <span className={clsx(
-                            "text-xs font-bold tabular-nums",
-                            totalDue > 0 ? "text-danger" : "text-success"
-                        )}>
-                            {totalDue.toLocaleString()} DA
-                        </span>
-                    </div>
-                );
-            }
-        },
+		{
+			header: "Solde",
+			accessor: (student: StudentWithGroups) => {
+				const totalDue =
+					student.paymentPlans?.reduce(
+						(acc, p) => acc + (p.totalAmount - p.paidAmount),
+						0,
+					) || 0;
+				return (
+					<div className="flex items-center gap-2">
+						<Wallet
+							size={14}
+							className={clsx(totalDue > 0 ? "text-danger" : "text-success")}
+						/>
+						<span
+							className={clsx(
+								"text-xs font-bold tabular-nums",
+								totalDue > 0 ? "text-danger" : "text-success",
+							)}
+						>
+							{totalDue.toLocaleString()} DA
+						</span>
+					</div>
+				);
+			},
+		},
 		{
 			header: "Statut",
 			accessor: (student: StudentWithGroups) => (
 				<span
 					className={clsx(
-                        "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border",
+						"inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border",
 						student.isActive
 							? "bg-success-50 text-success border-success/10"
-							: "bg-rose-50 text-danger border-danger/10"
+							: "bg-rose-50 text-danger border-danger/10",
 					)}
 				>
 					<div
 						className={clsx(
-                            "w-1.5 h-1.5 rounded-full me-2",
-                            student.isActive ? "bg-success animate-pulse" : "bg-danger"
-                        )}
+							"w-1.5 h-1.5 rounded-full me-2",
+							student.isActive ? "bg-success animate-pulse" : "bg-danger",
+						)}
 					/>
 					{student.isActive ? t("active") : t("inactive")}
 				</span>
@@ -270,66 +282,70 @@ export default function StudentsClientView({
 						{t("students_manage_subtitle")}
 					</p>
 				</div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-surface-50 p-1 rounded-xl flex gap-1 border border-line">
-                        <button
-                            onClick={() => setViewMode("table")}
-                            className={clsx(
-                                "p-2 rounded-lg transition-all",
-                                viewMode === "table" ? "bg-white text-brand-500 shadow-sm" : "text-ink-400 hover:text-ink-900"
-                            )}
-                        >
-                            <List size={20} />
-                        </button>
-                        <button
-                            onClick={() => setViewMode("grid")}
-                            className={clsx(
-                                "p-2 rounded-lg transition-all",
-                                viewMode === "grid" ? "bg-white text-brand-500 shadow-sm" : "text-ink-400 hover:text-ink-900"
-                            )}
-                        >
-                            <LayoutGrid size={20} />
-                        </button>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleAdd}
-                        className="btn btn--primary btn--md"
-                    >
-                        <Plus size={20} />
-                        Nouveau Registre
-                    </button>
-                </div>
+				<div className="flex items-center gap-4">
+					<div className="bg-surface-50 p-1 rounded-xl flex gap-1 border border-line">
+						<button
+							onClick={() => setViewMode("table")}
+							className={clsx(
+								"p-2 rounded-lg transition-all",
+								viewMode === "table"
+									? "bg-white text-brand-500 shadow-sm"
+									: "text-ink-400 hover:text-ink-900",
+							)}
+						>
+							<List size={20} />
+						</button>
+						<button
+							onClick={() => setViewMode("grid")}
+							className={clsx(
+								"p-2 rounded-lg transition-all",
+								viewMode === "grid"
+									? "bg-white text-brand-500 shadow-sm"
+									: "text-ink-400 hover:text-ink-900",
+							)}
+						>
+							<LayoutGrid size={20} />
+						</button>
+					</div>
+					<button
+						type="button"
+						onClick={handleAdd}
+						className="btn btn--primary btn--md"
+					>
+						<Plus size={20} />
+						Nouveau Registre
+					</button>
+				</div>
 			</div>
 
-            {viewMode === "table" ? (
-                <DataTable
-                    data={optimisticStudents}
-                    columns={columns}
-                    searchPlaceholder={t("students_search_placeholder")}
-                    hideDefaultAction={true}
-                />
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {optimisticStudents.map((student) => (
-                        <StudentCard
-                            key={student.id}
-                            student={student}
-                            onEdit={handleEdit}
-                            onDelete={handleOpenDelete}
-                            onDownloadPDF={handleDownloadPDF}
-                        />
-                    ))}
-                    {optimisticStudents.length === 0 && (
-                        <div className="col-span-full py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-line">
-                            <User size={48} className="mx-auto mb-4 text-ink-100" />
-                            <p className="font-bold uppercase tracking-widest text-[11px] text-ink-300">
-                                Aucun étudiant trouvé
-                            </p>
-                        </div>
-                    )}
-                </div>
-            )}
+			{viewMode === "table" ? (
+				<DataTable
+					data={optimisticStudents}
+					columns={columns}
+					searchPlaceholder={t("students_search_placeholder")}
+					hideDefaultAction={true}
+				/>
+			) : (
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+					{optimisticStudents.map((student) => (
+						<StudentCard
+							key={student.id}
+							student={student}
+							onEdit={handleEdit}
+							onDelete={handleOpenDelete}
+							onDownloadPDF={handleDownloadPDF}
+						/>
+					))}
+					{optimisticStudents.length === 0 && (
+						<div className="col-span-full py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-line">
+							<User size={48} className="mx-auto mb-4 text-ink-100" />
+							<p className="font-bold uppercase tracking-widest text-[11px] text-ink-300">
+								Aucun étudiant trouvé
+							</p>
+						</div>
+					)}
+				</div>
+			)}
 
 			<ConfirmModal
 				isOpen={isDeleteModalOpen}
@@ -340,59 +356,66 @@ export default function StudentsClientView({
 				confirmLabel={t("delete")}
 				variant="danger"
 				isLoading={isPending}
-                size="lg"
+				size="lg"
 			/>
 
-            <StudentFormModal
-                key={selectedStudent?.id || "new"}
-                isOpen={isModalOpen}
-                onClose={() => {
-                    setIsModalOpen(false);
-                    setSelectedStudent(null);
-                }}
-                student={selectedStudent}
-                groups={groups}
-            />
+			<StudentFormModal
+				key={selectedStudent?.id || "new"}
+				isOpen={isModalOpen}
+				onClose={() => {
+					setIsModalOpen(false);
+					setSelectedStudent(null);
+				}}
+				student={selectedStudent}
+				groups={groups}
+			/>
 
-            {/* Error Notification */}
-            <AnimatePresence>
-                {errorMessage && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 100 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-white border-2 border-danger/20 shadow-2xl rounded-2xl p-4 flex items-start gap-4 min-w-[320px] max-w-md"
-                    >
-                        <div className="p-2 bg-rose-50 rounded-xl text-danger shrink-0">
-                            <AlertCircle size={20} />
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-sm font-bold text-ink-900 mb-1">Attention</h4>
-                            <p className="text-xs text-ink-500 leading-relaxed font-medium">{errorMessage}</p>
-                            <button 
-                                onClick={() => setErrorMessage(null)}
-                                className="mt-3 text-[10px] font-bold text-brand-500 uppercase tracking-widest hover:text-brand-700"
-                            >
-                                {t("students_understood")}
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+			{/* Error Notification */}
+			<AnimatePresence>
+				{errorMessage && (
+					<motion.div
+						initial={{ opacity: 0, y: 100 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: 100 }}
+						className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-white border-2 border-danger/20 shadow-2xl rounded-2xl p-4 flex items-start gap-4 min-w-[320px] max-w-md"
+					>
+						<div className="p-2 bg-rose-50 rounded-xl text-danger shrink-0">
+							<AlertCircle size={20} />
+						</div>
+						<div className="flex-1">
+							<h4 className="text-sm font-bold text-ink-900 mb-1">Attention</h4>
+							<p className="text-xs text-ink-500 leading-relaxed font-medium">
+								{errorMessage}
+							</p>
+							<button
+								onClick={() => setErrorMessage(null)}
+								className="mt-3 text-[10px] font-bold text-brand-500 uppercase tracking-widest hover:text-brand-700"
+							>
+								{t("students_understood")}
+							</button>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
-            <AnimatePresence>
-                {pdfError && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="fixed top-24 right-8 z-[100] bg-rose-600 text-white shadow-xl rounded-xl px-4 py-3 text-xs font-bold flex items-center gap-3"
-                    >
-                        <AlertCircle size={16} />
-                        {pdfError}
-                        <button onClick={() => setPdfError(null)} className="ml-2 hover:opacity-70 transition-opacity">✕</button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+			<AnimatePresence>
+				{pdfError && (
+					<motion.div
+						initial={{ opacity: 0, scale: 0.95 }}
+						animate={{ opacity: 1, scale: 1 }}
+						className="fixed top-24 right-8 z-[100] bg-rose-600 text-white shadow-xl rounded-xl px-4 py-3 text-xs font-bold flex items-center gap-3"
+					>
+						<AlertCircle size={16} />
+						{pdfError}
+						<button
+							onClick={() => setPdfError(null)}
+							className="ml-2 hover:opacity-70 transition-opacity"
+						>
+							✕
+						</button>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }

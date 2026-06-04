@@ -142,7 +142,8 @@ export default function GroupsClientView({
 							setSelectedGroup({
 								...selectedGroup,
 								students:
-									selectedGroup.students?.filter((s) => s.id !== studentId) ?? [],
+									selectedGroup.students?.filter((s) => s.id !== studentId) ??
+									[],
 							});
 						}
 					} else {

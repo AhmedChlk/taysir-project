@@ -1,13 +1,12 @@
 "use client";
 
+import type { Etablissement } from "@prisma/client";
 import { motion } from "framer-motion";
 import { Loader2, MapPin, Palette, Save, School } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { updateSchoolAction } from "@/actions/settings.actions";
 import { Input, TextArea } from "@/components/ui/FormInput";
-
-import type { Etablissement } from "@prisma/client";
 
 interface SchoolSettingsProps {
 	tenant: Etablissement | null;

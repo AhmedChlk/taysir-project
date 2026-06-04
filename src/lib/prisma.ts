@@ -109,9 +109,11 @@ function buildTenantExtension(etablissementId: string) {
 
 function evictExpiredTenantClients(): void {
 	const now = Date.now();
-	for (const [key, cached] of globalThis.tenantClients!.entries()) {
+	const clients = globalThis.tenantClients;
+	if (!clients) return;
+	for (const [key, cached] of clients.entries()) {
 		if (now - cached.createdAt > TENANT_CLIENT_TTL_MS) {
-			globalThis.tenantClients!.delete(key);
+			clients.delete(key);
 		}
 	}
 }

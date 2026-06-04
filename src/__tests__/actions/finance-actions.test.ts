@@ -5,6 +5,7 @@ vi.mock("@/lib/prisma", () => ({ getTenantPrisma: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ authOptions: {} }));
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import {
 	createPaymentPlanAction,
@@ -12,7 +13,6 @@ import {
 	registerPaymentAction,
 } from "@/actions/finance.actions";
 import { getTenantPrisma } from "@/lib/prisma";
-import { revalidateTag } from "next/cache";
 
 const makeSession = (override = {}) => ({
 	user: { id: "u1", role: "ADMIN", etablissementId: "etab-1", ...override },
@@ -62,24 +62,34 @@ describe("Finance Actions Audit", () => {
 			});
 
 			it("Cross-Tenant Access : Injecte bien le tenantId de la session dans la création (y compris les tranches)", async () => {
-				vi.mocked(getServerSession).mockResolvedValue(makeSession({ etablissementId: "tenant-hack" }) as never);
+				vi.mocked(getServerSession).mockResolvedValue(
+					makeSession({ etablissementId: "tenant-hack" }) as never,
+				);
 				const mockCreate = vi.fn().mockResolvedValue({ id: "plan-1" });
-				vi.mocked(getTenantPrisma).mockReturnValue({ paymentPlan: { create: mockCreate } } as never);
+				vi.mocked(getTenantPrisma).mockReturnValue({
+					paymentPlan: { create: mockCreate },
+				} as never);
 
 				const result = await createPaymentPlanAction(validPlanInput);
 				expect(result.success).toBe(true);
 
-				const callArgs = mockCreate.mock.calls[0]![0]!;
+				const callArgs = mockCreate.mock.calls[0]![0];
 				expect(callArgs.data.etablissementId).toBe("tenant-hack");
-				expect(callArgs.data.tranches.create[0].etablissementId).toBe("tenant-hack");
+				expect(callArgs.data.tranches.create[0].etablissementId).toBe(
+					"tenant-hack",
+				);
 			});
 		});
 
 		describe("🟠 B. Résilience et Désastres", () => {
 			it("Prisma Down : Capture une erreur DB générique sans crasher", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-				const mockCreate = vi.fn().mockRejectedValue(new Error("DB CONNECTION LOST"));
-				vi.mocked(getTenantPrisma).mockReturnValue({ paymentPlan: { create: mockCreate } } as never);
+				const mockCreate = vi
+					.fn()
+					.mockRejectedValue(new Error("DB CONNECTION LOST"));
+				vi.mocked(getTenantPrisma).mockReturnValue({
+					paymentPlan: { create: mockCreate },
+				} as never);
 
 				const result = await createPaymentPlanAction(validPlanInput);
 				expect(result.success).toBe(false);
@@ -90,8 +100,14 @@ describe("Finance Actions Audit", () => {
 
 			it("Unique Constraint Violation : Gère une duplication P2002 via le wrapper (safe-action gère la capture globale)", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-				const mockCreate = vi.fn().mockRejectedValue(new PrismaKnownError("Unique constraint", "P2002"));
-				vi.mocked(getTenantPrisma).mockReturnValue({ paymentPlan: { create: mockCreate } } as never);
+				const mockCreate = vi
+					.fn()
+					.mockRejectedValue(
+						new PrismaKnownError("Unique constraint", "P2002"),
+					);
+				vi.mocked(getTenantPrisma).mockReturnValue({
+					paymentPlan: { create: mockCreate },
+				} as never);
 
 				const result = await createPaymentPlanAction(validPlanInput);
 				expect(result.success).toBe(false);
@@ -131,7 +147,9 @@ describe("Finance Actions Audit", () => {
 			it("Succès : Calcule automatiquement le totalAmount si omis ou null", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 				const mockCreate = vi.fn().mockResolvedValue({ id: "plan-auto" });
-				vi.mocked(getTenantPrisma).mockReturnValue({ paymentPlan: { create: mockCreate } } as never);
+				vi.mocked(getTenantPrisma).mockReturnValue({
+					paymentPlan: { create: mockCreate },
+				} as never);
 
 				const result = await createPaymentPlanAction({
 					...validPlanInput,
@@ -139,14 +157,16 @@ describe("Finance Actions Audit", () => {
 				});
 
 				expect(result.success).toBe(true);
-				expect(mockCreate.mock.calls[0]![0]!.data.totalAmount).toBe(5000);
+				expect(mockCreate.mock.calls[0]?.[0]?.data.totalAmount).toBe(5000);
 				expect(revalidateTag).toHaveBeenCalledWith("finance-etab-1", "max");
 			});
 
 			it("Succès : Sans tranches (totalAmount est conservé)", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 				const mockCreate = vi.fn().mockResolvedValue({ id: "plan-notranches" });
-				vi.mocked(getTenantPrisma).mockReturnValue({ paymentPlan: { create: mockCreate } } as never);
+				vi.mocked(getTenantPrisma).mockReturnValue({
+					paymentPlan: { create: mockCreate },
+				} as never);
 
 				const result = await createPaymentPlanAction({
 					studentId: STUDENT_ID,
@@ -157,8 +177,10 @@ describe("Finance Actions Audit", () => {
 				});
 
 				expect(result.success).toBe(true);
-				expect(mockCreate.mock.calls[0]![0]!.data.totalAmount).toBe(9000);
-				expect(mockCreate.mock.calls[0]![0]!.data.tranches.create).toHaveLength(0);
+				expect(mockCreate.mock.calls[0]?.[0]?.data.totalAmount).toBe(9000);
+				expect(
+					mockCreate.mock.calls[0]?.[0]?.data.tranches.create,
+				).toHaveLength(0);
 			});
 		});
 	});
@@ -205,7 +227,9 @@ describe("Finance Actions Audit", () => {
 			it("Transaction Rollback : Si une erreur survient, la transaction est abandonnée", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 				vi.mocked(getTenantPrisma).mockReturnValue({
-					$transaction: vi.fn().mockRejectedValue(new Error("TRANSACTION_FAILED")),
+					$transaction: vi
+						.fn()
+						.mockRejectedValue(new Error("TRANSACTION_FAILED")),
 				} as never);
 
 				const result = await registerPaymentAction(validPaymentInput);
@@ -221,7 +245,11 @@ describe("Finance Actions Audit", () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 				const mockTx = {
 					$executeRaw: vi.fn().mockResolvedValue(undefined),
-					tranche: { findUnique: vi.fn().mockResolvedValue(buildMockTranche({ isPaid: true })) },
+					tranche: {
+						findUnique: vi
+							.fn()
+							.mockResolvedValue(buildMockTranche({ isPaid: true })),
+					},
 				};
 				vi.mocked(getTenantPrisma).mockReturnValue({
 					$transaction: vi.fn().mockImplementation((fn) => fn(mockTx)),
@@ -240,17 +268,22 @@ describe("Finance Actions Audit", () => {
 				const mockTx = {
 					$executeRaw: vi.fn().mockResolvedValue(undefined),
 					tranche: {
-						findUnique: vi.fn().mockResolvedValue(buildMockTranche({
-							amount: 1000,
-							paiements: [{ amount: 800 }], // Reste = 200
-						})),
+						findUnique: vi.fn().mockResolvedValue(
+							buildMockTranche({
+								amount: 1000,
+								paiements: [{ amount: 800 }], // Reste = 200
+							}),
+						),
 					},
 				};
 				vi.mocked(getTenantPrisma).mockReturnValue({
 					$transaction: vi.fn().mockImplementation((fn) => fn(mockTx)),
 				} as never);
 
-				const result = await registerPaymentAction({ ...validPaymentInput, montant_paye: 500 });
+				const result = await registerPaymentAction({
+					...validPaymentInput,
+					montant_paye: 500,
+				});
 				expect(result.success).toBe(false);
 				if (!result.success) {
 					expect(result.error.message).toMatch(/dépasse le solde/);
@@ -261,8 +294,12 @@ describe("Finance Actions Audit", () => {
 		describe("🟢 D. Le Happy Path Extrême", () => {
 			it("Succès : Paiement partiel avec référence et note (Injection safe)", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-				const mockPaiementCreate = vi.fn().mockResolvedValue({ id: "p-1", amount: 1000 });
-				const mockPlanUpdate = vi.fn().mockResolvedValue({ paidAmount: 1000, totalAmount: 5000 });
+				const mockPaiementCreate = vi
+					.fn()
+					.mockResolvedValue({ id: "p-1", amount: 1000 });
+				const mockPlanUpdate = vi
+					.fn()
+					.mockResolvedValue({ paidAmount: 1000, totalAmount: 5000 });
 				const mockTrancheUpdate = vi.fn();
 
 				const mockTx = {
@@ -287,19 +324,27 @@ describe("Finance Actions Audit", () => {
 				}
 
 				// Vérifie l'injection des datas et la création
-				expect(mockPaiementCreate.mock.calls[0]![0]!.data.note).toBe("<script>alert(1)</script>");
+				expect(mockPaiementCreate.mock.calls[0]?.[0]?.data.note).toBe(
+					"<script>alert(1)</script>",
+				);
 				// La tranche n'est pas soldée
 				expect(mockTrancheUpdate).not.toHaveBeenCalled();
 				// Le plan n'est pas full paid
-				expect(mockPlanUpdate).toHaveBeenLastCalledWith(expect.objectContaining({
-					data: { status: "PARTIAL" }
-				}));
+				expect(mockPlanUpdate).toHaveBeenLastCalledWith(
+					expect.objectContaining({
+						data: { status: "PARTIAL" },
+					}),
+				);
 			});
 
 			it("Succès : Paiement avec champs optionnels omis (couverture des fallbacks nuls)", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-				const mockPaiementCreate = vi.fn().mockResolvedValue({ id: "p-opt", amount: 1000 });
-				const mockPlanUpdate = vi.fn().mockResolvedValue({ paidAmount: 1000, totalAmount: 5000 });
+				const mockPaiementCreate = vi
+					.fn()
+					.mockResolvedValue({ id: "p-opt", amount: 1000 });
+				const mockPlanUpdate = vi
+					.fn()
+					.mockResolvedValue({ paidAmount: 1000, totalAmount: 5000 });
 
 				const mockTx = {
 					$executeRaw: vi.fn().mockResolvedValue(undefined),
@@ -324,15 +369,19 @@ describe("Finance Actions Audit", () => {
 				const result = await registerPaymentAction(minimalInput);
 				expect(result.success).toBe(true);
 
-				const createArgs = mockPaiementCreate.mock.calls[0]![0]!;
+				const createArgs = mockPaiementCreate.mock.calls[0]![0];
 				expect(createArgs.data.reference).toBeNull();
 				expect(createArgs.data.note).toBeNull();
 			});
 
 			it("Succès : Paiement total qui ferme la tranche ET le payment plan", async () => {
 				vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-				const mockPaiementCreate = vi.fn().mockResolvedValue({ id: "p-2", amount: 5000 });
-				const mockPlanUpdate = vi.fn().mockResolvedValue({ paidAmount: 5000, totalAmount: 5000 }); // Plan soldé
+				const mockPaiementCreate = vi
+					.fn()
+					.mockResolvedValue({ id: "p-2", amount: 5000 });
+				const mockPlanUpdate = vi
+					.fn()
+					.mockResolvedValue({ paidAmount: 5000, totalAmount: 5000 }); // Plan soldé
 				const mockTrancheUpdate = vi.fn();
 
 				const mockTx = {
@@ -349,7 +398,10 @@ describe("Finance Actions Audit", () => {
 					$transaction: vi.fn().mockImplementation((fn) => fn(mockTx)),
 				} as never);
 
-				const result = await registerPaymentAction({ ...validPaymentInput, montant_paye: 5000 });
+				const result = await registerPaymentAction({
+					...validPaymentInput,
+					montant_paye: 5000,
+				});
 				expect(result.success).toBe(true);
 				if (result.success) {
 					expect(result.data.trancheStatut).toBe("PAID");
@@ -357,9 +409,13 @@ describe("Finance Actions Audit", () => {
 				}
 
 				// Tranche mise à jour à PAID
-				expect(mockTrancheUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { isPaid: true } }));
+				expect(mockTrancheUpdate).toHaveBeenCalledWith(
+					expect.objectContaining({ data: { isPaid: true } }),
+				);
 				// Plan mis à jour à PAID
-				expect(mockPlanUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ data: { status: "PAID" } }));
+				expect(mockPlanUpdate).toHaveBeenLastCalledWith(
+					expect.objectContaining({ data: { status: "PAID" } }),
+				);
 			});
 		});
 	});
@@ -372,7 +428,9 @@ describe("Finance Actions Audit", () => {
 					paiement: { findUnique: vi.fn().mockResolvedValue(null) },
 				} as never);
 
-				const result = await getPaymentReceiptDataAction({ paiementId: PAYMENT_ID });
+				const result = await getPaymentReceiptDataAction({
+					paiementId: PAYMENT_ID,
+				});
 				expect(result.success).toBe(false);
 				if (!result.success) {
 					expect(result.error.code).toBe("RESOURCE_NOT_FOUND");
@@ -403,7 +461,9 @@ describe("Finance Actions Audit", () => {
 					paiement: { findUnique: vi.fn().mockResolvedValue(mockPayment) },
 				} as never);
 
-				const result = await getPaymentReceiptDataAction({ paiementId: PAYMENT_ID });
+				const result = await getPaymentReceiptDataAction({
+					paiementId: PAYMENT_ID,
+				});
 				expect(result.success).toBe(true);
 				if (result.success) {
 					expect(result.data.resteSurTranche).toBe(2500);

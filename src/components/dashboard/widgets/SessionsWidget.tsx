@@ -1,4 +1,4 @@
-import { ArrowUpRight, Calendar, MapPin, Plus } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getTodaySessionsAction } from "@/actions/dashboard.actions";
@@ -11,12 +11,14 @@ export default async function SessionsWidget() {
 
 	if (!response.success) {
 		return (
-			<div className="rounded-[24px] p-8 text-danger bg-rose-50 border border-rose-100">{t("stats_load_error")}</div>
+			<div className="rounded-[24px] p-8 text-danger bg-rose-50 border border-rose-100">
+				{t("stats_load_error")}
+			</div>
 		);
 	}
 
 	const sessions = response.data as SessionData[];
-	const uniqueRooms = new Set(sessions.map((s) => s.roomId)).size;
+	const _uniqueRooms = new Set(sessions.map((s) => s.roomId)).size;
 
 	return (
 		<div className="h-full bg-white rounded-[24px] border border-line p-8 shadow-sm flex flex-col justify-between group hover:shadow-ts-2 transition-all duration-300 relative overflow-hidden">

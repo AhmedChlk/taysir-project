@@ -1,19 +1,22 @@
 "use client";
 
-import React, { useMemo, useCallback } from "react";
 import { format, getDay, parse, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+import React, { useCallback, useMemo } from "react";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "./calendar-overrides.css";
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle } from "lucide-react";
 
 import type { Activity, Groupe, Room, Session, User } from "@prisma/client";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { updateSessionAction, updateSeriesAction } from "@/actions/schedule.actions";
+import {
+	updateSeriesAction,
+	updateSessionAction,
+} from "@/actions/schedule.actions";
 
 type SessionWithRelations = Session & {
 	room: Pick<Room, "name" | "capacity">;
@@ -73,22 +76,29 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 	} | null>(null);
 	const [isUpdating, setIsUpdating] = React.useState(false);
 
-	const events: CalendarEvent[] = useMemo(() => sessions.map((s) => ({
-		id: s.id,
-		title: `${s.activity.name} - ${s.group.name}`,
-		start: new Date(s.startTime),
-		end: new Date(s.endTime),
-		resource: s,
-	})), [sessions]);
+	const events: CalendarEvent[] = useMemo(
+		() =>
+			sessions.map((s) => ({
+				id: s.id,
+				title: `${s.activity.name} - ${s.group.name}`,
+				start: new Date(s.startTime),
+				end: new Date(s.endTime),
+				resource: s,
+			})),
+		[sessions],
+	);
 
-	const components = useMemo(() => ({
-		event: CalendarEventComponent,
-	}), []);
+	const components = useMemo(
+		() => ({
+			event: CalendarEventComponent,
+		}),
+		[],
+	);
 
 	const handleConfirmMove = async (mode: "single" | "following" | "all") => {
 		if (!pendingMove) return;
 		setIsUpdating(true);
-		
+
 		try {
 			if (mode === "single" || !pendingMove.event.resource.recurrenceGroupId) {
 				await updateSessionAction({
@@ -112,78 +122,93 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 		}
 	};
 
-	const handleSelectEvent = useCallback((event: CalendarEvent) => {
-		const params = new URLSearchParams(searchParams.toString());
-		params.set("drawer", "view-session");
-		params.set("id", event.id);
-		router.push(`?${params.toString()}`, { scroll: false });
-	}, [searchParams, router]);
+	const handleSelectEvent = useCallback(
+		(event: CalendarEvent) => {
+			const params = new URLSearchParams(searchParams.toString());
+			params.set("drawer", "view-session");
+			params.set("id", event.id);
+			router.push(`?${params.toString()}`, { scroll: false });
+		},
+		[searchParams, router],
+	);
 
-	const handleSelectSlot = useCallback(({ start, end }: { start: Date; end: Date }) => {
-		const params = new URLSearchParams(searchParams.toString());
-		params.set("drawer", "new-session");
-		params.set("start", start.toISOString());
-		params.set("end", end.toISOString());
-		router.push(`?${params.toString()}`, { scroll: false });
-	}, [searchParams, router]);
+	const handleSelectSlot = useCallback(
+		({ start, end }: { start: Date; end: Date }) => {
+			const params = new URLSearchParams(searchParams.toString());
+			params.set("drawer", "new-session");
+			params.set("start", start.toISOString());
+			params.set("end", end.toISOString());
+			router.push(`?${params.toString()}`, { scroll: false });
+		},
+		[searchParams, router],
+	);
 
-	const onEventDrop = useCallback(async ({
-		event,
-		start,
-		end,
-	}: {
-		event: CalendarEvent;
-		start: string | Date;
-		end: string | Date;
-	}) => {
-		const newStart = new Date(start);
-		const newEnd = new Date(end);
+	const onEventDrop = useCallback(
+		async ({
+			event,
+			start,
+			end,
+		}: {
+			event: CalendarEvent;
+			start: string | Date;
+			end: string | Date;
+		}) => {
+			const newStart = new Date(start);
+			const newEnd = new Date(end);
 
-		if (event.resource.recurrenceGroupId) {
-			setPendingMove({ event, start: newStart, end: newEnd });
-		} else {
-			const result = await updateSessionAction({
-				id: event.id,
-				startTime: newStart,
-				endTime: newEnd,
-			});
-			if (result?.success) {
-				router.refresh();
+			if (event.resource.recurrenceGroupId) {
+				setPendingMove({ event, start: newStart, end: newEnd });
+			} else {
+				const result = await updateSessionAction({
+					id: event.id,
+					startTime: newStart,
+					endTime: newEnd,
+				});
+				if (result?.success) {
+					router.refresh();
+				}
 			}
-		}
-	}, [router]);
+		},
+		[router],
+	);
 
-	const onEventResize = useCallback(async ({
-		event,
-		start,
-		end,
-	}: {
-		event: CalendarEvent;
-		start: string | Date;
-		end: string | Date;
-	}) => {
-		const newStart = new Date(start);
-		const newEnd = new Date(end);
+	const onEventResize = useCallback(
+		async ({
+			event,
+			start,
+			end,
+		}: {
+			event: CalendarEvent;
+			start: string | Date;
+			end: string | Date;
+		}) => {
+			const newStart = new Date(start);
+			const newEnd = new Date(end);
 
-		if (event.resource.recurrenceGroupId) {
-			setPendingMove({ event, start: newStart, end: newEnd });
-		} else {
-			const result = await updateSessionAction({
-				id: event.id,
-				startTime: newStart,
-				endTime: newEnd,
-			});
-			if (result?.success) {
-				router.refresh();
+			if (event.resource.recurrenceGroupId) {
+				setPendingMove({ event, start: newStart, end: newEnd });
+			} else {
+				const result = await updateSessionAction({
+					id: event.id,
+					startTime: newStart,
+					endTime: newEnd,
+				});
+				if (result?.success) {
+					router.refresh();
+				}
 			}
-		}
-	}, [router]);
+		},
+		[router],
+	);
 
-	const onNavigate = useCallback((date: Date) => {
-		const params = new URLSearchParams(searchParams.toString());
-		params.set("date", date.toISOString());
-		router.push(`?${params.toString()}`, { scroll: false });
-	}, [searchParams, router]);
+	const onNavigate = useCallback(
+		(date: Date) => {
+			const params = new URLSearchParams(searchParams.toString());
+			params.set("date", date.toISOString());
+			router.push(`?${params.toString()}`, { scroll: false });
+		},
+		[searchParams, router],
+	);
 
 	const eventPropGetter = useCallback((event: CalendarEvent) => {
 		return {
@@ -240,7 +265,7 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 			<AnimatePresence>
 				{pendingMove && (
 					<div className="absolute inset-0 z-[200] flex items-center justify-center bg-brand-900/10 backdrop-blur-sm rounded-2xl">
-						<motion.div 
+						<motion.div
 							initial={{ scale: 0.9, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.9, opacity: 0 }}
@@ -250,11 +275,14 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 								<div className="p-3 bg-brand-50 rounded-2xl text-brand-500">
 									<AlertCircle size={24} />
 								</div>
-								<h3 className="text-xl font-bold tracking-tight">Modification de série</h3>
+								<h3 className="text-xl font-bold tracking-tight">
+									Modification de série
+								</h3>
 							</div>
-							
+
 							<p className="text-sm text-ink-500 font-medium leading-relaxed">
-								Vous déplacez une séance récurrente. Quelles séances souhaitez-vous modifier ?
+								Vous déplacez une séance récurrente. Quelles séances
+								souhaitez-vous modifier ?
 							</p>
 
 							<div className="grid grid-cols-1 gap-2">
@@ -263,21 +291,27 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 									onClick={() => handleConfirmMove("single")}
 									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all group"
 								>
-									<p className="font-bold text-ink-900 text-sm">Uniquement cette séance</p>
+									<p className="font-bold text-ink-900 text-sm">
+										Uniquement cette séance
+									</p>
 								</button>
 								<button
 									disabled={isUpdating}
 									onClick={() => handleConfirmMove("following")}
 									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all"
 								>
-									<p className="font-bold text-ink-900 text-sm">Celle-ci et les suivantes</p>
+									<p className="font-bold text-ink-900 text-sm">
+										Celle-ci et les suivantes
+									</p>
 								</button>
 								<button
 									disabled={isUpdating}
 									onClick={() => handleConfirmMove("all")}
 									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all"
 								>
-									<p className="font-bold text-ink-900 text-sm">Toutes les séances de la série</p>
+									<p className="font-bold text-ink-900 text-sm">
+										Toutes les séances de la série
+									</p>
 								</button>
 							</div>
 
@@ -296,4 +330,3 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 });
 
 export default TaysirCalendar;
-

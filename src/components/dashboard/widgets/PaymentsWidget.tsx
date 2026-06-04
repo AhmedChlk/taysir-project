@@ -1,4 +1,4 @@
-import { ArrowUpRight, Clock, TrendingDown, Wallet } from "lucide-react";
+import { ArrowUpRight, TrendingDown } from "lucide-react";
 import Link from "next/link";
 import { getPendingPaymentsAction } from "@/actions/dashboard.actions";
 
@@ -30,7 +30,9 @@ export default async function PaymentsWidget() {
 				<div className="mb-8 flex-1">
 					<div className="text-4xl font-bold text-ink-900 tracking-tight transition-transform group-hover:scale-105 origin-left flex items-baseline gap-1.5 tabular-nums mb-2">
 						{totalAmount.toLocaleString("fr-DZ")}
-						<span className="text-lg text-ink-400 font-bold opacity-50">DA</span>
+						<span className="text-lg text-ink-400 font-bold opacity-50">
+							DA
+						</span>
 					</div>
 					<span className="text-danger text-sm font-bold uppercase tracking-widest block">
 						Reste à recouvrer

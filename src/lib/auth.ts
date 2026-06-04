@@ -26,10 +26,14 @@ export const authOptions: NextAuthOptions = {
 						return null;
 					}
 
-                    // Bloquer si le tenant est désactivé (sauf si Super Admin)
-                    if (user.role !== "SUPER_ADMIN" && user.etablissement && !user.etablissement.isActive) {
-                        return null;
-                    }
+					// Bloquer si le tenant est désactivé (sauf si Super Admin)
+					if (
+						user.role !== "SUPER_ADMIN" &&
+						user.etablissement &&
+						!user.etablissement.isActive
+					) {
+						return null;
+					}
 
 					const isPasswordValid = await bcrypt.compare(
 						credentials.password,
