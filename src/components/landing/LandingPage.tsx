@@ -9,6 +9,7 @@ import { Logo, LogoMark } from "./components/LandingLogo";
 import { LandingNavbar as Navbar } from "./components/LandingNavbar";
 import { DemoButton, DemoCtaProvider } from "./lib/DemoCta";
 import { Faq, FinalCta, HowItWorks, Problem } from "./sections/Funnel";
+import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 
 /* ==========================================================================
    Taysir Landing Page — Implementation based on Taysir Design System
@@ -2262,6 +2263,8 @@ export default function LandingPage({ locale }: { locale: string }) {
 				<KPIBand />
 				<Problem />
 				<HowItWorks />
+				<MassiveStats />
+				<MultiTenantBento />
 				<PlatformTabs />
 				<MicroDemo />
 				<ROISimulator />

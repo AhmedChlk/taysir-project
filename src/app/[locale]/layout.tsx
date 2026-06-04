@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import SessionProviderWrapper from "@/components/providers/SessionProviderWrapper";
 import "./globals.css";
 import { notFound } from "next/navigation";
@@ -10,6 +10,13 @@ import { routing } from "@/i18n/routing";
 const inter = Inter({
 	variable: "--font-inter",
 	subsets: ["latin"],
+});
+
+// Variable display font for massive animated data numbers (wght axis animated via GSAP).
+const fraunces = Fraunces({
+	variable: "--font-display",
+	subsets: ["latin"],
+	axes: ["opsz", "SOFT", "WONK"],
 });
 
 export const metadata: Metadata = {
@@ -44,7 +51,7 @@ export default async function LocaleLayout({
 		<html
 			lang={locale}
 			dir={dir}
-			className={`${inter.variable} h-full antialiased`}
+			className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
 		>
 			<body className="min-h-full flex flex-col font-sans">
 				<NextIntlClientProvider locale={locale} messages={messages}>
