@@ -9,6 +9,7 @@ import { Logo, LogoMark } from "./components/LandingLogo";
 import { LandingNavbar as Navbar } from "./components/LandingNavbar";
 import { DemoButton, DemoCtaProvider } from "./lib/DemoCta";
 import { Faq, FinalCta, HowItWorks, Problem } from "./sections/Funnel";
+import { LiveDashboardDraw } from "./sections/LiveDemo";
 import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 
 /* ==========================================================================
@@ -2265,6 +2266,7 @@ export default function LandingPage({ locale }: { locale: string }) {
 				<HowItWorks />
 				<MassiveStats />
 				<MultiTenantBento />
+				<LiveDashboardDraw />
 				<PlatformTabs />
 				<MicroDemo />
 				<ROISimulator />

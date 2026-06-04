@@ -290,8 +290,13 @@
 	.taysir-pain-grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
-	.taysir-steps-grid {
-		grid-template-columns: 1fr;
+	.taysir-steps-grid,
+	.taysir-stats-grid,
+	.taysir-live-grid {
+		grid-template-columns: 1fr !important;
+	}
+	.taysir-bento {
+		grid-template-columns: repeat(2, 1fr) !important;
 	}
 }
 /* Inverted CTA button: white on dark backgrounds */
