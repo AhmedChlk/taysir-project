@@ -64,7 +64,6 @@
 		"eslint": "^9",
 		"eslint-config-next": "16.2.3",
 		"jsdom": "^29.0.2",
-		"msw": "^2.13.4",
 		"tailwindcss": "^4",
 		"ts-node": "^10.9.2",
 		"typescript": "^5",
@@ -73,10 +72,5 @@
 	},
 	"prisma": {
 		"seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
-	},
-	"msw": {
-		"workerDirectory": [
-			"public"
-		]
 	}
 }
