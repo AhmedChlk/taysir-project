@@ -619,10 +619,149 @@ html.lenis body {
    + type workflows synthesised). Gutterless girih tessellation; terracotta
    grout via grid-gap; octagon-chamfered tiles; petrol star tile.
    ==================================================================== */
+/* ---------- Navbar (clean, Petrol & Brass) ---------- */
+.lnav {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 50;
+	height: var(--nav-h);
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	padding: 0 clamp(16px, 4vw, 48px);
+	background: transparent;
+	border-bottom: 1px solid transparent;
+	transition:
+		background var(--dur-small) var(--ease-order),
+		border-color var(--dur-small) var(--ease-order),
+		box-shadow var(--dur-small) var(--ease-order);
+}
+.lnav--scrolled {
+	background: rgba(246, 241, 231, 0.82);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border-bottom-color: var(--line-soft);
+	box-shadow: var(--shadow-1);
+}
+.lnav-logo {
+	display: inline-flex;
+	text-decoration: none;
+}
+.lnav-right {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: clamp(14px, 1.6vw, 24px);
+}
+.lnav-links {
+	display: flex;
+	align-items: center;
+	gap: clamp(16px, 1.8vw, 28px);
+}
+.lnav-link {
+	position: relative;
+	font-family: var(--font-body), serif;
+	font-size: 15px;
+	font-weight: 500;
+	color: var(--ink-700);
+	text-decoration: none;
+	padding: 4px 0;
+	transition: color var(--dur-small) var(--ease-order);
+}
+.lnav-link::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -1px;
+	height: 2px;
+	background: var(--accent);
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform var(--dur-small) var(--ease-order);
+}
+[dir="rtl"] .lnav-link::after {
+	transform-origin: right;
+}
+.lnav-link:hover {
+	color: var(--ink-900);
+}
+.lnav-link:hover::after {
+	transform: scaleX(1);
+}
+.lnav-divider {
+	width: 1px;
+	height: 22px;
+	background: var(--line);
+}
+.lnav-login {
+	font-family: var(--font-body), serif;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--brand-700);
+	text-decoration: none;
+	transition: color var(--dur-small) var(--ease-order);
+}
+.lnav-login:hover {
+	color: var(--brand-500);
+}
+.lnav-cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--font-body), serif;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--fg-on-brand-strong);
+	background: var(--brand-700);
+	padding: 9px 18px;
+	border-radius: 10px;
+	border: none;
+	cursor: pointer;
+	text-decoration: none;
+	box-shadow: var(--shadow-1);
+	transition:
+		transform var(--dur-small) var(--ease-order),
+		background var(--dur-small) var(--ease-order),
+		box-shadow var(--dur-small) var(--ease-order);
+}
+.lnav-cta:hover {
+	background: var(--brand-600);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-2);
+}
+.lnav-cta-arrow {
+	transition: transform var(--dur-small) var(--ease-order);
+}
+.lnav-cta:hover .lnav-cta-arrow {
+	transform: translateX(3px);
+}
+[dir="rtl"] .lnav-cta-arrow {
+	transform: scaleX(-1);
+}
+[dir="rtl"] .lnav-cta:hover .lnav-cta-arrow {
+	transform: scaleX(-1) translateX(3px);
+}
+@media (max-width: 760px) {
+	.lnav-links,
+	.lnav-divider {
+		display: none;
+	}
+}
+
 .hz-section {
 	position: relative;
 	padding: calc(var(--nav-h) + 40px) clamp(16px, 4vw, 48px) 40px;
 	background: var(--surface-0);
+}
+.hz-tile {
+	transition: filter var(--dur-small) var(--ease-order);
+}
+.hz-tile:not(.hz-star):hover {
+	z-index: 3;
+	filter: drop-shadow(0 12px 22px rgba(11, 42, 48, 0.22));
 }
 .hz-grid {
 	display: grid;

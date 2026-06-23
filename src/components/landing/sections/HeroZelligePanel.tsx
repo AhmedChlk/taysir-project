@@ -81,6 +81,16 @@ export function HeroZelligePanel() {
 				delay: 0.15 + s.d,
 				ease: [0.16, 1, 0.3, 1] as const,
 			},
+			// Module tiles lift on hover (affordance — "alive"); the star stays put.
+			...(i > 0
+				? {
+						whileHover: {
+							y: -5,
+							scale: 1.018,
+							transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const },
+						},
+					}
+				: {}),
 		};
 	};
 
