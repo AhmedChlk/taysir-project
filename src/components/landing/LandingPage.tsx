@@ -43,10 +43,10 @@ const Hero = ({ locale: _locale }: { locale: string }) => {
 					</span>
 					<h1
 						style={{
-							fontSize: "clamp(2.3rem, 4.4vw, 3.4rem)",
-							lineHeight: 1.07,
-							fontWeight: 700,
-							letterSpacing: "-0.025em",
+							fontSize: "clamp(2.5rem, 5vw, 3.9rem)",
+							lineHeight: 1.03,
+							fontWeight: 800,
+							letterSpacing: "-0.035em",
 							color: "var(--fg1)",
 							margin: "14px 0 0",
 						}}

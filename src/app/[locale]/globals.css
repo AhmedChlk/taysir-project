@@ -153,6 +153,24 @@
 		line-height: var(--t-body-lh);
 		background-color: var(--surface-0);
 	}
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: var(--font-display), "Inter", sans-serif;
+		letter-spacing: -0.02em;
+	}
+	/* Numbers carry the product's data — set in the editorial numeric face,
+	   tabular + lining so DA amounts and percentages align. */
+	.t-num {
+		font-family: var(--font-numeric), Georgia, serif;
+		font-feature-settings:
+			"tnum" 1,
+			"lnum" 1;
+		letter-spacing: -0.01em;
+	}
 
 	h1,
 	.t-h1 {
@@ -423,9 +441,11 @@ html.lenis body {
 	border-radius: 999px;
 	background: var(--brand-50);
 	color: var(--brand-900);
-	font-size: 13px;
+	font-family: var(--font-display), sans-serif;
+	font-size: 12px;
 	font-weight: 600;
-	letter-spacing: 0.01em;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 }
 .hero-eyebrow-dot {
 	width: 8px;

@@ -88,7 +88,7 @@ export function MassiveStats() {
 								data-num={s.to}
 								data-suffix={s.suffix}
 								style={{
-									fontFamily: "var(--font-display), Georgia, serif",
+									fontFamily: "var(--font-numeric), Georgia, serif",
 									fontSize: "clamp(72px, 11vw, 150px)",
 									lineHeight: 0.9,
 									letterSpacing: "-0.03em",

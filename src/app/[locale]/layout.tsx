@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Fraunces, Inter } from "next/font/google";
 import SessionProviderWrapper from "@/components/providers/SessionProviderWrapper";
 import "./globals.css";
 import { notFound } from "next/navigation";
@@ -12,9 +12,17 @@ const inter = Inter({
 	subsets: ["latin"],
 });
 
-// Variable display font for massive animated data numbers (wght axis animated via GSAP).
-const fraunces = Fraunces({
+// Display face for headlines & eyebrows — the page's personality (opsz axis).
+const bricolage = Bricolage_Grotesque({
 	variable: "--font-display",
+	subsets: ["latin"],
+	axes: ["opsz"],
+});
+
+// Editorial serif reserved for numbers/data (DA amounts, %, animated stats).
+// wght axis is animated via GSAP in PowerShowcase.
+const fraunces = Fraunces({
+	variable: "--font-numeric",
 	subsets: ["latin"],
 	axes: ["opsz", "SOFT", "WONK"],
 });
@@ -51,7 +59,7 @@ export default async function LocaleLayout({
 		<html
 			lang={locale}
 			dir={dir}
-			className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
+			className={`${inter.variable} ${bricolage.variable} ${fraunces.variable} h-full antialiased`}
 		>
 			<body className="min-h-full flex flex-col font-sans">
 				<NextIntlClientProvider locale={locale} messages={messages}>
