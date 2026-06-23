@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import type { Route } from "next";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DemoButton } from "../lib/DemoCta";
 
 /* ==========================================================================
@@ -18,17 +18,62 @@ import { DemoButton } from "../lib/DemoCta";
 // Deterministic scatter (no Math.random → no hydration mismatch). Order matches
 // the JSX tile order; delays radiate outward from the star so order "assembles".
 const SCATTER = [
-	{ r: -3, x: -26, y: -18, d: 0.0 }, // star (center, first)
-	{ r: 5, x: 30, y: -24, d: 0.12 }, // élèves
-	{ r: -6, x: 38, y: -12, d: 0.18 }, // présences
-	{ r: 4, x: 34, y: 26, d: 0.3 }, // emploi du temps
-	{ r: -5, x: -30, y: 20, d: 0.24 }, // paiements
-	{ r: 6, x: -14, y: 30, d: 0.36 }, // inscriptions
-	{ r: -4, x: -34, y: 16, d: 0.42 }, // staff
-	{ r: 5, x: 22, y: 28, d: 0.48 }, // salles
-	{ r: -6, x: 36, y: 22, d: 0.54 }, // activités
+	{ r: -2, x: -14, y: -10, d: 0.0 }, // star (anchor, lands first)
+	{ r: 3, x: 16, y: -12, d: 0.14 }, // élèves
+	{ r: -3, x: 18, y: -8, d: 0.18 }, // présences
+	{ r: 2, x: 16, y: 14, d: 0.24 }, // emploi du temps
+	{ r: -3, x: -16, y: 12, d: 0.1 }, // paiements (money — lands early)
+	{ r: 3, x: -10, y: 16, d: 0.28 }, // inscriptions
+	{ r: -2, x: -18, y: 10, d: 0.36 }, // staff
+	{ r: 3, x: 12, y: 16, d: 0.32 }, // salles
+	{ r: -3, x: 18, y: 12, d: 0.4 }, // activités
 ];
 const NO_SCATTER = { r: 0, x: 0, y: 0, d: 0 };
+
+/* Numbers count up as their tile lands — the data "comes alive". */
+function CountUp({
+	to,
+	prefix = "",
+	suffix = "",
+	delay = 0,
+}: {
+	to: number;
+	prefix?: string;
+	suffix?: string;
+	delay?: number;
+}) {
+	const reduced = useReducedMotion();
+	const [v, setV] = useState(reduced ? to : 0);
+	useEffect(() => {
+		if (reduced) {
+			setV(to);
+			return;
+		}
+		let raf = 0;
+		let t0 = 0;
+		const dur = 1000;
+		const tick = (t: number) => {
+			if (!t0) t0 = t;
+			const k = Math.min(1, (t - t0) / dur);
+			setV(Math.round(to * (1 - (1 - k) ** 3)));
+			if (k < 1) raf = requestAnimationFrame(tick);
+		};
+		const id = window.setTimeout(() => {
+			raf = requestAnimationFrame(tick);
+		}, delay * 1000);
+		return () => {
+			window.clearTimeout(id);
+			cancelAnimationFrame(raf);
+		};
+	}, [to, delay, reduced]);
+	return (
+		<>
+			{prefix}
+			{v.toLocaleString("fr-FR")}
+			{suffix}
+		</>
+	);
+}
 
 function StarGlyph() {
 	return (
@@ -116,9 +161,9 @@ export function HeroZelligePanel() {
 			initial: { opacity: 0, scale: 0.92, rotate: s.r, x: s.x, y: s.y },
 			animate: { opacity: 1, scale: 1, rotate: 0, x: 0, y: 0 },
 			transition: {
-				duration: 0.62,
-				delay: 0.15 + s.d,
-				ease: [0.16, 1, 0.3, 1] as const,
+				duration: 0.66,
+				delay: 0.12 + s.d,
+				ease: [0.62, 0.05, 0, 1] as const, // --ease-zellige: drift then snap
 			},
 			// Module tiles lift on hover (affordance — "alive"); the star stays put.
 			...(i > 0
@@ -166,7 +211,9 @@ export function HeroZelligePanel() {
 				{/* ÉLÈVES */}
 				<motion.div className="hz-tile hz-elv hz-bone" {...tile(1)}>
 					<span className="hz-label">Élèves</span>
-					<span className="hz-num t-num">1 842</span>
+					<span className="hz-num t-num">
+						<CountUp to={1842} delay={0.45} />
+					</span>
 					<span className="hz-meta">
 						<span className="hz-up">+5</span> cette semaine
 					</span>
@@ -181,7 +228,9 @@ export function HeroZelligePanel() {
 				{/* PRÉSENCES */}
 				<motion.div className="hz-tile hz-prs hz-wash" {...tile(2)}>
 					<span className="hz-label">Présences</span>
-					<span className="hz-num t-num">96%</span>
+					<span className="hz-num t-num">
+						<CountUp to={96} suffix="%" delay={0.5} />
+					</span>
 					<span className="hz-checks" aria-hidden>
 						✓✓✓<span className="hz-check-abs">·</span>✓✓
 					</span>
@@ -221,9 +270,19 @@ export function HeroZelligePanel() {
 				{/* PAIEMENTS */}
 				<motion.div className="hz-tile hz-pay hz-bone" {...tile(4)}>
 					<span className="hz-label">Paiements</span>
-					<span className="hz-num t-num hz-num--sm">78%</span>
+					<span className="hz-num t-num hz-num--sm">
+						<CountUp to={78} suffix="%" delay={0.4} />
+					</span>
 					<div className="hz-bar" aria-hidden>
-						<span style={{ width: "78%" }} />
+						<motion.span
+							initial={{ width: 0 }}
+							animate={{ width: "78%" }}
+							transition={{
+								duration: 0.95,
+								delay: 0.5,
+								ease: [0.16, 1, 0.3, 1],
+							}}
+						/>
 					</div>
 					<span className="hz-meta">
 						<span className="hz-impaye t-num">3</span> impayés ↓
@@ -233,7 +292,9 @@ export function HeroZelligePanel() {
 				{/* INSCRIPTIONS */}
 				<motion.div className="hz-tile hz-ins hz-dark" {...tile(5)}>
 					<span className="hz-label hz-label--ondark">Inscriptions</span>
-					<span className="hz-num t-num hz-num--brass">+12</span>
+					<span className="hz-num t-num hz-num--brass">
+						<CountUp to={12} prefix="+" delay={0.55} />
+					</span>
 					<span className="hz-meta hz-meta--ondark">ce mois</span>
 				</motion.div>
 
@@ -241,7 +302,9 @@ export function HeroZelligePanel() {
 				<motion.div className="hz-tile hz-stf hz-bone" {...tile(6)}>
 					<span className="hz-label">Staff</span>
 					<span className="hz-row">
-						<span className="hz-num hz-num--sm t-num">24</span>
+						<span className="hz-num hz-num--sm t-num">
+							<CountUp to={24} delay={0.6} />
+						</span>
 						<span className="hz-meta">intervenants · 6 matières</span>
 					</span>
 				</motion.div>

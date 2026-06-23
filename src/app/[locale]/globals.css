@@ -1087,6 +1087,21 @@ html.lenis body {
 	font-weight: 700;
 	font-size: 11px;
 	white-space: nowrap;
+	animation: hz-pulse 2.4s var(--ease-order) infinite;
+}
+@keyframes hz-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.hz-warn {
+		animation: none;
+	}
 }
 .hz-trust {
 	max-width: 1120px;
