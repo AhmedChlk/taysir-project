@@ -755,6 +755,7 @@ html.lenis body {
 	position: relative;
 	padding: calc(var(--nav-h) + 40px) clamp(16px, 4vw, 48px) 40px;
 	background: var(--surface-0);
+	perspective: 1500px;
 }
 .hz-tile {
 	transition: filter var(--dur-small) var(--ease-order);
@@ -762,6 +763,40 @@ html.lenis body {
 .hz-tile:not(.hz-star):hover {
 	z-index: 3;
 	filter: drop-shadow(0 12px 22px rgba(11, 42, 48, 0.22));
+}
+/* Cursor "torch" — a glaze of light follows the mouse across the mosaic */
+.hz-spotlight {
+	position: absolute;
+	inset: 0;
+	z-index: 6;
+	pointer-events: none;
+	border-radius: 6px;
+	background: radial-gradient(
+		300px circle at var(--mx, 50%) var(--my, 50%),
+		rgba(55, 200, 200, 0.42),
+		rgba(212, 178, 94, 0.18) 34%,
+		transparent 60%
+	);
+	opacity: var(--spot, 0);
+	transition: opacity 0.35s var(--ease-order);
+	mix-blend-mode: screen;
+}
+/* Hover synergy — focus the hovered module, let the others recede */
+.hz-grid:has(.hz-tile:not(.hz-star):hover) .hz-tile:not(:hover):not(.hz-star) {
+	opacity: 0.82;
+	transition: opacity var(--dur-small) var(--ease-order);
+}
+/* No torch / tilt on touch or reduced motion */
+@media (hover: none), (prefers-reduced-motion: reduce) {
+	.hz-grid {
+		transform: none;
+	}
+	.hz-spotlight {
+		display: none;
+	}
+	.hz-grid:has(.hz-tile:hover) .hz-tile {
+		opacity: 1;
+	}
 }
 .hz-grid {
 	display: grid;
@@ -772,6 +807,9 @@ html.lenis body {
 	box-shadow: var(--shadow-3);
 	max-width: 1120px;
 	margin: 0 auto;
+	position: relative;
+	transform: rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
+	transition: transform 0.4s var(--ease-order);
 	grid-template-columns: repeat(4, 1fr);
 	grid-template-rows: repeat(4, minmax(clamp(92px, 11vw, 132px), auto));
 	grid-template-areas:

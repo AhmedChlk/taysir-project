@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import type { Route } from "next";
+import { useEffect, useRef } from "react";
 import { DemoButton } from "../lib/DemoCta";
 
 /* ==========================================================================
@@ -63,6 +64,44 @@ function StarGlyph() {
 
 export function HeroZelligePanel() {
 	const reduced = useReducedMotion();
+	const gridRef = useRef<HTMLDivElement>(null);
+
+	// Pointer "torch": a glaze of light + a subtle 3D tilt follow the cursor, so
+	// the mosaic feels alive and invites exploration. Mouse-only; reduced-motion off.
+	useEffect(() => {
+		if (reduced) return;
+		const el = gridRef.current;
+		if (!el) return;
+		let raf = 0;
+		const onMove = (e: PointerEvent) => {
+			if (e.pointerType !== "mouse") return;
+			cancelAnimationFrame(raf);
+			raf = requestAnimationFrame(() => {
+				const r = el.getBoundingClientRect();
+				const x = e.clientX - r.left;
+				const y = e.clientY - r.top;
+				const px = x / r.width - 0.5;
+				const py = y / r.height - 0.5;
+				el.style.setProperty("--mx", `${x}px`);
+				el.style.setProperty("--my", `${y}px`);
+				el.style.setProperty("--tx", `${px * 5}deg`);
+				el.style.setProperty("--ty", `${-py * 4}deg`);
+				el.style.setProperty("--spot", "1");
+			});
+		};
+		const onLeave = () => {
+			el.style.setProperty("--tx", "0deg");
+			el.style.setProperty("--ty", "0deg");
+			el.style.setProperty("--spot", "0");
+		};
+		el.addEventListener("pointermove", onMove);
+		el.addEventListener("pointerleave", onLeave);
+		return () => {
+			el.removeEventListener("pointermove", onMove);
+			el.removeEventListener("pointerleave", onLeave);
+			cancelAnimationFrame(raf);
+		};
+	}, [reduced]);
 
 	const tile = (i: number) => {
 		const s = SCATTER[i] ?? NO_SCATTER;
@@ -96,7 +135,8 @@ export function HeroZelligePanel() {
 
 	return (
 		<section className="hz-section" aria-label="Taysir — pilotez votre école">
-			<div className="hz-grid">
+			<div className="hz-grid" ref={gridRef}>
+				<div className="hz-spotlight" aria-hidden />
 				{/* STAR — headline seated into the mosaic */}
 				<motion.div className="hz-tile hz-star" {...tile(0)}>
 					<div className="hz-star-top">
