@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Fraunces, Inter } from "next/font/google";
+import { Big_Shoulders, Petrona, Reem_Kufi, Vazirmatn } from "next/font/google";
 import SessionProviderWrapper from "@/components/providers/SessionProviderWrapper";
 import "./globals.css";
 import { notFound } from "next/navigation";
@@ -7,24 +7,35 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 
-const inter = Inter({
-	variable: "--font-inter",
-	subsets: ["latin"],
-});
-
-// Display face for headlines & eyebrows — the page's personality (opsz axis).
-const bricolage = Bricolage_Grotesque({
+// Taysir type system (workflow: typography-expert "Condensed Power").
+// DISPLAY — Big Shoulders Display: condensed industrial caps for headlines.
+const bigShoulders = Big_Shoulders({
 	variable: "--font-display",
 	subsets: ["latin"],
-	axes: ["opsz"],
+	display: "swap",
 });
 
-// Editorial serif reserved for numbers/data (DA amounts, %, animated stats).
-// wght axis is animated via GSAP in PowerShowcase.
-const fraunces = Fraunces({
-	variable: "--font-numeric",
+// BODY / UI — Petrona: warm slab-transitional serif (trustworthy, editorial).
+const petrona = Petrona({
+	variable: "--font-body",
 	subsets: ["latin"],
-	axes: ["opsz", "SOFT", "WONK"],
+	display: "swap",
+});
+
+// NUMERIC + ARABIC workhorse — Vazirmatn: one variable file drives DA / % /
+// tabular figures AND Arabic UI (identical glyphs FR/AR) + the GSAP wght
+// stat animation in PowerShowcase.
+const vazirmatn = Vazirmatn({
+	variable: "--font-numeric",
+	subsets: ["arabic", "latin"],
+	display: "swap",
+});
+
+// ARABIC display — Reem Kufi: squared Kufic that rhymes with zellige geometry.
+const reemKufi = Reem_Kufi({
+	variable: "--font-arabic-display",
+	subsets: ["arabic"],
+	display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -59,7 +70,7 @@ export default async function LocaleLayout({
 		<html
 			lang={locale}
 			dir={dir}
-			className={`${inter.variable} ${bricolage.variable} ${fraunces.variable} h-full antialiased`}
+			className={`${bigShoulders.variable} ${petrona.variable} ${vazirmatn.variable} ${reemKufi.variable} h-full antialiased`}
 		>
 			<body className="min-h-full flex flex-col font-sans">
 				<NextIntlClientProvider locale={locale} messages={messages}>

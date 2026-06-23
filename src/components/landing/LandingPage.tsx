@@ -10,7 +10,7 @@ import { LandingNavbar as Navbar } from "./components/LandingNavbar";
 import { DemoButton, DemoCtaProvider } from "./lib/DemoCta";
 import { SmoothScroll } from "./lib/SmoothScroll";
 import { Faq, FinalCta, HowItWorks, Problem } from "./sections/Funnel";
-import { HeroWhatsAppThread } from "./sections/HeroWhatsAppThread";
+import { HeroZelligePanel } from "./sections/HeroZelligePanel";
 import { LiveDashboardDraw } from "./sections/LiveDemo";
 import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 
@@ -21,115 +21,7 @@ import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 // --- Sub-components ---
 
 const Hero = ({ locale: _locale }: { locale: string }) => {
-	return (
-		<section
-			style={{
-				background: "#fff",
-				paddingTop: "calc(var(--nav-h) + 44px)",
-				paddingBottom: 84,
-				borderBottom: "1px solid #F3F4F6",
-				position: "relative",
-				overflow: "hidden",
-			}}
-		>
-			<div className="hero-grid">
-				<motion.div
-					initial={{ opacity: 0, y: 14 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-				>
-					<span className="hero-eyebrow">
-						<span className="hero-eyebrow-dot" /> Relances WhatsApp incluses
-					</span>
-					<h1
-						style={{
-							fontSize: "clamp(2.5rem, 5vw, 3.9rem)",
-							lineHeight: 1.03,
-							fontWeight: 800,
-							letterSpacing: "-0.035em",
-							color: "var(--fg1)",
-							margin: "14px 0 0",
-						}}
-					>
-						Encaissez{" "}
-						<span style={{ color: "var(--brand-500)" }}>sans&nbsp;courir</span>{" "}
-						après les&nbsp;parents.
-					</h1>
-					<p
-						style={{
-							fontSize: "clamp(1rem, 1.3vw, 1.125rem)",
-							lineHeight: 1.6,
-							color: "var(--fg2)",
-							margin: "20px 0 30px",
-							maxWidth: 460,
-						}}
-					>
-						Taysir relance les parents sur WhatsApp, encaisse, et renvoie le
-						reçu — automatiquement. Paiements, inscriptions et emplois du temps
-						réunis pour les écoles algériennes, sans un seul cahier.
-					</p>
-					<div
-						style={{
-							display: "flex",
-							gap: 12,
-							alignItems: "center",
-							flexWrap: "wrap",
-						}}
-					>
-						<DemoButton className="btn btn--hero-primary">
-							Réserver une démo
-							<span className="btn-arrow" aria-hidden>
-								<ArrowR size={18} />
-							</span>
-						</DemoButton>
-						<a href="#produit" className="btn btn--hero-secondary">
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								aria-hidden
-							>
-								<path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.5-6.86a1.05 1.05 0 000-1.76L9.56 4.26A1.04 1.04 0 008 5.14z" />
-							</svg>
-							Voir Taysir en action
-						</a>
-					</div>
-					<div
-						style={{
-							display: "flex",
-							gap: 22,
-							marginTop: 36,
-							fontSize: 13,
-							color: "var(--fg3)",
-						}}
-					>
-						<span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-							<Check size={15} color="var(--brand-500)" /> 14 jours d'essai
-						</span>
-						<span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-							<Check size={15} color="var(--brand-500)" /> Sans carte bancaire
-						</span>
-						<span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-							<Check size={15} color="var(--brand-500)" /> Relances WhatsApp
-							incluses
-						</span>
-					</div>
-				</motion.div>
-
-				<motion.div
-					className="hero-media"
-					initial={{ opacity: 0, y: 14 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.8, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-				>
-					<div className="hero-media-inner">
-						<HeroWhatsAppThread />
-					</div>
-				</motion.div>
-			</div>
-		</section>
-	);
+	return <HeroZelligePanel />;
 };
 
 const CountUp = ({ to, duration = 900 }: { to: number; duration?: number }) => {
