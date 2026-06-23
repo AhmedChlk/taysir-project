@@ -20,7 +20,9 @@ const { mockJsPDF } = vi.hoisted(() => ({
 vi.mock("jspdf", () => {
 	class jsPDF {
 		constructor() {
-			return mockJsPDF;
+			// Copy mock fn refs onto the instance instead of returning from the
+			// constructor (noConstructorReturn); assertions on mockJsPDF.* still hold.
+			Object.assign(this, mockJsPDF);
 		}
 	}
 	return { jsPDF, default: jsPDF };

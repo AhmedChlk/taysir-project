@@ -10,6 +10,10 @@ const eslintConfig = defineConfig([
 			"@typescript-eslint/no-explicit-any": "off",
 			"@typescript-eslint/no-unused-vars": "warn",
 			"react-hooks/set-state-in-effect": "off",
+			// French/Arabic UI: copy is apostrophe-dense (l'élève, d'isolation...).
+			// Raw apostrophes render correctly in JSX; escaping every one to &apos;
+			// fights the language and adds noise. Rule intentionally disabled.
+			"react/no-unescaped-entities": "off",
 		},
 	},
 	// Override default ignores of eslint-config-next.

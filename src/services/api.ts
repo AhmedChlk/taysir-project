@@ -1,6 +1,7 @@
 // Fonctions pour récupérer les données (Server Side Only)
 
 import "server-only";
+import type { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { cache } from "react";
@@ -133,7 +134,7 @@ export const getSessions = async (options?: {
 	const client = await getPrisma();
 	const user = session?.user;
 
-	const where: any = {};
+	const where: Prisma.SessionWhereInput = {};
 	if (user?.role === "INTERVENANT") {
 		where.instructorId = user.id;
 	} else if (options?.instructorId) {

@@ -22,6 +22,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
 					{error.message || "Une erreur inattendue est survenue."}
 				</p>
 				<button
+					type="button"
 					onClick={reset}
 					className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
 				>
