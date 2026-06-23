@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "./LandingLogo";
@@ -37,11 +38,12 @@ export const LandingNavbar = ({ locale }: { locale: string }) => {
 				padding: "0 5%",
 			}}
 		>
-			<Link href={`/${locale}` as any} style={{ textDecoration: "none" }}>
+			<Link href={`/${locale}` as Route} style={{ textDecoration: "none" }}>
 				<Logo />
 			</Link>
 
 			<div
+				className="landing-nav-links"
 				style={{
 					marginLeft: "auto",
 					display: "flex",
@@ -52,7 +54,8 @@ export const LandingNavbar = ({ locale }: { locale: string }) => {
 				{links.map((l) => (
 					<Link
 						key={l.label}
-						href={l.href as any}
+						href={l.href as Route}
+						className="landing-nav-link"
 						style={{
 							fontSize: 14,
 							fontWeight: 500,
@@ -65,7 +68,7 @@ export const LandingNavbar = ({ locale }: { locale: string }) => {
 					</Link>
 				))}
 				<Link
-					href={loginUrl as any}
+					href={loginUrl as Route}
 					style={{
 						background: "var(--brand-500)",
 						color: "#fff",

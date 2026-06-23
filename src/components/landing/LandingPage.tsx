@@ -1,14 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-
 import { ArrowR, Check } from "./components/LandingIcons";
 import { Logo, LogoMark } from "./components/LandingLogo";
 import { LandingNavbar as Navbar } from "./components/LandingNavbar";
 import { DemoButton, DemoCtaProvider } from "./lib/DemoCta";
+import { SmoothScroll } from "./lib/SmoothScroll";
 import { Faq, FinalCta, HowItWorks, Problem } from "./sections/Funnel";
+import { HeroWhatsAppThread } from "./sections/HeroWhatsAppThread";
 import { LiveDashboardDraw } from "./sections/LiveDemo";
 import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 
@@ -18,589 +20,53 @@ import { MassiveStats, MultiTenantBento } from "./sections/PowerShowcase";
 
 // --- Sub-components ---
 
-const TaysirDesktopMockup = () => {
-	const studentRow = (
-		idx: number,
-		name: string,
-		group: string,
-		status: string,
-	) => {
-		const colors = ["#DBEAFE", "#FEF3C7", "#FCE7F3", "#D1FAE5", "#E0E7FF"];
-		const tone =
-			status === "Présent"
-				? { bg: "#DCFCE7", fg: "#15803D" }
-				: status === "Retard"
-					? { bg: "#FEF3C7", fg: "#92400E" }
-					: status === "Absent"
-						? { bg: "#FEE2E2", fg: "#B91C1C" }
-						: { bg: "#E0E7FF", fg: "#3730A3" };
-		return (
-			<div
-				key={idx}
-				style={{
-					display: "grid",
-					gridTemplateColumns: "24px 1fr 90px 74px",
-					alignItems: "center",
-					gap: 10,
-					padding: "9px 12px",
-					borderBottom: "1px solid #F3F4F6",
-					fontSize: 12,
-				}}
-			>
-				<div
-					style={{
-						width: 22,
-						height: 22,
-						borderRadius: 999,
-						background: colors[idx % 5],
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						fontSize: 10,
-						fontWeight: 600,
-						color: "#475569",
-					}}
-				>
-					{name
-						.split(" ")
-						.map((x) => x[0])
-						.join("")
-						.slice(0, 2)}
-				</div>
-				<div
-					style={{
-						color: "var(--fg1)",
-						fontWeight: 500,
-						whiteSpace: "nowrap",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-					}}
-				>
-					{name}
-				</div>
-				<div style={{ color: "var(--fg3)", fontSize: 11 }}>{group}</div>
-				<span
-					style={{
-						fontSize: 10,
-						fontWeight: 600,
-						padding: "3px 8px",
-						borderRadius: 999,
-						background: tone.bg,
-						color: tone.fg,
-						justifySelf: "start",
-					}}
-				>
-					{status}
-				</span>
-			</div>
-		);
-	};
-
-	return (
-		<div
-			style={{
-				background: "#fff",
-				borderRadius: 14,
-				boxShadow: "var(--shadow-3)",
-				width: 560,
-				height: 420,
-				overflow: "hidden",
-				border: "1px solid #EAECEF",
-				position: "relative",
-			}}
-		>
-			<div
-				style={{
-					height: 40,
-					background: "#fff",
-					borderBottom: "1px solid #EFF1F3",
-					display: "flex",
-					alignItems: "center",
-					padding: "0 12px",
-					gap: 10,
-					fontSize: 12,
-					color: "var(--fg3)",
-				}}
-			>
-				<div style={{ display: "flex", gap: 6 }}>
-					<span
-						style={{
-							width: 10,
-							height: 10,
-							borderRadius: 999,
-							background: "#F87171",
-						}}
-					/>
-					<span
-						style={{
-							width: 10,
-							height: 10,
-							borderRadius: 999,
-							background: "#FBBF24",
-						}}
-					/>
-					<span
-						style={{
-							width: 10,
-							height: 10,
-							borderRadius: 999,
-							background: "#4ADE80",
-						}}
-					/>
-				</div>
-				<div
-					style={{
-						marginLeft: 16,
-						background: "#F3F4F6",
-						borderRadius: 6,
-						padding: "4px 10px",
-						fontSize: 11,
-						color: "var(--fg3)",
-						minWidth: 260,
-						display: "flex",
-						alignItems: "center",
-						gap: 6,
-					}}
-				>
-					<span style={{ color: "#4ADE80" }}>●</span> app.taysir.dz/eleves
-				</div>
-			</div>
-
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: "54px 168px 1fr",
-					height: 380,
-				}}
-			>
-				{/* Sidebar Rail */}
-				<div
-					style={{
-						borderRight: "1px solid #EFF1F3",
-						padding: "12px 0",
-						display: "flex",
-						flexDirection: "column",
-						alignItems: "center",
-						gap: 4,
-						background: "#FAFBFC",
-					}}
-				>
-					<div
-						style={{
-							width: 32,
-							height: 32,
-							borderRadius: 8,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							color: "var(--brand-500)",
-							background: "var(--brand-50)",
-							marginBottom: 8,
-						}}
-					>
-						<LogoMark size={20} />
-					</div>
-					{[1, 2, 3, 4].map((i) => (
-						<div
-							key={i}
-							style={{
-								width: 32,
-								height: 32,
-								borderRadius: 8,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: i === 1 ? "var(--brand-500)" : "var(--fg3)",
-								background: i === 1 ? "var(--brand-50)" : "transparent",
-							}}
-						>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.75"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<rect x="3" y="3" width="18" height="18" rx="2" />
-							</svg>
-						</div>
-					))}
-				</div>
-
-				{/* Groups List */}
-				<div
-					style={{
-						borderRight: "1px solid #EFF1F3",
-						padding: "14px 10px",
-						background: "#fff",
-					}}
-				>
-					<div
-						style={{
-							fontSize: 10,
-							fontWeight: 600,
-							color: "var(--fg3)",
-							letterSpacing: "0.08em",
-							textTransform: "uppercase",
-							padding: "0 10px 8px",
-						}}
-					>
-						Groupes
-					</div>
-					{[
-						{ name: "Toutes les classes", count: 248, active: false },
-						{ name: "Mathématiques 3AS", count: 32, active: true },
-						{ name: "Physique 2AS", count: 28, active: false },
-						{ name: "Français 1AS", count: 24, active: false },
-					].map((g) => (
-						<div
-							key={g.name}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-								padding: "8px 10px",
-								fontSize: 12,
-								borderRadius: 6,
-								marginBottom: 2,
-								background: g.active ? "#EEF4F5" : "transparent",
-								color: g.active ? "var(--brand-900)" : "var(--fg2)",
-								fontWeight: g.active ? 600 : 500,
-							}}
-						>
-							<span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-								<span
-									style={{
-										width: 6,
-										height: 6,
-										borderRadius: 2,
-										background: g.active ? "var(--brand-500)" : "#CBD5E1",
-									}}
-								/>
-								{g.name}
-							</span>
-							<span style={{ fontSize: 11, color: "var(--fg3)" }}>
-								{g.count}
-							</span>
-						</div>
-					))}
-				</div>
-
-				{/* Students Table */}
-				<div style={{ background: "#fff", overflow: "hidden" }}>
-					<div
-						style={{
-							padding: "14px 16px 10px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-						}}
-					>
-						<div>
-							<div
-								style={{ fontSize: 14, fontWeight: 600, color: "var(--fg1)" }}
-							>
-								Mathématiques 3AS
-							</div>
-							<div style={{ fontSize: 11, color: "var(--fg3)", marginTop: 2 }}>
-								32 élèves · Pr. Benali
-							</div>
-						</div>
-						<div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-							<div
-								style={{
-									fontSize: 11,
-									fontWeight: 600,
-									color: "var(--fg2)",
-									background: "#F3F4F6",
-									padding: "5px 10px",
-									borderRadius: 6,
-								}}
-							>
-								Présences
-							</div>
-						</div>
-					</div>
-					{studentRow(0, "Amina Belkacem", "3AS · A", "Présent")}
-					{studentRow(1, "Youcef Hamidi", "3AS · A", "Retard")}
-					{studentRow(2, "Salma Ouadah", "3AS · A", "Présent")}
-					{studentRow(3, "Karim Mezrag", "3AS · A", "Absent")}
-					{studentRow(4, "Lina Bouras", "3AS · B", "Présent")}
-				</div>
-			</div>
-		</div>
-	);
-};
-
-const TaysirPhoneMockup = () => {
-	const [filled, setFilled] = useState(0);
-	useEffect(() => {
-		const id = setInterval(() => setFilled((f) => (f + 1) % 10), 1600);
-		return () => clearInterval(id);
-	}, []);
-
-	return (
-		<div
-			style={{
-				position: "absolute",
-				right: -56,
-				bottom: -60,
-				width: 240,
-				height: 490,
-				background: "linear-gradient(160deg, #1C1F24 0%, #0B0D10 100%)",
-				borderRadius: 44,
-				padding: 5,
-				boxShadow:
-					"0 40px 80px -20px rgba(15,81,92,0.35), 0 10px 30px -6px rgba(0,0,0,0.22)",
-			}}
-		>
-			<div
-				style={{
-					width: "100%",
-					height: "100%",
-					background: "#000",
-					borderRadius: 40,
-					padding: 3,
-					boxSizing: "border-box",
-				}}
-			>
-				<div
-					style={{
-						width: "100%",
-						height: "100%",
-						background: "#F7F8FA",
-						borderRadius: 37,
-						overflow: "hidden",
-						position: "relative",
-						display: "flex",
-						flexDirection: "column",
-					}}
-				>
-					<div
-						style={{
-							position: "absolute",
-							top: 8,
-							left: "50%",
-							transform: "translateX(-50%)",
-							width: 86,
-							height: 24,
-							background: "#000",
-							borderRadius: 999,
-							zIndex: 3,
-						}}
-					/>
-					<div
-						style={{
-							height: 34,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							padding: "10px 22px 0",
-							fontSize: 11.5,
-							fontWeight: 600,
-							color: "var(--fg1)",
-						}}
-					>
-						<span>9:41</span>
-					</div>
-
-					<div
-						style={{
-							padding: "14px 16px 12px",
-							background: "#fff",
-							borderBottom: "1px solid #F0F2F5",
-						}}
-					>
-						<div
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: 8,
-								marginBottom: 8,
-							}}
-						>
-							<LogoMark size={18} color="var(--brand-500)" />
-							<div
-								style={{ fontSize: 13, fontWeight: 700, color: "var(--fg1)" }}
-							>
-								Appel en cours
-							</div>
-							<span
-								style={{
-									marginLeft: "auto",
-									fontSize: 9,
-									fontWeight: 700,
-									color: "#15803D",
-									background: "#DCFCE7",
-									padding: "3px 7px",
-									borderRadius: 999,
-								}}
-							>
-								Live
-							</span>
-						</div>
-						<div style={{ fontSize: 15, fontWeight: 700, color: "var(--fg1)" }}>
-							Maths · 3AS‑A
-						</div>
-						<div
-							style={{
-								marginTop: 12,
-								height: 5,
-								borderRadius: 999,
-								background: "#EEF1F3",
-								overflow: "hidden",
-							}}
-						>
-							<div
-								style={{
-									height: "100%",
-									width: `${(filled / 9) * 100}%`,
-									background: "var(--brand-500)",
-									borderRadius: 999,
-									transition: "width 600ms var(--ease)",
-								}}
-							/>
-						</div>
-					</div>
-
-					<div
-						style={{
-							flex: 1,
-							padding: 12,
-							display: "grid",
-							gridTemplateColumns: "1fr 1fr 1fr",
-							gap: 8,
-						}}
-					>
-						{["AB", "YH", "SO", "KM", "LB", "RC", "NS", "MK", "HD"].map(
-							(ini, i) => (
-								<div
-									key={i}
-									style={{
-										background: "#fff",
-										borderRadius: 12,
-										padding: "10px 6px",
-										display: "flex",
-										flexDirection: "column",
-										alignItems: "center",
-										gap: 5,
-										border:
-											i < filled
-												? "1.5px solid rgba(26,122,137,0.35)"
-												: "1px solid #EEF1F3",
-										transition: "all 340ms var(--ease)",
-									}}
-								>
-									<div
-										style={{
-											width: 28,
-											height: 28,
-											borderRadius: 999,
-											background: "#F3F4F6",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-											fontSize: 10,
-											fontWeight: 700,
-										}}
-									>
-										{ini}
-									</div>
-									<div style={{ fontSize: 9, fontWeight: 600 }}>
-										{i < filled ? (i % 5 !== 3 ? "Présent" : "Absent") : "—"}
-									</div>
-								</div>
-							),
-						)}
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-};
-
 const Hero = ({ locale: _locale }: { locale: string }) => {
 	return (
 		<section
 			style={{
 				background: "#fff",
-				paddingTop: "calc(var(--nav-h) + 56px)",
-				paddingBottom: 100,
+				paddingTop: "calc(var(--nav-h) + 44px)",
+				paddingBottom: 84,
 				borderBottom: "1px solid #F3F4F6",
 				position: "relative",
 				overflow: "hidden",
 			}}
 		>
-			<div
-				style={{
-					maxWidth: "var(--container)",
-					margin: "0 auto",
-					padding: "0 48px",
-					display: "grid",
-					gridTemplateColumns: "1fr 1fr",
-					gap: 64,
-					alignItems: "center",
-				}}
-			>
+			<div className="hero-grid">
 				<motion.div
 					initial={{ opacity: 0, y: 14 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
 				>
-					<div
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							gap: 8,
-							background: "var(--brand-50)",
-							color: "var(--brand-900)",
-							border: "1px solid #CFE3E7",
-							borderRadius: 999,
-							padding: "5px 12px",
-							fontSize: 12,
-							fontWeight: 600,
-							marginBottom: 22,
-						}}
-					>
-						<span
-							style={{
-								width: 6,
-								height: 6,
-								borderRadius: 999,
-								background: "var(--brand-500)",
-							}}
-						/>
-						Plateforme n° 1 pour les écoles en Algérie
-					</div>
+					<span className="hero-eyebrow">
+						<span className="hero-eyebrow-dot" /> Relances WhatsApp incluses
+					</span>
 					<h1
 						style={{
-							fontSize: 60,
-							lineHeight: 1.05,
+							fontSize: "clamp(2.3rem, 4.4vw, 3.4rem)",
+							lineHeight: 1.07,
 							fontWeight: 700,
 							letterSpacing: "-0.025em",
 							color: "var(--fg1)",
-							margin: 0,
+							margin: "14px 0 0",
 						}}
 					>
-						Pilotez votre école,
-						<br />
-						sans le chaos.
+						Encaissez{" "}
+						<span style={{ color: "var(--brand-500)" }}>sans&nbsp;courir</span>{" "}
+						après les&nbsp;parents.
 					</h1>
 					<p
 						style={{
-							fontSize: 19,
-							lineHeight: 1.55,
+							fontSize: "clamp(1rem, 1.3vw, 1.125rem)",
+							lineHeight: 1.6,
 							color: "var(--fg2)",
-							margin: "22px 0 32px",
-							maxWidth: 480,
+							margin: "20px 0 30px",
+							maxWidth: 460,
 						}}
 					>
-						Taysir réunit inscriptions, présences, emplois du temps et paiements
-						dans une seule plateforme pensée pour les établissements éducatifs
-						algériens.
+						Taysir relance les parents sur WhatsApp, encaisse, et renvoie le
+						reçu — automatiquement. Paiements, inscriptions et emplois du temps
+						réunis pour les écoles algériennes, sans un seul cahier.
 					</p>
 					<div
 						style={{
@@ -610,11 +76,23 @@ const Hero = ({ locale: _locale }: { locale: string }) => {
 							flexWrap: "wrap",
 						}}
 					>
-						<DemoButton>
-							Réserver une démo <ArrowR size={18} />
+						<DemoButton className="btn btn--hero-primary">
+							Réserver une démo
+							<span className="btn-arrow" aria-hidden>
+								<ArrowR size={18} />
+							</span>
 						</DemoButton>
-						<a href="#produit" className="btn btn--ghost btn--lg">
-							Voir le produit
+						<a href="#produit" className="btn btn--hero-secondary">
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								aria-hidden
+							>
+								<path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.5-6.86a1.05 1.05 0 000-1.76L9.56 4.26A1.04 1.04 0 008 5.14z" />
+							</svg>
+							Voir Taysir en action
 						</a>
 					</div>
 					<div
@@ -633,25 +111,21 @@ const Hero = ({ locale: _locale }: { locale: string }) => {
 							<Check size={15} color="var(--brand-500)" /> Sans carte bancaire
 						</span>
 						<span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-							<Check size={15} color="var(--brand-500)" /> Support RTL
+							<Check size={15} color="var(--brand-500)" /> Relances WhatsApp
+							incluses
 						</span>
 					</div>
 				</motion.div>
 
 				<motion.div
-					style={{
-						position: "relative",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						minHeight: 500,
-					}}
+					className="hero-media"
 					initial={{ opacity: 0, y: 14 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.8, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
 				>
-					<TaysirDesktopMockup />
-					<TaysirPhoneMockup />
+					<div className="hero-media-inner">
+						<HeroWhatsAppThread />
+					</div>
 				</motion.div>
 			</div>
 		</section>
@@ -1533,7 +1007,7 @@ const ROISimulator = () => {
 			return () => {
 				if (ref.current !== null) cancelAnimationFrame(ref.current);
 			};
-		}, [target, v]); // eslint-disable-line react-hooks/exhaustive-deps
+		}, [target, v]);
 		return v;
 	};
 	const dMonthly = useTween(monthly);
@@ -2089,7 +1563,7 @@ const Pricing = ({ locale }: { locale: string }) => {
 								{p.tagline}
 							</div>
 							<Link
-								href={loginUrl as any}
+								href={loginUrl as Route}
 								className={`btn ${p.featured ? "btn--primary" : "btn--ghost"} btn--md`}
 								style={{ width: "100%" }}
 							>
@@ -2258,7 +1732,10 @@ const Footer = () => (
 export default function LandingPage({ locale }: { locale: string }) {
 	return (
 		<DemoCtaProvider>
-			<div className="min-h-screen bg-white">
+			<SmoothScroll />
+			{/* overflow-x: clip kills any mobile horizontal bleed without creating a
+			    scroll container (unlike `hidden`), keeping window-based Lenis intact */}
+			<div className="min-h-screen bg-white" style={{ overflowX: "clip" }}>
 				<Navbar locale={locale} />
 				<Hero locale={locale} />
 				<KPIBand />
