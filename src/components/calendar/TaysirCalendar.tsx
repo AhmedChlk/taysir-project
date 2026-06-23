@@ -3,8 +3,11 @@
 import { format, getDay, parse, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import React, { useCallback, useMemo } from "react";
+import type { Components, EventPropGetter } from "react-big-calendar";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
-import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
+import withDragAndDrop, {
+	type EventInteractionArgs,
+} from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "./calendar-overrides.css";
@@ -88,7 +91,7 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 		[sessions],
 	);
 
-	const components = useMemo(
+	const components = useMemo<Components<CalendarEvent, object>>(
 		() => ({
 			event: CalendarEventComponent,
 		}),
@@ -144,15 +147,7 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 	);
 
 	const onEventDrop = useCallback(
-		async ({
-			event,
-			start,
-			end,
-		}: {
-			event: CalendarEvent;
-			start: string | Date;
-			end: string | Date;
-		}) => {
+		async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
 			const newStart = new Date(start);
 			const newEnd = new Date(end);
 
@@ -173,15 +168,7 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 	);
 
 	const onEventResize = useCallback(
-		async ({
-			event,
-			start,
-			end,
-		}: {
-			event: CalendarEvent;
-			start: string | Date;
-			end: string | Date;
-		}) => {
+		async ({ event, start, end }: EventInteractionArgs<CalendarEvent>) => {
 			const newStart = new Date(start);
 			const newEnd = new Date(end);
 
@@ -210,7 +197,7 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 		[searchParams, router],
 	);
 
-	const eventPropGetter = useCallback((event: CalendarEvent) => {
+	const eventPropGetter = useCallback<EventPropGetter<CalendarEvent>>((event) => {
 		return {
 			style: {
 				backgroundColor: event.resource.activity.color || "#0F515C",
@@ -237,17 +224,17 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 				startAccessor="start"
 				endAccessor="end"
 				date={currentDate}
-				components={components as any}
+				components={components}
 				onNavigate={onNavigate}
 				onSelectEvent={handleSelectEvent}
 				onSelectSlot={handleSelectSlot}
-				onEventDrop={onEventDrop as any}
-				onEventResize={onEventResize as any}
+				onEventDrop={onEventDrop}
+				onEventResize={onEventResize}
 				selectable
 				resizable
 				views={["month", "week", "day"]}
 				defaultView={Views.WEEK}
-				eventPropGetter={eventPropGetter as any}
+				eventPropGetter={eventPropGetter}
 				messages={{
 					next: "Suivant",
 					previous: "Précédent",

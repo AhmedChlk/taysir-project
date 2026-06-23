@@ -1,5 +1,6 @@
 "use client";
 
+import type { Prisma } from "@prisma/client";
 import { motion } from "framer-motion";
 import {
 	AlertCircle,
@@ -19,7 +20,7 @@ import SessionForm from "@/components/dashboard/forms/SessionForm";
 import SessionDetails from "@/components/dashboard/schedule/SessionDetails";
 import { formatFullName } from "@/utils/format";
 
-type DrawerType =
+export type DrawerType =
 	| "new-session"
 	| "view-session"
 	| "payments"
@@ -51,6 +52,19 @@ interface PendingPayment {
 	student: { firstName: string; lastName: string };
 }
 
+// Mirrors the `include` of `getSessionAction` (full room/activity/group,
+// partial instructor select) — the shape consumed by `SessionDetails`.
+type DrawerSession = Prisma.SessionGetPayload<{
+	include: {
+		room: true;
+		activity: true;
+		group: true;
+		instructor: {
+			select: { firstName: true; lastName: true; avatarUrl: true };
+		};
+	};
+}>;
+
 import { Loader2 } from "lucide-react";
 
 interface DrawerFormData {
@@ -60,7 +74,7 @@ interface DrawerFormData {
 	groups?: { id: string; name: string }[];
 	students?: { id: string; firstName: string; lastName: string }[];
 	todaySessions?: TodaySession[];
-	allSessions?: any[];
+	allSessions?: DrawerSession[];
 	pendingPayments?: PendingPayment[];
 }
 
@@ -77,7 +91,9 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 	const searchParams = useSearchParams();
 	const sessionId = searchParams.get("id");
 	const t = useTranslations();
-	const [fetchedSession, setFetchedSession] = useState<any>(null);
+	const [fetchedSession, setFetchedSession] = useState<DrawerSession | null>(
+		null,
+	);
 	const [isFetchingSession, setIsFetchingSession] = useState(false);
 
 	useEffect(() => {

@@ -1,6 +1,6 @@
 "use server";
 
-import { RoleUser } from "@prisma/client";
+import { Prisma, RoleUser } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
@@ -148,7 +148,10 @@ export const updateTenantAction = createSafeAction(
 		contractEndDate: z.string().optional(),
 	}),
 	async ({ id, ...data }) => {
-		const updateData: any = { ...data };
+		// Cast to the exact Prisma input type (not `any`): Zod `.optional()` yields
+		// `T | undefined`, which exactOptionalPropertyTypes rejects against Prisma's
+		// non-undefined field types even though Prisma skips `undefined` at runtime.
+		const updateData = { ...data } as Prisma.EtablissementUpdateInput;
 		if (data.contractEndDate) {
 			updateData.contractEndDate = new Date(data.contractEndDate);
 		}

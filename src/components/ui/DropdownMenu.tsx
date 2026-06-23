@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { MoreVertical } from "lucide-react";
+import type { Route } from "next";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -132,7 +133,7 @@ export default function DropdownMenu({
 											return (
 												<Link
 													key={idx}
-													href={item.href as any}
+													href={item.href as Route}
 													onClick={() => setIsOpen(false)}
 													className={commonClasses}
 												>

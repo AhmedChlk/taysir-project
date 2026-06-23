@@ -1,11 +1,10 @@
 "use client";
 
 import { clsx } from "clsx";
-import { motion } from "framer-motion";
+import { type HTMLMotionProps, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
-interface SubmitButtonProps
-	extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface SubmitButtonProps extends HTMLMotionProps<"button"> {
 	isLoading?: boolean;
 	loadingText?: string;
 	children: React.ReactNode;
@@ -28,7 +27,7 @@ export function SubmitButton({
 				isLoading && "opacity-80 cursor-not-allowed",
 				className,
 			)}
-			{...(props as any)}
+			{...props}
 		>
 			{isLoading ? (
 				<>

@@ -1,7 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
-import { StatusSession } from "@prisma/client";
+import { Prisma, StatusSession } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
@@ -204,7 +204,10 @@ export const updateSessionAction = createSafeAction(
 
 		const result = await client.session.update({
 			where: { id, etablissementId: tenantId },
-			data: updateData as any,
+			// Zod `.optional()` yields `T | undefined`; under exactOptionalPropertyTypes
+			// this is incompatible with Prisma's FK scalar input types even though
+			// Prisma treats `undefined` as "skip field" at runtime.
+			data: updateData as Prisma.SessionUncheckedUpdateInput,
 		});
 
 		revalidateTag(`etab_${tenantId}_schedule`, "max");
@@ -247,7 +250,7 @@ export const updateSeriesAction = createSafeAction(
 				})
 			: null;
 
-		const whereClause: any = {
+		const whereClause: Prisma.SessionWhereInput = {
 			recurrenceGroupId: data.recurrenceGroupId,
 			etablissementId: tenantId,
 		};
@@ -269,23 +272,29 @@ export const updateSeriesAction = createSafeAction(
 			data;
 
 		if (timeShift) {
+			const shift = timeShift;
 			// Update complexe : on doit boucler ou utiliser une raw query car Prisma ne supporte pas nativement l'addition de dates en updateMany
 			const sessions = await client.session.findMany({ where: whereClause });
 			const updates = sessions.map((s) =>
 				client.session.update({
 					where: { id: s.id },
+					// `baseUpdateData` carries Zod-optional `T | undefined` FK fields which,
+					// under exactOptionalPropertyTypes, are not assignable to Prisma's input
+					// types despite `undefined` meaning "skip field" at runtime.
 					data: {
 						...baseUpdateData,
-						startTime: new Date(s.startTime.getTime() + timeShift?.start),
-						endTime: new Date(s.endTime.getTime() + timeShift?.end),
-					} as any,
+						startTime: new Date(s.startTime.getTime() + shift.start),
+						endTime: new Date(s.endTime.getTime() + shift.end),
+					} as Prisma.SessionUncheckedUpdateInput,
 				}),
 			);
 			await Promise.all(updates);
 		} else {
 			await client.session.updateMany({
 				where: whereClause,
-				data: baseUpdateData as any,
+				// See note above: Zod-optional `T | undefined` FK fields vs. Prisma input
+				// types under exactOptionalPropertyTypes.
+				data: baseUpdateData as Prisma.SessionUncheckedUpdateManyInput,
 			});
 		}
 
@@ -303,7 +312,7 @@ export const deleteSeriesAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
 
-		const whereClause: any = {
+		const whereClause: Prisma.SessionWhereInput = {
 			recurrenceGroupId: data.recurrenceGroupId,
 			etablissementId: tenantId,
 		};

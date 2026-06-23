@@ -12,16 +12,51 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAction } from "next-safe-action/hooks";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useMemo,
+	useState,
+	useTransition,
+} from "react";
 import { bulkMarkPresenceAction } from "@/actions/logistics.actions";
 import type { AttendanceRecord, Group, Session, Student } from "@/types/schema";
 import { cn, formatDate, formatFullName, formatTime } from "@/utils/format";
+
+type Translator = ReturnType<typeof useTranslations>;
+
+type StatusChangeHandler = (studentId: string, status: StatutPresence) => void;
 
 interface AttendanceClientViewProps {
 	sessions: Session[];
 	students: Student[];
 	groups: Group[];
 	initialAttendance: AttendanceRecord[];
+}
+
+interface StudentRowProps {
+	student: Student;
+	record: AttendanceRecord | undefined;
+	onStatusChange: StatusChangeHandler;
+	t: Translator;
+}
+
+type StudentCardProps = StudentRowProps;
+
+interface StatusButtonsProps {
+	status: StatutPresence;
+	onStatusChange: (status: StatutPresence) => void;
+	t: Translator;
+	isFullWidth?: boolean;
+}
+
+interface StatusButtonProps {
+	active: boolean;
+	onClick: () => void;
+	variant: "present" | "late" | "absent";
+	icon: ReactNode;
+	label: string;
+	showLabel?: boolean | undefined;
 }
 
 export default function AttendanceClientView({
@@ -41,8 +76,11 @@ export default function AttendanceClientView({
 		useState<AttendanceRecord[]>(initialAttendance);
 
 	// Safe Action hook
+	// `createSafeAction` produces a custom `(input) => Promise<ActionResponse>`
+	// signature that does not structurally match next-safe-action's
+	// `SingleInputActionFn`; cast to the exact param type `useAction` expects.
 	const { execute: executeBulkSave, status } = useAction(
-		bulkMarkPresenceAction as any,
+		bulkMarkPresenceAction as unknown as Parameters<typeof useAction>[0],
 		{
 			onSuccess: () => {
 				alert(t("save_success"));
@@ -281,7 +319,7 @@ export default function AttendanceClientView({
 	);
 }
 
-function StudentRow({ student, record, onStatusChange, t }: any) {
+function StudentRow({ student, record, onStatusChange, t }: StudentRowProps) {
 	const status = record?.status || StatutPresence.PRESENT;
 
 	return (
@@ -305,7 +343,7 @@ function StudentRow({ student, record, onStatusChange, t }: any) {
 			<td className="px-6 py-4">
 				<StatusButtons
 					status={status}
-					onStatusChange={(s: any) => onStatusChange(student.id, s)}
+					onStatusChange={(s) => onStatusChange(student.id, s)}
 					t={t}
 				/>
 			</td>
@@ -324,7 +362,7 @@ function StudentRow({ student, record, onStatusChange, t }: any) {
 	);
 }
 
-function StudentCard({ student, record, onStatusChange, t }: any) {
+function StudentCard({ student, record, onStatusChange, t }: StudentCardProps) {
 	const status = record?.status || StatutPresence.PRESENT;
 
 	return (
@@ -349,7 +387,7 @@ function StudentCard({ student, record, onStatusChange, t }: any) {
 			<div className="grid grid-cols-1 gap-3">
 				<StatusButtons
 					status={status}
-					onStatusChange={(s: any) => onStatusChange(student.id, s)}
+					onStatusChange={(s) => onStatusChange(student.id, s)}
 					t={t}
 					isFullWidth
 				/>
@@ -367,7 +405,12 @@ function StudentCard({ student, record, onStatusChange, t }: any) {
 	);
 }
 
-function StatusButtons({ status, onStatusChange, t, isFullWidth }: any) {
+function StatusButtons({
+	status,
+	onStatusChange,
+	t,
+	isFullWidth,
+}: StatusButtonsProps) {
 	return (
 		<div
 			className={cn(
@@ -410,7 +453,7 @@ function StatusButton({
 	icon,
 	label,
 	showLabel,
-}: any) {
+}: StatusButtonProps) {
 	const variants = {
 		present: active
 			? "bg-green-500 text-white shadow-lg shadow-green-200"
@@ -430,7 +473,7 @@ function StatusButton({
 			className={cn(
 				"flex items-center justify-center gap-2 transition-all rounded-xl border",
 				showLabel ? "flex-1 py-2.5 px-3" : "h-11 w-11",
-				variants[variant as keyof typeof variants],
+				variants[variant],
 			)}
 		>
 			{icon}

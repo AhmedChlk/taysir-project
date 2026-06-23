@@ -156,8 +156,10 @@ export default function SessionForm({
 			} else {
 				setError(result?.error?.message || "Une erreur est survenue");
 			}
-		} catch (err: any) {
-			setError(err.message || "Une erreur est survenue");
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Une erreur est survenue",
+			);
 		} finally {
 			setIsPending(false);
 		}
@@ -260,7 +262,11 @@ export default function SessionForm({
 						onChange={(e) =>
 							setFormData({
 								...formData,
-								recurrenceType: e.target.value as any,
+								recurrenceType: e.target.value as
+								| "NONE"
+								| "DAILY"
+								| "WEEKLY"
+								| "MONTHLY",
 							})
 						}
 						options={[

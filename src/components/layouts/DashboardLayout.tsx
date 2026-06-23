@@ -19,7 +19,7 @@ import { Suspense, useEffect, useState } from "react";
 import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Sidebar from "@/components/navigation/Sidebar";
-import Drawer from "@/components/ui/Drawer";
+import Drawer, { type DrawerType } from "@/components/ui/Drawer";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 
 export default function DashboardLayout({
@@ -217,7 +217,7 @@ export default function DashboardLayout({
 					<Suspense fallback={null}>
 						<Drawer
 							key={activeDrawer + (searchParams.get("id") || "")}
-							type={activeDrawer as any}
+							type={activeDrawer as DrawerType}
 							onClose={closeDrawer}
 							{...(formData ? { formData } : {})}
 						/>

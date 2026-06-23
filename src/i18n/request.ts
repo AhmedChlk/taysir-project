@@ -3,12 +3,13 @@ import { routing } from "./routing";
 
 export default getRequestConfig(async ({ requestLocale }) => {
 	// On attend que la locale soit résolue (important pour Next.js 15)
-	let locale = await requestLocale;
+	const requested = await requestLocale;
 
-	// On s'assure qu'on utilise une locale supportée
-	if (!locale || !routing.locales.includes(locale as any)) {
-		locale = routing.defaultLocale;
-	}
+	// On s'assure qu'on utilise une locale supportée (sinon, locale par défaut)
+	const locale =
+		requested && (routing.locales as readonly string[]).includes(requested)
+			? requested
+			: routing.defaultLocale;
 
 	return {
 		locale,
