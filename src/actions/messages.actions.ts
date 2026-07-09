@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
-import { createSafeAction } from "@/lib/actions/safe-action";
+import { ATTENDANCE_ROLES, createSafeAction } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
 import { SendMessageSchema } from "@/lib/validations";
 
@@ -29,6 +29,7 @@ export const sendMessageAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_messages`, "max");
 		return message;
 	},
+	{ requiredRole: ATTENDANCE_ROLES },
 );
 
 export const getReceivedMessagesAction = createSafeAction(

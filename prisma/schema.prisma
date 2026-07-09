@@ -27,6 +27,7 @@ model Etablissement {
   messages        Message[]
   paiements       Paiement[]
   paymentPlans    PaymentPlan[]
+  relances        Relance[]
   rooms           Room[]
   sessions        Session[]
   students        Student[]
@@ -45,7 +46,7 @@ model User {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   etablissementId  String?
-  salary           Float?
+  salary           Decimal?       @db.Decimal(12, 2)
   status           UserStatus     @default(ACTIVE)
   receivedMessages Message[]      @relation("ReceivedMessages")
   sentMessages     Message[]      @relation("SentMessages")
@@ -121,9 +122,11 @@ model Student {
   etablissementId  String
   photoUrl         String?
   address          String?
+  niveau           NiveauScolaire?
   attendance       AttendanceRecord[]
   documents        Document[]
   paymentPlans     PaymentPlan[]
+  relances         Relance[]
   etablissement    Etablissement      @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
   groups           Groupe[]           @relation("GroupeToStudent")
 
@@ -132,11 +135,31 @@ model Student {
 }
 
 /// *
+/// * Relance : trace d'un rappel de paiement envoyé (journal de relance).
+model Relance {
+  id              String        @id @default(uuid())
+  etablissementId String
+  studentId       String
+  paymentPlanId   String?
+  amount          Decimal       @db.Decimal(12, 2)
+  daysLate        Int           @default(0)
+  channel         String        @default("WHATSAPP")
+  sentAt          DateTime      @default(now())
+  sentById        String
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([id, etablissementId])
+  @@index([etablissementId])
+  @@index([studentId])
+}
+
+/// *
 /// * PaymentPlan : Le contrat financier global (ex: Frais annuels).
 model PaymentPlan {
   id              String            @id @default(uuid())
-  totalAmount     Float
-  paidAmount      Float             @default(0)
+  totalAmount     Decimal           @db.Decimal(12, 2)
+  paidAmount      Decimal           @db.Decimal(12, 2) @default(0)
   currency        String            @default("DZD")
   status          StatusPaymentPlan @default(PENDING)
   createdAt       DateTime          @default(now())
@@ -158,8 +181,9 @@ model PaymentPlan {
 /// * Tranche : Une échéance prévue dans le plan de paiement.
 model Tranche {
   id              String        @id @default(uuid())
-  amount          Float
+  amount          Decimal       @db.Decimal(12, 2)
   dueDate         DateTime
+  label           String?
   isPaid          Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -178,9 +202,10 @@ model Tranche {
 /// * Paiement : Un flux financier réel (reçu).
 model Paiement {
   id              String        @id @default(uuid())
-  amount          Float
+  amount          Decimal       @db.Decimal(12, 2)
   date            DateTime      @default(now())
   method          PaymentMethod @default(CASH)
+  receiptNumber   Int?
   reference       String?
   note            String?
   createdAt       DateTime      @default(now())
@@ -322,4 +347,20 @@ enum StatusDocument {
   PENDING
   APPROVED
   REJECTED
+}
+
+/// Niveaux scolaires algériens : primaire (AP), moyen (AM), secondaire (AS).
+enum NiveauScolaire {
+  AP1
+  AP2
+  AP3
+  AP4
+  AP5
+  AM1
+  AM2
+  AM3
+  AM4
+  AS1
+  AS2
+  AS3
 }

@@ -161,10 +161,15 @@ describe("markPresenceAction", () => {
 
 	it("crée un enregistrement de présence", async () => {
 		vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-		const mockFindUnique = vi.fn().mockResolvedValue({ id: "s1" });
+		const mockFindUnique = vi.fn().mockResolvedValue({ groupId: "grp-1" });
+		// L'élève doit être inscrit au groupe de la séance (contrôle d'intégrité).
+		const mockStudentFindFirst = vi
+			.fn()
+			.mockResolvedValue({ id: "550e8400-e29b-41d4-a716-446655440002" });
 		const mockUpsert = vi.fn().mockResolvedValue({ id: "att-1" });
 		vi.mocked(getTenantPrisma).mockReturnValue({
 			session: { findUnique: mockFindUnique },
+			student: { findFirst: mockStudentFindFirst },
 			attendanceRecord: { upsert: mockUpsert },
 		} as never);
 

@@ -36,7 +36,7 @@ export default function EmptyState({
 				<button
 					type="button"
 					onClick={onAction}
-					className="flex items-center gap-2 rounded-lg bg-primary-teal px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-teal hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 ease-in-out"
+					className="flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-accent-teal hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 ease-in-out"
 				>
 					{actionLabel}
 				</button>

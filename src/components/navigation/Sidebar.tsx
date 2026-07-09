@@ -148,7 +148,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 	const filteredSuperAdminItems = superAdminItems.filter(
 		(item) => userRole && item.roles.includes(userRole),
 	);
-	const showSettings = !!userRole;
+	// L'enseignant a un espace focalisé : pas de réglages dans la barre
+	// (son compte reste accessible via le menu utilisateur en haut à droite).
+	const showSettings = !!userRole && userRole !== UserRole.INTERVENANT;
 
 	return (
 		<>

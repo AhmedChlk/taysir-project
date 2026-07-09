@@ -7,10 +7,13 @@ const { mockJsPDF } = vi.hoisted(() => ({
 		setTextColor: vi.fn().mockReturnThis(),
 		setFillColor: vi.fn().mockReturnThis(),
 		setDrawColor: vi.fn().mockReturnThis(),
+		setLineWidth: vi.fn().mockReturnThis(),
 		setFont: vi.fn().mockReturnThis(),
 		text: vi.fn().mockReturnThis(),
 		line: vi.fn().mockReturnThis(),
 		rect: vi.fn().mockReturnThis(),
+		roundedRect: vi.fn().mockReturnThis(),
+		addImage: vi.fn().mockReturnThis(),
 		output: vi.fn().mockReturnValue(new ArrayBuffer(8)),
 		save: vi.fn(),
 		splitTextToSize: vi.fn((text) => [text]),
@@ -93,10 +96,19 @@ describe("PDF Generators Audit", () => {
 			);
 		});
 
-		it("Edge Case: gère un paiementId sans tiret (Branch coverage ligne 30)", () => {
+		it("Edge Case: gère un paiementId sans tiret (repli sans numéro de reçu)", () => {
 			generatePaymentReceiptPDF({ ...validData, paiementId: "simpleid" });
 			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.stringContaining("Reçu N° : SIMPLEID"),
+				expect.stringContaining("Reçu SIMPLEID"),
+				20,
+				60,
+			);
+		});
+
+		it("Utilise le numéro de reçu séquentiel quand il est fourni", () => {
+			generatePaymentReceiptPDF({ ...validData, receiptNumber: 42 });
+			expect(mockJsPDF.text).toHaveBeenCalledWith(
+				expect.stringContaining("Reçu N° 0042"),
 				20,
 				60,
 			);
@@ -120,22 +132,24 @@ describe("PDF Generators Audit", () => {
 			],
 		} as any;
 
+		// Layout-agnostic: flatten every text() call (string or string[]) so the
+		// assertions check WHAT is printed, not WHERE — survives PDF redesigns.
+		const allText = () =>
+			mockJsPDF.text.mock.calls
+				.flatMap((c) => {
+					const a = c[0] as string | string[];
+					return Array.isArray(a) ? a : [a];
+				})
+				.join(" | ");
+
 		it("Happy Path: génère un profil élève complet (Mineur)", () => {
 			const doc = generateStudentProfilePDF(student);
 			expect(doc).toBeDefined();
-			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.stringContaining("Zohra Benali"),
-				60,
-				135,
-			);
-			// splitTextToSize wrapping
-			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.arrayContaining([
-					expect.stringContaining("Math Grade 10, Physics"),
-				]),
-				60,
-				180,
-			);
+			const text = allText();
+			expect(text).toContain("Amine Benali");
+			expect(text).toContain("Zohra Benali");
+			expect(text).toContain("MINEUR");
+			expect(text).toContain("Math Grade 10, Physics");
 		});
 
 		it("Happy Path: génère un profil élève adulte (Majeur) et INACTIF", () => {
@@ -147,17 +161,11 @@ describe("PDF Generators Audit", () => {
 				email: "amine@test.com",
 			};
 			generateStudentProfilePDF(adult);
-			expect(mockJsPDF.text).toHaveBeenCalledWith("INACTIF", 60, 80);
-			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.stringContaining("0666-77-88-99"),
-				60,
-				135,
-			);
-			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.stringContaining("amine@test.com"),
-				60,
-				145,
-			);
+			const text = allText();
+			expect(text).toContain("INACTIF");
+			expect(text).toContain("ADULTE");
+			expect(text).toContain("0666-77-88-99");
+			expect(text).toContain("amine@test.com");
 		});
 
 		it("Gestion du Vide: gère l'absence d'adresse, de groupes et les fallbacks N/A", () => {
@@ -169,13 +177,9 @@ describe("PDF Generators Audit", () => {
 				parentPhone: null,
 			};
 			generateStudentProfilePDF(minimal);
-			expect(mockJsPDF.text).toHaveBeenCalledWith(
-				expect.arrayContaining([expect.stringContaining("Aucun groupe")]),
-				60,
-				180,
-			);
-			expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 135); // parentName null -> N/A
-			expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 145); // parentPhone null -> N/A
+			const text = allText();
+			expect(text).toContain("Aucun groupe");
+			expect(text).toContain("N/A"); // parentName / parentPhone null -> N/A
 		});
 
 		it("Gestion du Vide: fallbacks N/A pour adulte", () => {
@@ -186,8 +190,7 @@ describe("PDF Generators Audit", () => {
 				email: null,
 			};
 			generateStudentProfilePDF(adultMinimal);
-			expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 135); // phone null -> N/A
-			expect(mockJsPDF.text).toHaveBeenCalledWith("N/A", 60, 145); // email null -> N/A
+			expect(allText()).toContain("N/A"); // phone / email null -> N/A
 		});
 
 		it("Données Massives: vérifie la pagination/découpage de texte pour les adresses très longues", () => {

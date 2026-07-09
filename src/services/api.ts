@@ -7,8 +7,13 @@ import { getServerSession } from "next-auth/next";
 import { cache } from "react";
 import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
+import { money, moneyOrNull } from "@/lib/money";
 import { getTenantPrisma, prisma } from "@/lib/prisma";
 import { computeWeeklyAttendanceRatios } from "@/lib/queries/attendance";
+
+// Conversion des champs monétaires Decimal → number à la frontière lecture DB
+// → Client Components (voir src/lib/money.ts). Types concrets : le spread
+// `{ ...obj, totalAmount: number }` écrase proprement le champ d'origine.
 
 /**
  * RÉCUPÉRATION DU PRISMA MÉMOÏSÉE (PERFORMANCE)
@@ -26,8 +31,15 @@ const getPrisma = cache(async () => {
 		);
 	}
 
+	// Le SUPER_ADMIN opère exclusivement sur /superadmin (client GLOBAL_ACCESS
+	// restreint). Retourner le client `prisma` brut ici fusionnerait les données
+	// de TOUS les établissements et défait l'isolation multi-tenant : on refuse.
 	if (user.role === "SUPER_ADMIN") {
-		return prisma;
+		throw new TaysirError(
+			"Le SUPER_ADMIN n'accède pas aux données d'un établissement via le tableau de bord.",
+			ErrorCodes.ERR_FORBIDDEN,
+			403,
+		);
 	}
 
 	if (!user.etablissementId) {
@@ -61,7 +73,7 @@ export const getCurrentUser = cache(async () => {
 
 	if (!userId) return null;
 
-	return await prisma.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			id: true,
@@ -75,6 +87,11 @@ export const getCurrentUser = cache(async () => {
 			etablissementId: true,
 		},
 	});
+
+	if (!user) return null;
+	return "salary" in user
+		? { ...user, salary: moneyOrNull(user.salary as never) }
+		: user;
 });
 
 // Liste des écoles
@@ -88,7 +105,7 @@ export const getStaff = async () => {
 	const session = await getServerSession(authOptions);
 	const userRole = session?.user?.role;
 
-	return await client.user.findMany({
+	const staff = await client.user.findMany({
 		orderBy: { createdAt: "desc" },
 		select: {
 			id: true,
@@ -101,8 +118,13 @@ export const getStaff = async () => {
 			salary: userRole === "GERANT",
 			createdAt: true,
 			updatedAt: true,
+			_count: { select: { sessions: true } },
 		},
 	});
+
+	return staff.map((u) =>
+		"salary" in u ? { ...u, salary: moneyOrNull(u.salary as never) } : u,
+	);
 };
 
 // Liste des salles
@@ -111,10 +133,30 @@ export const getRooms = async () => {
 	return await client.room.findMany();
 };
 
+// Salles + nombre de séances qui les occupent (dépendance Planning)
+export const getRoomsWithUsage = async () => {
+	const client = await getPrisma();
+	return await client.room.findMany({
+		include: { _count: { select: { sessions: true } } },
+		orderBy: { name: "asc" },
+	});
+};
+
 // Liste des activités
 export const getActivities = async () => {
 	const client = await getPrisma();
 	return await client.activity.findMany();
+};
+
+// Activités + usage (séances planifiées + plans de paiement liés)
+export const getActivitiesWithUsage = async () => {
+	const client = await getPrisma();
+	return await client.activity.findMany({
+		include: {
+			_count: { select: { sessions: true, paymentPlans: true } },
+		},
+		orderBy: { name: "asc" },
+	});
 };
 
 // Liste des groupes
@@ -164,21 +206,27 @@ export const getStudents = async () => {
 	const session = await getServerSession(authOptions);
 	const tenantId = session?.user?.etablissementId;
 
+	// Pas de tenant rattaché (y compris SUPER_ADMIN) → aucune donnée élève
+	// n'est servie ici. Le SUPER_ADMIN passe par /superadmin, jamais par cette
+	// liste tenant (sinon fuite cross-tenant de PII).
 	if (!tenantId) {
-		if (session?.user?.role === "SUPER_ADMIN") {
-			return await prisma.student.findMany({
-				include: { groups: true, paymentPlans: true },
-			});
-		}
 		return [];
 	}
 
 	return await unstable_cache(
 		async () => {
 			const client = await getPrisma();
-			return await client.student.findMany({
+			const students = await client.student.findMany({
 				include: { groups: true, paymentPlans: true },
 			});
+			return students.map((s) => ({
+				...s,
+				paymentPlans: s.paymentPlans.map((p) => ({
+					...p,
+					totalAmount: money(p.totalAmount),
+					paidAmount: money(p.paidAmount),
+				})),
+			}));
 		},
 		[`students-list-${tenantId}`],
 		{
@@ -191,7 +239,7 @@ export const getStudents = async () => {
 // Liste des paiements (PaymentPlans)
 export const getPayments = async () => {
 	const client = await getPrisma();
-	return await client.paymentPlan.findMany({
+	const plans = await client.paymentPlan.findMany({
 		include: {
 			student: true,
 			activity: true, // Inclure l'activité suite au mandat de structure
@@ -202,6 +250,35 @@ export const getPayments = async () => {
 		},
 		orderBy: { createdAt: "desc" },
 	});
+	return plans.map((p) => ({
+		...p,
+		totalAmount: money(p.totalAmount),
+		paidAmount: money(p.paidAmount),
+		tranches: p.tranches.map((t) => ({
+			...t,
+			amount: money(t.amount),
+			paiements: t.paiements.map((pm) => ({
+				...pm,
+				amount: money(pm.amount),
+			})),
+		})),
+	}));
+};
+
+// Dernière relance par élève (journal de relance) → { studentId: ISO date }
+export const getLatestRelanceByStudent = async (): Promise<
+	Record<string, string>
+> => {
+	const client = await getPrisma();
+	const relances = await client.relance.findMany({
+		orderBy: { sentAt: "desc" },
+		select: { studentId: true, sentAt: true },
+	});
+	const map: Record<string, string> = {};
+	for (const r of relances) {
+		if (!map[r.studentId]) map[r.studentId] = r.sentAt.toISOString();
+	}
+	return map;
 };
 
 // Liste des présences

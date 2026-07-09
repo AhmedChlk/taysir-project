@@ -128,7 +128,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 			case "new-session":
 				return t("drawer_new_session");
 			case "view-session":
-				return "Détails de la séance";
+				return t("drawer_sessions");
 			default:
 				return t("drawer_operational");
 		}
@@ -169,11 +169,8 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				if (!currentSession) {
 					return (
 						<div className="flex flex-col items-center justify-center h-full text-center opacity-30 py-20">
-							<Loader2
-								size={32}
-								className="animate-spin text-taysir-teal mb-4"
-							/>
-							<p className="font-black text-taysir-teal uppercase tracking-tighter">
+							<Loader2 size={32} className="animate-spin text-brand-500 mb-4" />
+							<p className="font-black text-brand-500 uppercase tracking-tighter">
 								Chargement...
 							</p>
 						</div>
@@ -195,13 +192,13 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 							formData?.todaySessions?.map((session) => (
 								<div
 									key={session.id}
-									className="p-5 rounded-[24px] bg-white border border-taysir-teal/5 shadow-sm hover:shadow-md transition-all group"
+									className="p-5 rounded-[24px] bg-white border border-brand-500/5 shadow-sm hover:shadow-md transition-all group"
 								>
 									<div className="flex justify-between items-start mb-3">
-										<span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-taysir-teal/5 text-taysir-teal rounded-lg">
+										<span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-brand-500/5 text-brand-500 rounded-lg">
 											{session.activity.name}
 										</span>
-										<div className="flex items-center gap-1 text-taysir-teal font-bold text-xs">
+										<div className="flex items-center gap-1 text-brand-500 font-bold text-xs">
 											<Clock size={12} />
 											{new Date(session.startTime).toLocaleTimeString([], {
 												hour: "2-digit",
@@ -209,15 +206,15 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 											})}
 										</div>
 									</div>
-									<h4 className="text-lg font-black text-taysir-teal uppercase tracking-tighter mb-4">
+									<h4 className="text-lg font-black text-brand-500 uppercase tracking-tighter mb-4">
 										{session.group.name}
 									</h4>
-									<div className="flex items-center justify-between pt-4 border-t border-taysir-teal/5">
-										<div className="flex items-center gap-2 text-xs font-medium text-taysir-teal/60">
+									<div className="flex items-center justify-between pt-4 border-t border-brand-500/5">
+										<div className="flex items-center gap-2 text-xs font-medium text-brand-500/60">
 											<MapPin size={14} />
 											{session.room.name}
 										</div>
-										<div className="flex items-center gap-2 text-xs font-bold text-taysir-teal">
+										<div className="flex items-center gap-2 text-xs font-bold text-brand-500">
 											<User size={14} className="opacity-40" />
 											{formatFullName(
 												session.instructor.firstName,
@@ -244,17 +241,17 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 							formData?.pendingPayments?.map((plan) => (
 								<div
 									key={plan.id}
-									className="p-5 rounded-[24px] bg-white border border-taysir-teal/5 shadow-sm hover:shadow-md transition-all"
+									className="p-5 rounded-[24px] bg-white border border-brand-500/5 shadow-sm hover:shadow-md transition-all"
 								>
 									<div className="flex justify-between items-center mb-4">
 										<div>
-											<h4 className="font-black text-taysir-teal uppercase tracking-tighter">
+											<h4 className="font-black text-brand-500 uppercase tracking-tighter">
 												{formatFullName(
 													plan.student.firstName,
 													plan.student.lastName,
 												)}
 											</h4>
-											<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
+											<p className="text-[10px] font-bold text-brand-500/40 uppercase tracking-widest">
 												Total: {plan.totalAmount.toLocaleString()} DZD
 											</p>
 										</div>
@@ -272,7 +269,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 										{plan.tranches.slice(0, 2).map((tranche, _idx: number) => (
 											<div
 												key={tranche.id}
-												className="flex items-center justify-between p-2 bg-taysir-bg rounded-xl text-[10px] font-bold uppercase tracking-tight"
+												className="flex items-center justify-between p-2 bg-surface-0 rounded-xl text-[10px] font-bold uppercase tracking-tight"
 											>
 												<span className="opacity-40">
 													Échéance{" "}
@@ -282,7 +279,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 											</div>
 										))}
 										{plan.tranches.length > 2 && (
-											<div className="text-center text-[8px] font-black text-taysir-teal/20 uppercase tracking-[0.2em] pt-1">
+											<div className="text-center text-[8px] font-black text-brand-500/20 uppercase tracking-[0.2em] pt-1">
 												+ {plan.tranches.length - 2} autres échéances
 											</div>
 										)}
@@ -303,7 +300,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				return (
 					<div className="flex flex-col items-center justify-center h-full text-center opacity-30 py-20">
 						<AlertCircle size={48} className="mb-4" />
-						<p className="font-black text-taysir-teal uppercase tracking-tighter">
+						<p className="font-black text-brand-500 uppercase tracking-tighter">
 							Bientôt disponible
 						</p>
 						<p className="text-sm font-medium mt-2">
@@ -321,7 +318,7 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
 				onClick={onClose}
-				className="fixed inset-0 bg-taysir-teal/20 backdrop-blur-sm z-[100]"
+				className="fixed inset-0 bg-brand-500/20 backdrop-blur-sm z-[100]"
 			/>
 
 			<motion.div
@@ -329,42 +326,42 @@ export default function Drawer({ type, onClose, formData }: DrawerProps) {
 				animate={{ x: 0 }}
 				exit={{ x: "100%" }}
 				transition={{ type: "spring", damping: 25, stiffness: 200 }}
-				className="fixed right-0 top-0 bottom-0 w-full md:w-[500px] bg-white shadow-2xl z-[101] border-l border-taysir-teal/5 flex flex-col"
+				className="fixed right-0 top-0 bottom-0 w-full md:w-[500px] bg-white shadow-2xl z-[101] border-l border-brand-500/5 flex flex-col"
 			>
-				<div className="p-8 border-b border-taysir-teal/5 flex justify-between items-center bg-white sticky top-0 z-10">
+				<div className="p-8 border-b border-brand-500/5 flex justify-between items-center bg-white sticky top-0 z-10">
 					<div className="flex items-center gap-3">
-						<div className="p-3 bg-taysir-teal/5 rounded-2xl text-taysir-teal">
+						<div className="p-3 bg-brand-500/5 rounded-2xl text-brand-500">
 							{getIcon()}
 						</div>
 						<div>
-							<h2 className="text-xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
+							<h2 className="text-xl font-black text-brand-500 uppercase tracking-tighter leading-none">
 								{getTitle()}
 							</h2>
-							<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-[0.2em] mt-1">
+							<p className="text-[10px] font-bold text-brand-500/40 uppercase tracking-[0.2em] mt-1">
 								{type.includes("new")
-									? "Nouveau Dossier"
-									: `Vue Opérationnelle`}
+									? t("drawer_new_file")
+									: t("drawer_operational")}
 							</p>
 						</div>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
-						className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-taysir-teal/5 transition-colors"
+						className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-brand-500/5 transition-colors"
 					>
 						<X size={20} />
 					</button>
 				</div>
 
-				<div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-taysir-bg/10">
+				<div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-surface-0/10">
 					{renderContent()}
 				</div>
 
-				<div className="p-8 border-t border-taysir-teal/5 bg-white">
+				<div className="p-8 border-t border-brand-500/5 bg-white">
 					<button
 						type="button"
 						onClick={onClose}
-						className="w-full py-4 rounded-2xl border-2 border-taysir-teal/10 text-taysir-teal font-black uppercase tracking-widest text-xs hover:bg-taysir-teal/5 transition-all active:scale-95"
+						className="w-full py-4 rounded-2xl border-2 border-brand-500/10 text-brand-500 font-black uppercase tracking-widest text-xs hover:bg-brand-500/5 transition-all active:scale-95"
 					>
 						{t("close_drawer")}
 					</button>

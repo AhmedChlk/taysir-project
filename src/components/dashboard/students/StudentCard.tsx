@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import DropdownMenu from "@/components/ui/DropdownMenu";
 import { Link } from "@/i18n/routing";
+import { niveauShort } from "@/lib/niveaux";
 import type { Group, PaymentPlan, Student } from "@/types/schema";
 import { formatFullName } from "@/utils/format";
 
@@ -101,6 +102,11 @@ export default function StudentCard({
 						{student.isMinor && (
 							<span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[9px] font-bold uppercase tracking-widest border border-amber-200/50">
 								{t("student_minor")}
+							</span>
+						)}
+						{student.niveau && (
+							<span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[9px] font-bold uppercase tracking-widest border border-brand-200/50">
+								{niveauShort(student.niveau)}
 							</span>
 						)}
 					</div>

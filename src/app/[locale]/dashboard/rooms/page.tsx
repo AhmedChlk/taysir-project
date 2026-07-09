@@ -1,8 +1,8 @@
 import RoomsClientView from "@/components/dashboard/rooms/RoomsClientView";
-import { getRooms } from "@/services/api";
+import { getRoomsWithUsage } from "@/services/api";
 
 export default async function RoomsPage() {
-	const rooms = await getRooms();
+	const rooms = await getRoomsWithUsage();
 
 	return <RoomsClientView initialRooms={rooms} />;
 }

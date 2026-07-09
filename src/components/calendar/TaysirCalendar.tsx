@@ -1,13 +1,19 @@
 "use client";
 
 import { format, getDay, parse, startOfWeek } from "date-fns";
-import { fr } from "date-fns/locale";
+import { arDZ, fr } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import React, { useCallback, useMemo } from "react";
 import type { Components, EventPropGetter } from "react-big-calendar";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import withDragAndDrop, {
 	type EventInteractionArgs,
 } from "react-big-calendar/lib/addons/dragAndDrop";
+import {
+	localizedGroup,
+	localizedRoom,
+	localizedSubject,
+} from "@/lib/subjects";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "./calendar-overrides.css";
@@ -40,6 +46,7 @@ const DnDCalendar = withDragAndDrop<CalendarEvent, object>(Calendar);
 
 const locales = {
 	fr: fr,
+	"ar-DZ": arDZ,
 };
 
 const localizer = dateFnsLocalizer({
@@ -55,16 +62,33 @@ interface TaysirCalendarProps {
 	currentDate: Date;
 }
 
-const CalendarEventComponent = ({ event }: { event: CalendarEvent }) => (
-	<div className="flex flex-col h-full overflow-hidden leading-tight">
-		<div className="flex items-center gap-1">
-			<span className="truncate">{event.resource.activity.name}</span>
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const hhmm = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
+const CalendarEventComponent = ({ event }: { event: CalendarEvent }) => {
+	const locale = useLocale();
+	const r = event.resource;
+	const activity = localizedSubject(r.activity.name, locale);
+	const room = localizedRoom(r.room.name, locale);
+	const group = localizedGroup(r.group.name, locale);
+	// Infobulle complète : reste lisible même quand plusieurs séances se
+	// chevauchent et sont réduites à des colonnes étroites (écoles à plusieurs
+	// salles = cours en parallèle au même créneau).
+	const tooltip = `${hhmm(event.start)}–${hhmm(event.end)} · ${activity} · ${group} · ${room}`;
+	return (
+		<div
+			title={tooltip}
+			className="flex flex-col h-full overflow-hidden leading-tight"
+		>
+			<div className="flex items-center gap-1">
+				<span className="truncate font-bold">{activity}</span>
+			</div>
+			<div className="text-[9px] opacity-80 truncate hidden md:block">
+				{group}
+			</div>
 		</div>
-		<div className="text-[9px] opacity-80 truncate hidden md:block">
-			{event.resource.group.name}
-		</div>
-	</div>
-);
+	);
+};
 
 const TaysirCalendar = React.memo(function TaysirCalendar({
 	sessions,
@@ -72,6 +96,10 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 }: TaysirCalendarProps) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
+	const locale = useLocale();
+	const t = useTranslations();
+	// Culture react-big-calendar : arabe (Algérie) ou français.
+	const culture = locale === "ar" ? "ar-DZ" : "fr";
 	const [pendingMove, setPendingMove] = React.useState<{
 		event: CalendarEvent;
 		start: Date;
@@ -97,6 +125,18 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 		}),
 		[],
 	);
+
+	// Grille horaire sur 24h (00:00 → 23:59) — couvre les cours du soir / de nuit.
+	// La vue s'ouvre autour de 08:00 mais reste défilable sur toute la journée.
+	// Seules les heures/minutes de ces Date sont prises en compte par react-big-calendar.
+	const { minTime, maxTime, scrollToTime } = useMemo(() => {
+		const at = (hour: number, min = 0) => {
+			const d = new Date(currentDate);
+			d.setHours(hour, min, 0, 0);
+			return d;
+		};
+		return { minTime: at(0), maxTime: at(23, 59), scrollToTime: at(8) };
+	}, [currentDate]);
 
 	const handleConfirmMove = async (mode: "single" | "following" | "all") => {
 		if (!pendingMove) return;
@@ -197,24 +237,27 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 		[searchParams, router],
 	);
 
-	const eventPropGetter = useCallback<EventPropGetter<CalendarEvent>>((event) => {
-		return {
-			style: {
-				backgroundColor: event.resource.activity.color || "#0F515C",
-				borderRadius: "10px",
-				border: "1px solid white",
-				color: "white",
-				fontSize: "10px",
-				fontWeight: "bold",
-				padding: "2px 4px",
-				boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-				opacity: 0.9,
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap",
-			},
-		};
-	}, []);
+	const eventPropGetter = useCallback<EventPropGetter<CalendarEvent>>(
+		(event) => {
+			return {
+				style: {
+					backgroundColor: event.resource.activity.color || "#0F515C",
+					borderRadius: "10px",
+					border: "1px solid white",
+					color: "white",
+					fontSize: "10px",
+					fontWeight: "bold",
+					padding: "2px 4px",
+					boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+					opacity: 0.9,
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+				},
+			};
+		},
+		[],
+	);
 
 	return (
 		<div className="h-full relative">
@@ -224,6 +267,9 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 				startAccessor="start"
 				endAccessor="end"
 				date={currentDate}
+				min={minTime}
+				max={maxTime}
+				scrollToTime={scrollToTime}
 				components={components}
 				onNavigate={onNavigate}
 				onSelectEvent={handleSelectEvent}
@@ -236,15 +282,15 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 				defaultView={Views.WEEK}
 				eventPropGetter={eventPropGetter}
 				messages={{
-					next: "Suivant",
-					previous: "Précédent",
-					today: "Aujourd'hui",
-					month: "Mois",
-					week: "Semaine",
-					day: "Jour",
-					agenda: "Agenda",
+					next: t("calendar_next"),
+					previous: t("calendar_previous"),
+					today: t("today_label"),
+					month: t("calendar_month"),
+					week: t("calendar_week"),
+					day: t("calendar_day"),
+					agenda: t("calendar_agenda"),
 				}}
-				culture="fr"
+				culture={culture}
 				className="taysir-calendar-override"
 			/>
 
@@ -263,50 +309,53 @@ const TaysirCalendar = React.memo(function TaysirCalendar({
 									<AlertCircle size={24} />
 								</div>
 								<h3 className="text-xl font-bold tracking-tight">
-									Modification de série
+									{t("series_edit_title")}
 								</h3>
 							</div>
 
 							<p className="text-sm text-ink-500 font-medium leading-relaxed">
-								Vous déplacez une séance récurrente. Quelles séances
-								souhaitez-vous modifier ?
+								{t("series_edit_question")}
 							</p>
 
 							<div className="grid grid-cols-1 gap-2">
 								<button
+									type="button"
 									disabled={isUpdating}
 									onClick={() => handleConfirmMove("single")}
-									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all group"
+									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-start transition-all group"
 								>
 									<p className="font-bold text-ink-900 text-sm">
-										Uniquement cette séance
+										{t("series_only_this")}
 									</p>
 								</button>
 								<button
+									type="button"
 									disabled={isUpdating}
 									onClick={() => handleConfirmMove("following")}
-									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all"
+									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-start transition-all"
 								>
 									<p className="font-bold text-ink-900 text-sm">
-										Celle-ci et les suivantes
+										{t("series_this_and_following")}
 									</p>
 								</button>
 								<button
+									type="button"
 									disabled={isUpdating}
 									onClick={() => handleConfirmMove("all")}
-									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-left transition-all"
+									className="p-4 rounded-2xl border border-line hover:border-brand-500 hover:bg-brand-50/50 text-start transition-all"
 								>
 									<p className="font-bold text-ink-900 text-sm">
-										Toutes les séances de la série
+										{t("series_all")}
 									</p>
 								</button>
 							</div>
 
 							<button
+								type="button"
 								onClick={() => setPendingMove(null)}
 								className="w-full py-2 text-xs font-bold text-ink-400 uppercase tracking-widest hover:text-ink-900 transition-colors"
 							>
-								Annuler le déplacement
+								{t("series_cancel_move")}
 							</button>
 						</motion.div>
 					</div>

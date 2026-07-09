@@ -1,5 +1,6 @@
 "use client";
 
+import type { NiveauScolaire } from "@prisma/client";
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -10,9 +11,10 @@ import {
 	Loader2,
 	Plus,
 	ShieldCheck,
+	User,
 } from "lucide-react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 import {
 	createStudentAction,
@@ -22,8 +24,8 @@ import { uploadFileAction } from "@/actions/upload.actions";
 import { Input } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
 import MultiSelect from "@/components/ui/MultiSelect";
-import { Toggle } from "@/components/ui/Toggle";
 import { useRouter } from "@/i18n/routing";
+import { niveauxByCycle } from "@/lib/niveaux";
 import type { Group, PaymentPlan, Student } from "@/types/schema";
 
 type StudentWithGroups = Student & {
@@ -56,6 +58,7 @@ export default function StudentFormModal({
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const t = useTranslations();
+	const locale = useLocale();
 	const router = useRouter();
 
 	const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,6 +106,8 @@ export default function StudentFormModal({
 			parentName: (formData.get("parentName") as string) || null,
 			parentPhone: (formData.get("parentPhone") as string) || null,
 			parentEmail: (formData.get("parentEmail") as string) || null,
+			niveau: ((formData.get("niveau") as string) ||
+				null) as NiveauScolaire | null,
 			groupIds: selectedGroupIds,
 		};
 
@@ -132,15 +137,15 @@ export default function StudentFormModal({
 			}
 			size="xl"
 		>
-			<form onSubmit={handleSubmit} className="relative">
-				{/* Floating Header Decoration */}
-				<div className="absolute -top-24 left-1/2 -translate-x-1/2 w-full flex justify-center pointer-events-none">
+			<form onSubmit={handleSubmit} className="space-y-8">
+				{/* Photo — centrée, dans le flux normal (plus d'absolu qui chevauche). */}
+				<div className="flex justify-center">
 					<motion.div
-						initial={{ y: 20, opacity: 0 }}
+						initial={{ y: 10, opacity: 0 }}
 						animate={{ y: 0, opacity: 1 }}
-						className="relative group/photo pointer-events-auto"
+						className="relative group/photo"
 					>
-						<div className="w-32 h-32 rounded-[2.5rem] bg-white p-1.5 shadow-2xl shadow-brand-500/10 border border-line overflow-hidden relative">
+						<div className="w-28 h-28 rounded-[2rem] bg-white p-1.5 shadow-xl shadow-brand-500/10 border border-line overflow-hidden relative">
 							<div className="w-full h-full rounded-[2rem] bg-surface-50 flex items-center justify-center overflow-hidden border border-dashed border-ink-200 group-hover/photo:border-brand-500 transition-all duration-500 shadow-inner relative">
 								{photoPreview ? (
 									<Image
@@ -173,14 +178,44 @@ export default function StudentFormModal({
 					</motion.div>
 				</div>
 
-				<div className="mt-12 space-y-12">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-						{/* Left Column: Core Info */}
+				<div className="space-y-8">
+					{/* Statut — segmenté pleine largeur : choix clair, aucune troncature. */}
+					<div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface-100 p-1.5">
+						<button
+							type="button"
+							onClick={() => setIsMinor(false)}
+							className={clsx(
+								"flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all active:scale-[0.98]",
+								!isMinor
+									? "bg-white text-ink-900 shadow-sm"
+									: "text-ink-400 hover:text-ink-600",
+							)}
+						>
+							<User size={16} />
+							{t("student_adult")}
+						</button>
+						<button
+							type="button"
+							onClick={() => setIsMinor(true)}
+							className={clsx(
+								"flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all active:scale-[0.98]",
+								isMinor
+									? "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
+									: "text-ink-400 hover:text-ink-600",
+							)}
+						>
+							<Baby size={16} />
+							{t("students_minor_label")}
+						</button>
+					</div>
+
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+						{/* Colonne gauche : Identité + Contact / Tuteur */}
 						<motion.div
 							initial={{ x: -20, opacity: 0 }}
 							animate={{ x: 0, opacity: 1 }}
 							transition={{ delay: 0.1 }}
-							className="space-y-10"
+							className="space-y-8"
 						>
 							<div className="space-y-6">
 								<div className="flex items-center gap-3">
@@ -215,67 +250,6 @@ export default function StudentFormModal({
 											placeholder="Cité 1200 logts, Bat B..."
 										/>
 									</div>
-								</div>
-							</div>
-
-							{/* Assignment Section */}
-							<div className="p-8 bg-surface-50 rounded-[32px] border border-line space-y-6">
-								<div className="flex items-center gap-3">
-									<div className="w-1.5 h-5 bg-brand-500 rounded-full" />
-									<h3 className="text-xs font-black text-ink-900 uppercase tracking-widest">
-										{t("students_academic_assignment")}
-									</h3>
-								</div>
-								<MultiSelect
-									label={t("students_enroll_groups")}
-									options={groups.map((g) => ({ label: g.name, value: g.id }))}
-									value={selectedGroupIds}
-									onChange={setSelectedGroupIds}
-									placeholder={t("students_groups_placeholder")}
-								/>
-							</div>
-						</motion.div>
-
-						{/* Right Column: Status & Contact */}
-						<motion.div
-							initial={{ x: 20, opacity: 0 }}
-							animate={{ x: 0, opacity: 1 }}
-							transition={{ delay: 0.2 }}
-							className="space-y-10"
-						>
-							{/* Apple-style Toggle Card */}
-							<div
-								className={clsx(
-									"group p-1 rounded-[32px] border transition-all duration-500 ease-out",
-									isMinor
-										? "bg-amber-100/50 border-amber-200"
-										: "bg-surface-100 border-line hover:border-ink-200",
-								)}
-							>
-								<div className="bg-white rounded-[30px] p-6 flex items-center justify-between shadow-sm">
-									<div className="flex items-center gap-4">
-										<div
-											className={clsx(
-												"w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
-												isMinor
-													? "bg-amber-500 text-white shadow-lg shadow-amber-500/20 rotate-12"
-													: "bg-surface-50 text-ink-400",
-											)}
-										>
-											<Baby size={24} />
-										</div>
-										<div>
-											<p className="text-sm font-black text-ink-900 uppercase tracking-tight">
-												{isMinor ? "Élève Mineur" : "Élève Majeur"}
-											</p>
-											<p className="text-[10px] font-bold text-ink-400 uppercase tracking-tighter mt-0.5">
-												{isMinor
-													? "Tuteur obligatoire"
-													: "Coordonnées directes"}
-											</p>
-										</div>
-									</div>
-									<Toggle enabled={isMinor} onChange={setIsMinor} />
 								</div>
 							</div>
 
@@ -356,6 +330,54 @@ export default function StudentFormModal({
 									</motion.div>
 								)}
 							</AnimatePresence>
+						</motion.div>
+
+						{/* Colonne droite : Affectation académique */}
+						<motion.div
+							initial={{ x: 20, opacity: 0 }}
+							animate={{ x: 0, opacity: 1 }}
+							transition={{ delay: 0.2 }}
+						>
+							<div className="p-8 bg-surface-50 rounded-[32px] border border-line space-y-6">
+								<div className="flex items-center gap-3">
+									<div className="w-1.5 h-5 bg-brand-500 rounded-full" />
+									<h3 className="text-xs font-black text-ink-900 uppercase tracking-widest">
+										{t("students_academic_assignment")}
+									</h3>
+								</div>
+								<div>
+									<label
+										htmlFor="niveau"
+										className="mb-1.5 block text-sm font-bold text-ink-700"
+									>
+										{t("students_niveau")}
+									</label>
+									<select
+										id="niveau"
+										name="niveau"
+										defaultValue={student?.niveau ?? ""}
+										className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-semibold text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+									>
+										<option value="">{t("students_niveau_none")}</option>
+										{niveauxByCycle(locale).map((cycle) => (
+											<optgroup key={cycle.cycle} label={cycle.label}>
+												{cycle.options.map((o) => (
+													<option key={o.value} value={o.value}>
+														{o.label}
+													</option>
+												))}
+											</optgroup>
+										))}
+									</select>
+								</div>
+								<MultiSelect
+									label={t("students_enroll_groups")}
+									options={groups.map((g) => ({ label: g.name, value: g.id }))}
+									value={selectedGroupIds}
+									onChange={setSelectedGroupIds}
+									placeholder={t("students_groups_placeholder")}
+								/>
+							</div>
 						</motion.div>
 					</div>
 

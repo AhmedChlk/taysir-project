@@ -45,17 +45,17 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 			animate={{ opacity: 1, y: 0 }}
 			className="space-y-6"
 		>
-			<div className="bg-white rounded-[32px] border border-taysir-teal/5 shadow-xl overflow-hidden">
+			<div className="bg-white rounded-[32px] border border-brand-500/5 shadow-xl overflow-hidden">
 				<form onSubmit={handleUpdateSchool} className="p-8 md:p-10 space-y-8">
-					<div className="flex items-center gap-4 pb-8 border-b border-taysir-teal/5">
-						<div className="p-4 bg-taysir-teal/5 rounded-2xl text-taysir-teal">
+					<div className="flex items-center gap-4 pb-8 border-b border-brand-500/5">
+						<div className="p-4 bg-brand-500/5 rounded-2xl text-brand-500">
 							<School size={24} />
 						</div>
 						<div>
-							<h3 className="text-xl font-black text-taysir-teal uppercase tracking-tighter leading-none">
+							<h3 className="text-xl font-black text-brand-500 uppercase tracking-tighter leading-none">
 								Configuration Établissement
 							</h3>
-							<p className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-[0.2em] mt-2">
+							<p className="text-[10px] font-bold text-brand-500/40 uppercase tracking-[0.2em] mt-2">
 								Identité visuelle et informations légales
 							</p>
 						</div>
@@ -78,8 +78,8 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 						</div>
 
 						<div className="space-y-6">
-							<div className="p-6 bg-taysir-bg/50 rounded-3xl border border-taysir-teal/5">
-								<label className="text-xs font-black text-taysir-teal/40 uppercase tracking-widest flex items-center gap-2 mb-4">
+							<div className="p-6 bg-surface-0/50 rounded-3xl border border-brand-500/5">
+								<label className="text-xs font-black text-brand-500/40 uppercase tracking-widest flex items-center gap-2 mb-4">
 									<Palette size={14} /> Identité Visuelle
 								</label>
 
@@ -92,10 +92,10 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 											className="w-12 h-12 rounded-xl cursor-pointer border-none bg-transparent"
 										/>
 										<div className="flex-1">
-											<div className="text-sm font-black text-taysir-teal uppercase tracking-tight">
+											<div className="text-sm font-black text-brand-500 uppercase tracking-tight">
 												{color}
 											</div>
-											<div className="text-[10px] font-bold text-taysir-teal/40 uppercase tracking-widest">
+											<div className="text-[10px] font-bold text-brand-500/40 uppercase tracking-widest">
 												Couleur Principale
 											</div>
 										</div>
@@ -116,7 +116,7 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 												className={cn(
 													"h-8 rounded-lg border-2 transition-all",
 													color === c
-														? "border-taysir-teal scale-110 shadow-md"
+														? "border-brand-500 scale-110 shadow-md"
 														: "border-transparent opacity-60 hover:opacity-100",
 												)}
 												style={{ backgroundColor: c }}
@@ -126,7 +126,7 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 								</div>
 							</div>
 
-							<div className="p-6 bg-taysir-teal rounded-3xl text-white shadow-lg shadow-taysir-teal/20 relative overflow-hidden group">
+							<div className="p-6 bg-brand-500 rounded-3xl text-white shadow-lg shadow-brand-500/20 relative overflow-hidden group">
 								<div className="relative z-10">
 									<div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">
 										Aperçu Branding
@@ -146,11 +146,11 @@ export default function SchoolSettings({ tenant }: SchoolSettingsProps) {
 						</div>
 					</div>
 
-					<div className="flex justify-end pt-6 border-t border-taysir-teal/5">
+					<div className="flex justify-end pt-6 border-t border-brand-500/5">
 						<button
 							type="submit"
 							disabled={isPending}
-							className="btn-primary flex items-center gap-3 px-8 py-4 shadow-xl shadow-taysir-teal/10"
+							className="btn-primary flex items-center gap-3 px-8 py-4 shadow-xl shadow-brand-500/10"
 						>
 							{isPending ? (
 								<Loader2 size={18} className="animate-spin" />

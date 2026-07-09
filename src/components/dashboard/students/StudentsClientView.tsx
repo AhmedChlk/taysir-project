@@ -1,5 +1,6 @@
 "use client";
 
+import type { NiveauScolaire } from "@prisma/client";
 import { clsx } from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -16,20 +17,28 @@ import {
 	User,
 	Wallet,
 } from "lucide-react";
-import Image from "next/image";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { deleteStudentAction } from "@/actions/students.actions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import DropdownMenu from "@/components/ui/DropdownMenu";
-import { useRouter } from "@/i18n/routing";
+import { PageHeader } from "@/components/ui/primitives";
+import { Link, useRouter } from "@/i18n/routing";
+import {
+	type CsvCell,
+	csvDateStamp,
+	downloadCsv,
+	toCsv,
+} from "@/lib/export-csv";
 import { useDashboardView } from "@/lib/hooks/useDashboardView";
-import { generateStudentProfilePDF } from "@/lib/pdf-generators/student-profile";
+import { niveauShort, niveauxByCycle } from "@/lib/niveaux";
 import type { Group, PaymentPlan, Student } from "@/types/schema";
-import { formatFullName } from "@/utils/format";
+import { formatDate, formatFullName } from "@/utils/format";
+import { StudentAvatar } from "./StudentAvatar";
 import StudentCard from "./StudentCard";
 import StudentFormModal from "./StudentFormModal";
+import { StudentPdfPreviewModal } from "./StudentPdfPreviewModal";
 
 type StudentWithGroups = Student & {
 	groups: Group[];
@@ -65,6 +74,19 @@ export default function StudentsClientView({
 
 	const [pdfError, setPdfError] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+	const locale = useLocale();
+	const [niveauFilter, setNiveauFilter] = useState<NiveauScolaire | "all">(
+		"all",
+	);
+	const filteredStudents = useMemo(
+		() =>
+			niveauFilter === "all"
+				? optimisticStudents
+				: optimisticStudents.filter((s) => s.niveau === niveauFilter),
+		[optimisticStudents, niveauFilter],
+	);
+	const [previewStudent, setPreviewStudent] =
+		useState<StudentWithGroups | null>(null);
 
 	const t = useTranslations();
 	const router = useRouter();
@@ -77,6 +99,29 @@ export default function StudentsClientView({
 	const handleAdd = () => {
 		setSelectedStudent(null);
 		setIsModalOpen(true);
+	};
+
+	// Export effectifs (CSV Excel-ready) — rapport pour le dirigeant / la compta.
+	const handleExportCSV = () => {
+		const headers = [
+			t("students_identity"),
+			t("status"),
+			t("students_type_label"),
+			t("students_niveau"),
+			t("students_phone_col"),
+			t("students_groups_col"),
+			t("students_registration_date"),
+		];
+		const rows: CsvCell[][] = filteredStudents.map((s) => [
+			formatFullName(s.firstName, s.lastName),
+			s.isActive ? t("active") : t("inactive"),
+			s.isMinor ? t("minor") : t("adult"),
+			niveauShort(s.niveau) || "—",
+			(s.isMinor ? s.parentPhone : s.phone) || "—",
+			s.groups.map((g) => g.name).join(" / ") || "—",
+			formatDate(s.registrationDate),
+		]);
+		downloadCsv(`effectifs_${csvDateStamp()}.csv`, toCsv(headers, rows));
 	};
 
 	const confirmDelete = async () => {
@@ -94,44 +139,29 @@ export default function StudentsClientView({
 		});
 	};
 
+	// "Télécharger la fiche" now opens an in-app preview (with download/print
+	// inside) instead of a blind download.
 	const handleDownloadPDF = (student: StudentWithGroups) => {
-		try {
-			const doc = generateStudentProfilePDF(student);
-			doc.save(`Fiche_${student.lastName}_${student.firstName}.pdf`);
-			setPdfError(null);
-		} catch (error) {
-			console.error("PDF Generation failed", error);
-			setPdfError(t("students_pdf_error"));
-		}
+		setPreviewStudent(student);
 	};
 
 	const columns = [
 		{
 			header: t("students_identity"),
 			accessor: (student: StudentWithGroups) => (
-				<div className="flex items-center gap-4">
-					<div className="relative w-11 h-11 rounded-2xl overflow-hidden border border-line shadow-sm shrink-0 bg-surface-100 flex items-center justify-center">
-						{student.photoUrl ? (
-							<Image
-								src={student.photoUrl}
-								alt={student.firstName}
-								fill
-								className="object-cover"
-								onError={(e) => {
-									const target = e.target as HTMLImageElement;
-									target.style.display = "none";
-									target.parentElement?.insertAdjacentHTML(
-										"beforeend",
-										'<div class="flex items-center justify-center w-full h-full text-ink-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>',
-									);
-								}}
-							/>
-						) : (
-							<User size={20} className="text-ink-400" />
-						)}
-					</div>
+				<Link
+					href={`/dashboard/students/${student.id}`}
+					className="group/name flex items-center gap-4"
+				>
+					<StudentAvatar
+						src={student.photoUrl}
+						name={formatFullName(student.firstName, student.lastName)}
+						size={44}
+						rounded="rounded-2xl"
+						className="shadow-sm"
+					/>
 					<div className="flex flex-col">
-						<span className="font-bold text-ink-900 text-sm leading-tight tracking-tight">
+						<span className="font-bold text-ink-900 text-sm leading-tight tracking-tight group-hover/name:text-brand-600 transition-colors">
 							{formatFullName(student.firstName, student.lastName)}
 						</span>
 						<div className="flex items-center gap-2 mt-1">
@@ -140,12 +170,17 @@ export default function StudentsClientView({
 									{t("student_minor")}
 								</span>
 							)}
+							{student.niveau && (
+								<span className="px-1.5 py-0.5 rounded-lg bg-brand-50 text-brand-700 text-[9px] font-bold uppercase tracking-wider border border-brand-200/50">
+									{niveauShort(student.niveau)}
+								</span>
+							)}
 							<span className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">
-								{new Date(student.registrationDate).toLocaleDateString()}
+								{formatDate(student.registrationDate)}
 							</span>
 						</div>
 					</div>
-				</div>
+				</Link>
 			),
 		},
 		{
@@ -272,62 +307,86 @@ export default function StudentsClientView({
 
 	return (
 		<div className="space-y-10 pb-20 pt-4">
-			<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-				<div className="space-y-2">
-					<div className="t-eyebrow">{t("students_manage_title")}</div>
-					<h1 className="t-h1 text-ink-900">
-						Gestion des <span className="text-brand-500">Inscriptions</span>
-					</h1>
-					<p className="t-body text-ink-500 max-w-lg">
-						{t("students_manage_subtitle")}
-					</p>
-				</div>
-				<div className="flex items-center gap-4">
-					<div className="bg-surface-50 p-1 rounded-xl flex gap-1 border border-line">
-						<button
-							onClick={() => setViewMode("table")}
-							className={clsx(
-								"p-2 rounded-lg transition-all",
-								viewMode === "table"
-									? "bg-white text-brand-500 shadow-sm"
-									: "text-ink-400 hover:text-ink-900",
-							)}
+			<PageHeader
+				eyebrow={t("students_manage_title")}
+				title={t("students_title_prefix")}
+				accent={t("students_title_accent")}
+				subtitle={t("students_manage_subtitle")}
+				actions={
+					<>
+						<select
+							value={niveauFilter}
+							onChange={(e) =>
+								setNiveauFilter(e.target.value as NiveauScolaire | "all")
+							}
+							className="rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink-900 outline-none transition focus:border-brand-500"
+							aria-label={t("students_niveau")}
 						>
-							<List size={20} />
+							<option value="all">{t("students_all_levels")}</option>
+							{niveauxByCycle(locale).map((cycle) => (
+								<optgroup key={cycle.cycle} label={cycle.label}>
+									{cycle.options.map((o) => (
+										<option key={o.value} value={o.value}>
+											{o.label}
+										</option>
+									))}
+								</optgroup>
+							))}
+						</select>
+						<div className="bg-surface-50 p-1 rounded-xl flex gap-1 border border-line">
+							<button
+								onClick={() => setViewMode("table")}
+								className={clsx(
+									"p-2 rounded-lg transition-all",
+									viewMode === "table"
+										? "bg-white text-brand-500 shadow-sm"
+										: "text-ink-400 hover:text-ink-900",
+								)}
+							>
+								<List size={20} />
+							</button>
+							<button
+								onClick={() => setViewMode("grid")}
+								className={clsx(
+									"p-2 rounded-lg transition-all",
+									viewMode === "grid"
+										? "bg-white text-brand-500 shadow-sm"
+										: "text-ink-400 hover:text-ink-900",
+								)}
+							>
+								<LayoutGrid size={20} />
+							</button>
+						</div>
+						<button
+							type="button"
+							onClick={handleExportCSV}
+							className="btn btn--secondary btn--md"
+						>
+							<Download size={18} />
+							{t("export_csv")}
 						</button>
 						<button
-							onClick={() => setViewMode("grid")}
-							className={clsx(
-								"p-2 rounded-lg transition-all",
-								viewMode === "grid"
-									? "bg-white text-brand-500 shadow-sm"
-									: "text-ink-400 hover:text-ink-900",
-							)}
+							type="button"
+							onClick={handleAdd}
+							className="btn btn--primary btn--md"
 						>
-							<LayoutGrid size={20} />
+							<Plus size={20} />
+							{t("students_new_registry")}
 						</button>
-					</div>
-					<button
-						type="button"
-						onClick={handleAdd}
-						className="btn btn--primary btn--md"
-					>
-						<Plus size={20} />
-						Nouveau Registre
-					</button>
-				</div>
-			</div>
+					</>
+				}
+			/>
 
 			{viewMode === "table" ? (
 				<DataTable
-					data={optimisticStudents}
+					data={filteredStudents}
 					columns={columns}
 					searchPlaceholder={t("students_search_placeholder")}
 					hideDefaultAction={true}
 				/>
 			) : (
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-					{optimisticStudents.map((student) => (
+					{filteredStudents.map((student) => (
 						<StudentCard
 							key={student.id}
 							student={student}
@@ -369,6 +428,14 @@ export default function StudentsClientView({
 				student={selectedStudent}
 				groups={groups}
 			/>
+
+			{previewStudent && (
+				<StudentPdfPreviewModal
+					student={previewStudent}
+					isOpen={!!previewStudent}
+					onClose={() => setPreviewStudent(null)}
+				/>
+			)}
 
 			{/* Error Notification */}
 			<AnimatePresence>

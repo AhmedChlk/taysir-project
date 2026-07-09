@@ -83,7 +83,7 @@ export default function DropdownMenu({
 			<button
 				type="button"
 				onClick={toggleDropdown}
-				className="p-2 rounded-xl text-gray-400 hover:text-taysir-teal hover:bg-taysir-teal/5 transition-all outline-none focus:ring-2 focus:ring-taysir-teal/20 active:bg-taysir-teal/10"
+				className="p-2 rounded-xl text-gray-400 hover:text-brand-500 hover:bg-brand-500/5 transition-all outline-none focus:ring-2 focus:ring-brand-500/20 active:bg-brand-500/10"
 			>
 				{trigger || <MoreVertical size={20} />}
 			</button>
@@ -108,7 +108,7 @@ export default function DropdownMenu({
 									left: coords.left,
 									width: "224px", // w-56
 								}}
-								className="z-[9999] origin-top rounded-2xl bg-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] ring-1 ring-black/5 overflow-hidden border border-taysir-teal/5 pointer-events-auto"
+								className="z-[9999] origin-top rounded-2xl bg-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] ring-1 ring-black/5 overflow-hidden border border-brand-500/5 pointer-events-auto"
 								onClick={(e) => e.stopPropagation()}
 							>
 								<div className="py-2 bg-white">
@@ -126,7 +126,7 @@ export default function DropdownMenu({
 											"flex w-full items-center gap-3 px-5 py-3 text-sm font-bold transition-colors text-left",
 											item.variant === "danger"
 												? "text-rose-600 hover:bg-rose-50"
-												: "text-taysir-teal/80 hover:bg-taysir-teal/5 hover:text-taysir-teal",
+												: "text-brand-500/80 hover:bg-brand-500/5 hover:text-brand-500",
 										);
 
 										if (item.href) {

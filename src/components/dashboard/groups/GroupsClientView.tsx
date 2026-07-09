@@ -26,6 +26,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, Select } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
+import { PageHeader, StatCard } from "@/components/ui/primitives";
 import { useRouter } from "@/i18n/routing";
 import type {
 	Activity,
@@ -210,15 +211,16 @@ export default function GroupsClientView({
 			header: t("group_name"),
 			accessor: (group: Group) => (
 				<div className="flex items-center gap-4">
-					<div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-teal/20 to-primary-teal/10 text-primary-teal shadow-sm">
+					<div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 shadow-ts-1">
 						<Users size={22} />
 					</div>
 					<div className="flex flex-col">
-						<span className="font-bold text-gray-900 text-sm">
-							{group.name}
-						</span>
-						<span className="text-xs text-gray-500 font-medium">
-							Id: {group.id.split("-")[0]}
+						<span className="font-bold text-ink-900 text-sm">{group.name}</span>
+						<span className="text-xs text-ink-400 font-medium">
+							{group.students?.length || 0}{" "}
+							{(group.students?.length || 0) > 1
+								? t("groups_students_plural")
+								: t("groups_students_singular")}
 						</span>
 					</div>
 				</div>
@@ -232,20 +234,22 @@ export default function GroupsClientView({
 						{(group.students || []).slice(0, 3).map((_, i) => (
 							<div
 								key={i}
-								className="h-8 w-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shadow-sm"
+								className="h-8 w-8 rounded-full border-2 border-white bg-surface-100 flex items-center justify-center text-xs font-bold text-ink-500 shadow-ts-1"
 							>
 								<UserTypeIcon />
 							</div>
 						))}
 						{(group.students?.length || 0) > 3 && (
-							<div className="h-8 w-8 rounded-full border-2 border-white bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-500 shadow-sm">
+							<div className="h-8 w-8 rounded-full border-2 border-white bg-surface-50 flex items-center justify-center text-xs font-bold text-ink-400 shadow-ts-1">
 								+{(group.students?.length || 0) - 3}
 							</div>
 						)}
 					</div>
-					<span className="text-sm font-semibold text-gray-700 ml-2">
+					<span className="text-sm font-semibold text-ink-700 ml-2">
 						{group.students?.length || 0}{" "}
-						{t("students")?.toLowerCase() || "élèves"}
+						{(group.students?.length || 0) > 1
+							? t("groups_students_plural")
+							: t("groups_students_singular")}
 					</span>
 				</div>
 			),
@@ -255,16 +259,16 @@ export default function GroupsClientView({
 			accessor: (group: Group) => (
 				<span
 					className={clsx(
-						"inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-sm transition-all",
+						"inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border",
 						group.isActive
-							? "bg-green-50 text-green-700 border border-green-200"
-							: "bg-red-50 text-red-700 border border-red-200",
+							? "bg-success-50 text-success border-success/10"
+							: "bg-rose-50 text-danger border-danger/10",
 					)}
 				>
 					<span
 						className={clsx(
 							"h-1.5 w-1.5 rounded-full",
-							group.isActive ? "bg-green-500" : "bg-red-500",
+							group.isActive ? "bg-success" : "bg-danger",
 						)}
 					/>
 					{group.isActive ? t("active") : t("inactive")}
@@ -281,7 +285,7 @@ export default function GroupsClientView({
 							e.stopPropagation();
 							handleDelete(group.id);
 						}}
-						className="p-2 bg-red-600 text-white rounded-xl transition-all duration-300 ease-out shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+						className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-400 transition-colors hover:bg-rose-50 hover:text-danger"
 						title={t("delete")}
 					>
 						<Trash2 size={18} />
@@ -292,99 +296,64 @@ export default function GroupsClientView({
 	];
 
 	return (
-		<div className="space-y-8 animate-in fade-in duration-500 ease-out">
-			{/* Header */}
-			<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-				<div>
-					<h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-						{t("groups_title")}
-					</h1>
-					<p className="text-sm text-gray-500 mt-1 font-medium">
-						{t("groups_subtitle")}
-					</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => {
-						setSelectedGroup(null);
-						setIsModalOpen(true);
-						if (navigator.vibrate) navigator.vibrate(50);
-					}}
-					className="btn-primary flex items-center gap-2"
-				>
-					<Plus size={20} strokeWidth={2.5} />
-					{t("add_group")}
-				</button>
-			</div>
+		<div className="space-y-8">
+			<PageHeader
+				eyebrow={t("groups_title")}
+				title="Gestion des"
+				accent="Groupes"
+				subtitle={t("groups_subtitle")}
+				actions={
+					<button
+						type="button"
+						onClick={() => {
+							setSelectedGroup(null);
+							setIsModalOpen(true);
+							if (navigator.vibrate) navigator.vibrate(50);
+						}}
+						className="btn btn--primary btn--md"
+					>
+						<Plus size={20} strokeWidth={2.5} />
+						{t("add_group")}
+					</button>
+				}
+			/>
 
-			{/* Bento Grid Stats */}
+			{/* Stats */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-					<div className="flex items-center gap-3 mb-2">
-						<div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-							<Users size={20} />
-						</div>
-						<h3 className="font-semibold text-gray-600 text-sm">
-							{t("groups_total_count")}
-						</h3>
-					</div>
-					<p className="text-3xl font-black text-gray-900">
-						{metrics.totalGroups}
-					</p>
-				</div>
-
-				<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-					<div className="flex items-center gap-3 mb-2">
-						<div className="p-2 bg-green-50 text-green-600 rounded-lg">
-							<CheckCircle2 size={20} />
-						</div>
-						<h3 className="font-semibold text-gray-600 text-sm">
-							{t("groups_active_count")}
-						</h3>
-					</div>
-					<p className="text-3xl font-black text-gray-900">
-						{metrics.activeGroups}
-					</p>
-				</div>
-
-				<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-					<div className="flex items-center gap-3 mb-2">
-						<div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-							<TrendingUp size={20} />
-						</div>
-						<h3 className="font-semibold text-gray-600 text-sm">
-							{t("groups_enrolled_count")}
-						</h3>
-					</div>
-					<p className="text-3xl font-black text-gray-900">
-						{metrics.totalStudentsInGroups}
-					</p>
-				</div>
-
-				<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-					<div className="flex items-center gap-3 mb-2">
-						<div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-							<Users size={20} />
-						</div>
-						<h3 className="font-semibold text-gray-600 text-sm">
-							{t("groups_avg_students")}
-						</h3>
-					</div>
-					<p className="text-3xl font-black text-gray-900">
-						{metrics.avgStudents}
-					</p>
-				</div>
+				<StatCard
+					label={t("groups_total_count")}
+					value={metrics.totalGroups}
+					icon={<Users size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("groups_active_count")}
+					value={metrics.activeGroups}
+					icon={<CheckCircle2 size={20} />}
+					tone="positive"
+				/>
+				<StatCard
+					label={t("groups_enrolled_count")}
+					value={metrics.totalStudentsInGroups}
+					icon={<TrendingUp size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("groups_avg_students")}
+					value={metrics.avgStudents}
+					icon={<Users size={20} />}
+					tone="warning"
+				/>
 			</div>
 
 			{/* Main Table */}
-			<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-				<DataTable
-					data={optimisticGroups}
-					columns={columns}
-					searchPlaceholder={t("groups_search_placeholder")}
-					onAction={handleAction}
-				/>
-			</div>
+			<DataTable
+				data={optimisticGroups}
+				columns={columns}
+				searchPlaceholder={t("groups_search_placeholder")}
+				onAction={handleAction}
+				hideDefaultAction={true}
+			/>
 
 			{/* Modal */}
 			<Modal
@@ -400,7 +369,7 @@ export default function GroupsClientView({
 							type="button"
 							disabled={isPending}
 							onClick={() => setIsModalOpen(false)}
-							className="btn-ghost"
+							className="btn btn--ghost btn--md"
 						>
 							{t("cancel")}
 						</button>
@@ -408,7 +377,7 @@ export default function GroupsClientView({
 							form="group-form"
 							type="submit"
 							disabled={isPending}
-							className="btn-primary flex items-center gap-2"
+							className="btn btn--primary btn--md"
 						>
 							{isPending && <Loader2 size={18} className="animate-spin" />}
 							{selectedGroup ? t("save_changes") : t("add")}
@@ -421,10 +390,10 @@ export default function GroupsClientView({
 					<form
 						id="group-form"
 						onSubmit={handleSubmit}
-						className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 space-y-4"
+						className="bg-surface-50 p-5 rounded-2xl border border-line/60 space-y-4"
 					>
-						<h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
-							<div className="w-6 h-6 rounded-md bg-accent-teal/10 flex items-center justify-center text-accent-teal">
+						<h4 className="text-sm font-bold text-ink-900 flex items-center gap-2 mb-4">
+							<div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center text-brand-500">
 								1
 							</div>
 							{t("groups_general_info")}
@@ -441,15 +410,15 @@ export default function GroupsClientView({
 					{/* Students Management Section (Only visible if Editing) */}
 					{selectedGroup && (
 						<div className="space-y-6">
-							<h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-								<div className="w-6 h-6 rounded-md bg-accent-teal/10 flex items-center justify-center text-accent-teal">
+							<h4 className="text-sm font-bold text-ink-900 flex items-center gap-2">
+								<div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center text-brand-500">
 									2
 								</div>
 								{t("groups_student_management")}
 							</h4>
 
 							{/* Add Student Row */}
-							<div className="flex gap-3 items-end bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+							<div className="flex gap-3 items-end bg-white p-4 rounded-2xl border border-line/60 shadow-ts-1">
 								<div className="flex-1">
 									<Select
 										label={t("groups_add_new_student")}
@@ -479,7 +448,7 @@ export default function GroupsClientView({
 										handleAddStudent();
 									}}
 									disabled={isPending || !selectedStudentToAdd}
-									className="btn-secondary mb-1.5 flex items-center gap-2"
+									className="btn btn--secondary btn--md mb-1.5"
 								>
 									<Plus size={18} />
 									{t("add")}
@@ -489,7 +458,7 @@ export default function GroupsClientView({
 							{/* Student List */}
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
-									<span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+									<span className="text-xs font-bold text-ink-400 uppercase tracking-wider">
 										{t("groups_enrolled_count_detail", {
 											count: selectedGroup.students?.length || 0,
 										})}
@@ -498,14 +467,14 @@ export default function GroupsClientView({
 
 								{!selectedGroup.students ||
 								selectedGroup.students.length === 0 ? (
-									<div className="flex flex-col items-center justify-center py-10 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
-										<div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-											<Inbox size={24} className="text-gray-300" />
+									<div className="flex flex-col items-center justify-center py-10 bg-surface-50 border border-dashed border-line/60 rounded-2xl">
+										<div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-ts-1 mb-4">
+											<Inbox size={24} className="text-ink-300" />
 										</div>
-										<h3 className="text-sm font-bold text-gray-700 mb-1">
+										<h3 className="text-sm font-bold text-ink-700 mb-1">
 											{t("groups_no_students")}
 										</h3>
-										<p className="text-xs text-gray-500 text-center max-w-[250px]">
+										<p className="text-xs text-ink-500 text-center max-w-[250px]">
 											{t("groups_empty_group_desc")}
 										</p>
 									</div>
@@ -514,18 +483,18 @@ export default function GroupsClientView({
 										{selectedGroup.students.map((student) => (
 											<div
 												key={student.id}
-												className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group"
+												className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-line/60 shadow-ts-1 hover:border-line transition-all group"
 											>
 												<div className="flex items-center gap-3">
-													<div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center font-bold text-gray-600 text-sm shadow-inner">
+													<div className="h-10 w-10 rounded-full bg-surface-100 flex items-center justify-center font-bold text-ink-500 text-sm">
 														{student.firstName.charAt(0)}
 														{student.lastName.charAt(0)}
 													</div>
 													<div className="flex flex-col">
-														<span className="text-sm font-bold text-gray-900 group-hover:text-primary-teal transition-colors">
+														<span className="text-sm font-bold text-ink-900 group-hover:text-brand-500 transition-colors">
 															{student.firstName} {student.lastName}
 														</span>
-														<span className="text-xs font-medium text-gray-500">
+														<span className="text-xs font-medium text-ink-500">
 															{student.email ||
 																student.phone ||
 																t("student_not_provided")}
@@ -539,7 +508,7 @@ export default function GroupsClientView({
 														handleRemoveStudent(student.id, selectedGroup.id);
 													}}
 													disabled={isPending}
-													className="p-2 bg-red-600 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+													className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-400 opacity-0 transition-all hover:bg-rose-50 hover:text-danger group-hover:opacity-100 focus:opacity-100"
 													title={t("delete")}
 												>
 													<UserMinus size={18} />

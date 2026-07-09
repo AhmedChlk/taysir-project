@@ -3,7 +3,7 @@
 import bcrypt from "bcryptjs";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
+import { createSafeAction, MANAGEMENT_ROLES } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma, prisma } from "@/lib/prisma";
 import { stripUndefined } from "@/lib/utils/prisma-helpers";
@@ -48,6 +48,7 @@ export const createUserAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_staff`, "max");
 		return user;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const getUsersListAction = createSafeAction(
@@ -131,6 +132,7 @@ export const updateUserAction = createSafeAction(
 
 		return updatedUser;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const resetUserPasswordAction = createSafeAction(
@@ -150,12 +152,52 @@ export const resetUserPasswordAction = createSafeAction(
 			select: { id: true, email: true },
 		});
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const deleteUserAction = createSafeAction(
 	z.object({ id: z.string().uuid() }),
-	async ({ id }, { tenantId }) => {
+	async ({ id }, { tenantId, userId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+
+		// Garde : on ne supprime pas la cible si c'est le dernier GERANT actif
+		// (sinon l'établissement se retrouve orphelin, sans compte pilote).
+		const target = await tenantPrisma.user.findUnique({
+			where: { id_etablissementId: { id, etablissementId: tenantId } },
+			select: { id: true, role: true },
+		});
+		if (!target) {
+			throw new TaysirError(
+				"Utilisateur introuvable ou accès refusé.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+		if (target.id === userId) {
+			throw new TaysirError(
+				"Utilisez la suppression de compte pour supprimer votre propre compte.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
+			);
+		}
+		if (target.role === "GERANT") {
+			const otherActiveGerant = await tenantPrisma.user.findFirst({
+				where: {
+					role: "GERANT",
+					status: "ACTIVE",
+					etablissementId: tenantId,
+					NOT: { id },
+				},
+				select: { id: true },
+			});
+			if (!otherActiveGerant) {
+				throw new TaysirError(
+					"Impossible de supprimer le dernier gérant actif de l'établissement.",
+					ErrorCodes.ERR_FORBIDDEN,
+					403,
+				);
+			}
+		}
 
 		const user = await tenantPrisma.user.delete({
 			where: {
@@ -169,4 +211,5 @@ export const deleteUserAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_staff`, "max");
 		return user;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );

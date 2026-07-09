@@ -41,10 +41,11 @@
 }
 
 .rbc-toolbar button {
+	min-height: 36px;
 	color: var(--ink-700);
 	border: 1px solid var(--line);
 	border-radius: 12px;
-	padding: 8px 16px;
+	padding: 8px 18px;
 	font-weight: 600;
 	font-size: 13px;
 	transition: all 0.2s var(--ease);
@@ -72,4 +73,13 @@
 [dir="rtl"] .rbc-time-view .rbc-time-header {
 	margin-right: 0;
 	margin-left: 10px;
+}
+
+/* Garder l'heure des événements en LTR même en RTL (arabe) : évite
+   l'inversion visuelle « 08:00 – 09:30 » → « 09:30 – 08:00 ». */
+.rbc-event-label,
+.rbc-time-header-content .rbc-header,
+.rbc-label {
+	direction: ltr;
+	unicode-bidi: embed;
 }

@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import {
 	ArrowLeft,
 	Calendar,
@@ -13,35 +12,26 @@ import {
 	Users,
 	Wallet,
 } from "lucide-react";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getStudentFullProfileAction } from "@/actions/students.actions";
 import { getGroups } from "@/services/api";
 import type { Group, PaymentPlan, Student } from "@/types/schema";
 
+// Type dérivé du retour de l'action : les montants monétaires y sont déjà
+// convertis Decimal → number à la frontière (cf. money.ts).
+type ProfileActionResult = Awaited<
+	ReturnType<typeof getStudentFullProfileAction>
+>;
 type StudentFullProfile = NonNullable<
-	Prisma.StudentGetPayload<{
-		include: {
-			groups: true;
-			documents: true;
-			attendance: {
-				include: { session: { include: { activity: true } } };
-			};
-			paymentPlans: {
-				include: {
-					activity: true;
-					tranches: { include: { paiements: true } };
-				};
-			};
-		};
-	}>
+	Extract<ProfileActionResult, { success: true }>["data"]
 >;
 
 import { clsx } from "clsx";
 import AddDocumentButton from "@/components/dashboard/students/AddDocumentButton";
 import DownloadStudentProfile from "@/components/dashboard/students/DownloadStudentProfile";
 import EditStudentProfileButton from "@/components/dashboard/students/EditStudentProfileButton";
+import { StudentAvatar } from "@/components/dashboard/students/StudentAvatar";
 import { Link } from "@/i18n/routing";
 import { formatDate, formatFullName, formatTime } from "@/utils/format";
 
@@ -117,18 +107,13 @@ export default async function StudentProfilePage({ params }: PageProps) {
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 				<div className="col-span-1 lg:col-span-8 bg-white rounded-[24px] border border-line p-8 md:p-10 shadow-sm relative overflow-hidden group">
 					<div className="relative z-10 flex flex-col md:flex-row gap-10 items-center md:items-start">
-						<div className="relative w-44 h-44 rounded-[40px] overflow-hidden border-4 border-white shadow-ts-3 shrink-0 bg-surface-100 flex items-center justify-center">
-							{student.photoUrl ? (
-								<Image
-									src={student.photoUrl}
-									alt={student.firstName}
-									fill
-									className="object-cover"
-								/>
-							) : (
-								<User size={80} className="text-ink-200" />
-							)}
-						</div>
+						<StudentAvatar
+							src={student.photoUrl}
+							name={formatFullName(student.firstName, student.lastName)}
+							size={176}
+							rounded="rounded-[40px]"
+							className="border-4 border-white shadow-ts-3"
+						/>
 
 						<div className="flex-1 text-center md:text-left">
 							<div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">

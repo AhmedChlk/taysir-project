@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
-import { createSafeAction } from "@/lib/actions/safe-action";
+import { createSafeAction, FRONTDESK_ROLES } from "@/lib/actions/safe-action";
 import { getTenantPrisma } from "@/lib/prisma";
 import {
 	GetStudentDocumentsSchema,
@@ -27,6 +27,7 @@ export const updateDocumentStatusAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_students`, "max");
 		return document;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const getStudentDocumentsAction = createSafeAction(
@@ -41,4 +42,5 @@ export const getStudentDocumentsAction = createSafeAction(
 			orderBy: { createdAt: "desc" },
 		});
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );

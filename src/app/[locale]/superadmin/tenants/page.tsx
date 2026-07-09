@@ -1,5 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { getAllTenantsAction } from "@/actions/superadmin.actions";
+import PlatformStatsBar from "@/components/superadmin/PlatformStatsBar";
 import SuperAdminTenantsView from "@/components/superadmin/SuperAdminTenantsView";
 
 export default async function SuperAdminTenantsPage({
@@ -21,5 +22,10 @@ export default async function SuperAdminTenantsPage({
 		);
 	}
 
-	return <SuperAdminTenantsView initialTenants={res.data} />;
+	return (
+		<>
+			<PlatformStatsBar />
+			<SuperAdminTenantsView initialTenants={res.data} />
+		</>
+	);
 }

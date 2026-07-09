@@ -104,7 +104,7 @@ describe("Dashboard Actions Audit", () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			// Zéro salle, Zéro session
 			mockPrisma.room.count.mockResolvedValue(0);
-			mockPrisma.session.count.mockResolvedValue(0);
+			mockPrisma.session.findMany.mockResolvedValue([]);
 
 			const result = await getRoomOccupancyAction({});
 			expect(result.success).toBe(true);
@@ -113,9 +113,12 @@ describe("Dashboard Actions Audit", () => {
 
 		it("getRoomOccupancyAction: Arrondi correct (Math.round)", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-			// 2 sessions sur 3 salles = 66.66% -> 67%
+			// 2 salles occupées sur 3 = 66.66% -> 67%
 			mockPrisma.room.count.mockResolvedValue(3);
-			mockPrisma.session.count.mockResolvedValue(2);
+			mockPrisma.session.findMany.mockResolvedValue([
+				{ roomId: "r1" },
+				{ roomId: "r2" },
+			]);
 
 			const result = await getRoomOccupancyAction({});
 			expect(result.success).toBe(true);
@@ -161,8 +164,8 @@ describe("Dashboard Actions Audit", () => {
 		it("getPendingPaymentsAction: Calcule la somme des restes à payer (reduce)", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
 			mockPrisma.paymentPlan.findMany.mockResolvedValue([
-				{ id: "p1", totalAmount: 1000, paidAmount: 200 }, // Reste 800
-				{ id: "p2", totalAmount: 500, paidAmount: 0 }, // Reste 500
+				{ id: "p1", totalAmount: 1000, paidAmount: 200, tranches: [] }, // Reste 800
+				{ id: "p2", totalAmount: 500, paidAmount: 0, tranches: [] }, // Reste 500
 			]);
 
 			const result = await getPendingPaymentsAction({});
@@ -293,7 +296,7 @@ describe("Dashboard Actions Audit", () => {
 			mockPrisma.student.findMany.mockResolvedValue([{}]);
 			mockPrisma.session.findMany.mockResolvedValue([{}]);
 			mockPrisma.paymentPlan.findMany.mockResolvedValue([
-				{ totalAmount: 100, paidAmount: 50 }, // Reste 50
+				{ totalAmount: 100, paidAmount: 50, tranches: [] }, // Reste 50
 			]);
 
 			const result = await getDashboardFormDataAction({});

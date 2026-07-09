@@ -41,6 +41,11 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Fuseau horaire de l'application = Algérie (UTC+1). Tous les calculs de dates
+# (startOfDay, buckets "aujourd'hui"/mois, présences) s'appuient sur l'heure
+# locale du process : sans ce réglage, un serveur en UTC classerait les séances
+# de 00h–01h heure locale dans le mauvais jour.
+ENV TZ=Africa/Algiers
 
 # No Prisma migration history in this project — sync schema with db push at boot.
 CMD ["sh", "-c", "echo '[BOOT] Syncing Prisma schema...' && ./node_modules/.bin/prisma db push --skip-generate && echo '[BOOT] Schema synced. Starting server...' && node server.js"]

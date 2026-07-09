@@ -2,7 +2,12 @@
 
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
+import {
+	ATTENDANCE_ROLES,
+	createSafeAction,
+	FRONTDESK_ROLES,
+	MANAGEMENT_ROLES,
+} from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
 import { stripUndefined } from "@/lib/utils/prisma-helpers";
@@ -25,6 +30,7 @@ export const createGroupAction = createSafeAction(
 		revalidateTag(`groups-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const updateGroupAction = createSafeAction(
@@ -43,6 +49,7 @@ export const updateGroupAction = createSafeAction(
 		revalidateTag(`groups-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const deleteGroupAction = createSafeAction(
@@ -84,6 +91,7 @@ export const deleteGroupAction = createSafeAction(
 		revalidateTag(`groups-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const createRoomAction = createSafeAction(
@@ -96,6 +104,7 @@ export const createRoomAction = createSafeAction(
 		revalidateTag(`rooms-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const updateRoomAction = createSafeAction(
@@ -114,6 +123,7 @@ export const updateRoomAction = createSafeAction(
 		revalidateTag(`rooms-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const deleteRoomAction = createSafeAction(
@@ -155,6 +165,7 @@ export const deleteRoomAction = createSafeAction(
 		revalidateTag(`rooms-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const createActivityAction = createSafeAction(
@@ -167,6 +178,7 @@ export const createActivityAction = createSafeAction(
 		revalidateTag(`activities-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const updateActivityAction = createSafeAction(
@@ -185,6 +197,7 @@ export const updateActivityAction = createSafeAction(
 		revalidateTag(`activities-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const deleteActivityAction = createSafeAction(
@@ -230,6 +243,7 @@ export const deleteActivityAction = createSafeAction(
 		revalidateTag(`activities-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: MANAGEMENT_ROLES },
 );
 
 export const markPresenceAction = createSafeAction(
@@ -244,12 +258,32 @@ export const markPresenceAction = createSafeAction(
 					etablissementId: tenantId,
 				},
 			},
+			select: { groupId: true },
 		});
 		if (!seance) {
 			throw new TaysirError(
 				"Séance introuvable.",
 				ErrorCodes.ERR_NOT_FOUND,
 				404,
+			);
+		}
+
+		// Intégrité : l'élève doit exister DANS ce tenant ET être inscrit au groupe
+		// de la séance. `Student.id` est une PK globale ; sans ce contrôle on pourrait
+		// écrire une présence pour l'élève d'un autre établissement ou hors-groupe.
+		const enrolled = await tenantPrisma.student.findFirst({
+			where: {
+				id: data.participantId,
+				etablissementId: tenantId,
+				groups: { some: { id: seance.groupId } },
+			},
+			select: { id: true },
+		});
+		if (!enrolled) {
+			throw new TaysirError(
+				"Élève introuvable ou non inscrit au groupe de cette séance.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
 			);
 		}
 
@@ -280,12 +314,45 @@ export const markPresenceAction = createSafeAction(
 		revalidateTag(`attendance-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: ATTENDANCE_ROLES },
 );
 
 export const bulkMarkPresenceAction = createSafeAction(
 	BulkMarkPresenceSchema,
 	async ({ sessionId, records }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+
+		// La séance doit appartenir au tenant (non vérifié auparavant).
+		const seance = await tenantPrisma.session.findUnique({
+			where: { id_etablissementId: { id: sessionId, etablissementId: tenantId } },
+			select: { groupId: true },
+		});
+		if (!seance) {
+			throw new TaysirError(
+				"Séance introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
+		// Tous les élèves pointés doivent être inscrits au groupe de la séance
+		// (empêche l'écriture de présences cross-tenant ou hors-groupe).
+		const enrolled = await tenantPrisma.student.findMany({
+			where: {
+				etablissementId: tenantId,
+				groups: { some: { id: seance.groupId } },
+			},
+			select: { id: true },
+		});
+		const enrolledIds = new Set(enrolled.map((s) => s.id));
+		const intrus = records.find((r) => !enrolledIds.has(r.studentId));
+		if (intrus) {
+			throw new TaysirError(
+				"Un ou plusieurs élèves ne sont pas inscrits au groupe de cette séance.",
+				ErrorCodes.ERR_INVALID_DATA,
+				400,
+			);
+		}
 
 		const result = await tenantPrisma.$transaction(
 			records.map((record) =>
@@ -316,4 +383,5 @@ export const bulkMarkPresenceAction = createSafeAction(
 		revalidateTag(`attendance-${tenantId}`, "max");
 		return result;
 	},
+	{ requiredRole: ATTENDANCE_ROLES },
 );

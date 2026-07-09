@@ -9,17 +9,17 @@ export default function SecuritySettings() {
 
 	return (
 		<div className="space-y-6 animate-in fade-in duration-500">
-			<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+			<div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden">
 				<div className="p-6 sm:p-8 space-y-8">
-					<div className="flex items-center gap-3 pb-6 border-b border-gray-100">
-						<div className="p-2.5 bg-primary-teal/10 rounded-lg text-primary-teal">
+					<div className="flex items-center gap-3 pb-6 border-b border-line/70">
+						<div className="p-2.5 bg-brand-500/10 rounded-lg text-brand-500">
 							<Shield size={20} />
 						</div>
 						<div>
-							<h3 className="text-sm font-bold text-gray-900">
+							<h3 className="text-sm font-bold text-ink-900">
 								{t("change_password")}
 							</h3>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-ink-500">
 								{t("security_settings_desc")}
 							</p>
 						</div>

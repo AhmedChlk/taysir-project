@@ -32,7 +32,7 @@ export default function LanguageSwitcher() {
 				onClick={() => setIsOpen(!isOpen)}
 				className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-100"
 			>
-				<Languages size={18} className="text-primary-teal" />
+				<Languages size={18} className="text-brand-500" />
 				<span className="text-sm font-bold hidden sm:inline">
 					{currentLocale?.label}
 				</span>
@@ -66,7 +66,7 @@ export default function LanguageSwitcher() {
 								className={clsx(
 									"flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors",
 									locale === l.code
-										? "bg-primary-teal/5 text-primary-teal"
+										? "bg-brand-500/5 text-brand-500"
 										: "text-gray-600 hover:bg-gray-50",
 								)}
 							>

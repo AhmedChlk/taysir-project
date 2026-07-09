@@ -1,27 +1,19 @@
-import DashboardSPA from "@/components/dashboard/DashboardSPA";
-import LiveRosterWidget from "@/components/dashboard/widgets/LiveRosterWidget";
-import PaymentsWidget from "@/components/dashboard/widgets/PaymentsWidget";
-import PerformanceKPIsWidget from "@/components/dashboard/widgets/PerformanceKPIsWidget";
-import SessionsWidget from "@/components/dashboard/widgets/SessionsWidget";
-import StaffAlertsWidget from "@/components/dashboard/widgets/StaffAlertsWidget";
-import StatsWidget from "@/components/dashboard/widgets/StatsWidget";
+import { getServerSession } from "next-auth/next";
+import DirectorCockpit from "@/components/dashboard/DirectorCockpit";
+import SecretaryCockpit from "@/components/dashboard/SecretaryCockpit";
+import TeacherCockpit from "@/components/dashboard/TeacherCockpit";
+import { authOptions } from "@/lib/auth";
 
-interface PageProps {
-	params: Promise<{ locale: string }>;
-}
-
-export default async function DashboardPage({ params }: PageProps) {
-	const { locale } = await params;
-
-	return (
-		<DashboardSPA
-			locale={locale}
-			stats={<StatsWidget />}
-			sessions={<SessionsWidget />}
-			payments={<PaymentsWidget />}
-			kpis={<PerformanceKPIsWidget />}
-			roster={<LiveRosterWidget />}
-			alerts={<StaffAlertsWidget />}
-		/>
-	);
+export default async function DashboardPage() {
+	const session = await getServerSession(authOptions);
+	const role = session?.user.role;
+	// Chaque rôle a son accueil : l'enseignant son espace (ses séances), la
+	// secrétaire son guichet (caisse + inscriptions), les autres le pilotage.
+	if (role === "INTERVENANT") {
+		return <TeacherCockpit />;
+	}
+	if (role === "SECRETAIRE") {
+		return <SecretaryCockpit />;
+	}
+	return <DirectorCockpit />;
 }

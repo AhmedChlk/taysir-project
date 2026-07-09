@@ -49,6 +49,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/tests/screenshots/
 
 # Claude Code local settings (may contain secrets)
 .claude/settings.json
@@ -59,6 +60,11 @@ node_modules/
 .playwright-mcp/
 .snyk
 GEMINI.md
+
+# Screenshots / scratch captures at repo root (agent working files)
+/*.jpeg
+/*.jpg
+/*.png
 
 # Local binaries / installers
 *.deb

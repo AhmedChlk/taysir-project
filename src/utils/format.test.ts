@@ -26,8 +26,8 @@ describe("formatFullName", () => {
 });
 
 describe("formatCurrency", () => {
-	it("formats amount with default DZD currency", () => {
-		expect(formatCurrency(1500)).toContain("DZD");
+	it("formats amount with default DA currency", () => {
+		expect(formatCurrency(1500)).toContain("DA");
 	});
 
 	it("formats amount with custom currency", () => {

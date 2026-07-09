@@ -10,29 +10,68 @@ import {
 	DollarSign,
 	Download,
 	Loader2,
+	MessageCircle,
 	Plus,
 	Search,
-	TrendingUp,
+	Smartphone,
 	Wallet,
+	X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+	useCallback,
+	useMemo,
+	useOptimistic,
+	useState,
+	useTransition,
+} from "react";
 import {
 	createPaymentPlanAction,
+	registerBulkPaymentAction,
 	registerPaymentAction,
 } from "@/actions/finance.actions";
-import EmptyState from "@/components/ui/EmptyState";
+import { RelanceButton } from "@/components/dashboard/payments/RelanceButton";
 import { Input, Select } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
+import { PdfPreviewModal } from "@/components/ui/PdfPreviewModal";
+import {
+	Button,
+	Card,
+	PageHeader,
+	SectionEmpty,
+	StatCard,
+} from "@/components/ui/primitives";
 import { useRouter } from "@/i18n/routing";
+import {
+	type CsvCell,
+	csvDateStamp,
+	downloadCsv,
+	toCsv,
+} from "@/lib/export-csv";
+import { agingSummary, overdueInfo } from "@/lib/payment-aging";
+import { generatePaymentPlanReceiptPDF } from "@/lib/pdf-generators/payment-receipt";
+import { localizedSubject } from "@/lib/subjects";
+import {
+	buildReceiptMessage,
+	buildRelanceMessage,
+	buildSmsUrl,
+	buildWaUrl,
+	normalizeDzPhone,
+} from "@/lib/wa-relance";
 import type { Activity, Payment, PaymentMethod, Student } from "@/types/schema";
-import { formatFullName } from "@/utils/format";
+import { formatCurrency, formatFullName } from "@/utils/format";
 
 interface PaymentsClientViewProps {
 	initialPayments: Payment[];
 	students: Student[];
 	activities: Activity[];
+	schoolName?: string;
+	relanceMap?: Record<string, string>;
 }
+
+// Valeur sentinelle du sélecteur → règlement réparti automatiquement sur les
+// échéances impayées les plus anciennes (paie plusieurs tranches en 1 fois).
+const BULK_TRANCHE = "BULK";
 
 type OptimisticPaymentAction =
 	| { type: "create"; payment: Payment }
@@ -42,15 +81,24 @@ export default function PaymentsClientView({
 	initialPayments = [],
 	students = [],
 	activities = [],
+	schoolName = "",
+	relanceMap = {},
 }: PaymentsClientViewProps) {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+	const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 	const [selectedPaymentState, setSelectedPaymentState] =
 		useState<Payment | null>(null);
 	const [isPending, startTransition] = useTransition();
+	const [receiptWa, setReceiptWa] = useState<{
+		name: string;
+		waUrl: string;
+		smsUrl: string;
+	} | null>(null);
 	const t = useTranslations();
+	const locale = useLocale();
 	const router = useRouter();
 
 	const [optimisticPayments, applyOptimistic] = useOptimistic(
@@ -176,6 +224,37 @@ export default function PaymentsClientView({
 		return date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 	};
 
+	// Reçu WhatsApp au parent : envoi en 1 clic (wa.me n'accepte pas de pièce
+	// jointe, le message porte le détail du reçu ; le PDF reste téléchargeable).
+	const openReceipt = (r: {
+		studentFirstName: string;
+		studentLastName: string;
+		amount: number;
+		receiptNumber: number | null;
+		remaining: number;
+		parentPhone: string | null;
+		schoolName: string;
+	}) => {
+		const phone = normalizeDzPhone(r.parentPhone);
+		if (!phone) return;
+		const message = buildReceiptMessage({
+			studentFirstName: r.studentFirstName,
+			amount: r.amount,
+			receiptNumber: r.receiptNumber,
+			remaining: r.remaining,
+			school: r.schoolName,
+			locale,
+		});
+		// Envoi OPTIONNEL : on prépare les liens (WhatsApp + SMS) et on affiche un
+		// bandeau ; aucun onglet ne s'ouvre automatiquement — c'est l'utilisateur
+		// qui choisit le canal (certains parents en Algérie n'ont pas WhatsApp).
+		setReceiptWa({
+			name: `${r.studentFirstName} ${r.studentLastName}`,
+			waUrl: buildWaUrl(phone, message),
+			smsUrl: buildSmsUrl(phone, message),
+		});
+	};
+
 	const handleRegisterPayment = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!selectedTrancheId || paymentAmount <= 0 || !selectedPayment) return;
@@ -183,20 +262,32 @@ export default function PaymentsClientView({
 		const paymentId = selectedPayment.id;
 		const trancheId = selectedTrancheId;
 		const amount = paymentAmount;
+		const isBulk = trancheId === BULK_TRANCHE;
 
+		setReceiptWa(null);
 		startTransition(async () => {
-			applyOptimistic({ type: "register", trancheId, amount, paymentId });
+			if (!isBulk) {
+				applyOptimistic({ type: "register", trancheId, amount, paymentId });
+			}
 			setPaymentAmount(0);
 			setSelectedTrancheId("");
 
-			const result = await registerPaymentAction({
-				trancheId,
-				montant_paye: amount,
-				methode: paymentMethod,
-			});
+			const result = isBulk
+				? await registerBulkPaymentAction({
+						paymentPlanId: paymentId,
+						montant_paye: amount,
+						methode: paymentMethod,
+					})
+				: await registerPaymentAction({
+						trancheId,
+						montant_paye: amount,
+						methode: paymentMethod,
+					});
 
 			if (!result.success) {
 				alert(result.error.message);
+			} else {
+				openReceipt(result.data.receipt);
 			}
 			router.refresh();
 		});
@@ -205,8 +296,43 @@ export default function PaymentsClientView({
 	const stats = useMemo(() => {
 		const total = optimisticPayments.reduce((acc, p) => acc + p.totalAmount, 0);
 		const paid = optimisticPayments.reduce((acc, p) => acc + p.paidAmount, 0);
-		return { total, paid, remaining: total - paid };
+		const rate = total > 0 ? Math.round((paid / total) * 100) : 0;
+		return { total, paid, remaining: total - paid, rate };
 	}, [optimisticPayments]);
+
+	// Ancienneté des impayés — ce que le dirigeant doit voir en premier.
+	const aging = useMemo(
+		() => agingSummary(optimisticPayments),
+		[optimisticPayments],
+	);
+
+	// Reçu PDF du plan sélectionné (tous les règlements déjà encaissés).
+	const receiptBuild = useCallback(() => {
+		const p = selectedPayment;
+		const student = p ? studentsMap[p.studentId] : null;
+		const payments = (p?.tranches ?? [])
+			.filter((tr) => tr.isPaid)
+			.flatMap((tr) =>
+				(tr.paiements ?? []).map((pm) => ({
+					paidDate: new Date(pm.date).toLocaleDateString("fr-FR"),
+					dueLabel: new Date(tr.dueDate).toLocaleDateString("fr-FR"),
+					method: pm.method,
+					amount: pm.amount,
+				})),
+			);
+		return generatePaymentPlanReceiptPDF({
+			school: schoolName || "Taysir",
+			studentName: student
+				? formatFullName(student.firstName, student.lastName)
+				: "—",
+			activity: p?.activity?.name ?? "—",
+			receiptNumber: p ? `R-${p.id.slice(0, 8).toUpperCase()}` : "—",
+			date: new Date().toLocaleDateString("fr-FR"),
+			paidAmount: p?.paidAmount ?? 0,
+			remaining: p ? p.totalAmount - p.paidAmount : 0,
+			payments,
+		});
+	}, [selectedPayment, studentsMap, schoolName]);
 
 	const exportToCSV = () => {
 		const headers = [
@@ -217,14 +343,14 @@ export default function PaymentsClientView({
 			t("payments_remaining"),
 			t("payments_status"),
 		];
-		const rows = filteredPayments.map((p) => {
+		const rows: CsvCell[][] = filteredPayments.map((p) => {
 			const student = studentsMap[p.studentId];
 			const studentName = student
 				? formatFullName(student.firstName, student.lastName)
 				: t("unknown");
 			return [
-				`"${studentName}"`,
-				`"${p.activity?.name || "N/A"}"`,
+				studentName,
+				p.activity?.name || "N/A",
 				p.totalAmount,
 				p.paidAmount,
 				p.totalAmount - p.paidAmount,
@@ -232,126 +358,108 @@ export default function PaymentsClientView({
 			];
 		});
 
-		const csvContent = [
-			headers.join(","),
-			...rows.map((row) => row.join(",")),
-		].join("\n");
-
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		const url = URL.createObjectURL(blob);
-		link.setAttribute("href", url);
-		link.setAttribute(
-			"download",
-			`paiements_${new Date().toISOString().split("T")[0]}.csv`,
-		);
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
+		downloadCsv(`paiements_${csvDateStamp()}.csv`, toCsv(headers, rows));
 	};
 
 	return (
-		<div className="space-y-8 animate-in fade-in duration-500">
-			{/* Header */}
-			<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-				<div className="flex items-center gap-3">
-					<div className="p-3 bg-orange-100 text-orange-600 rounded-2xl shadow-sm">
-						<Wallet size={24} />
-					</div>
-					<div>
-						<h1 className="text-2xl font-black text-gray-900 tracking-tight">
-							{t("payments")}
-						</h1>
-						<p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-							{t("payments_subtitle")}
-						</p>
-					</div>
+		<div className="space-y-8">
+			<PageHeader
+				eyebrow={t("payments_subtitle")}
+				title={t("payments_manage_title")}
+				accent={t("payments")}
+				subtitle="Encaissez, suivez les échéances et relancez les impayés."
+				actions={
+					<>
+						<Button
+							variant="secondary"
+							onClick={exportToCSV}
+							icon={<Download size={18} />}
+						>
+							{t("payments_export_csv")}
+						</Button>
+						<Button
+							onClick={() => setIsAddModalOpen(true)}
+							icon={<Plus size={18} strokeWidth={2.5} />}
+						>
+							{t("payments_new_plan")}
+						</Button>
+					</>
+				}
+			/>
+
+			{/* KPI — focal first: money at risk (Reste à recouvrer) leads, danger tone. */}
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+				<div className="lg:col-span-2">
+					<StatCard
+						label={t("payments_remaining_collect")}
+						value={formatCurrency(stats.remaining)}
+						icon={<AlertCircle size={22} />}
+						tone="danger"
+					/>
 				</div>
-				<div className="flex items-center gap-3">
-					<button
-						type="button"
-						onClick={exportToCSV}
-						className="flex items-center gap-2 bg-white text-taysir-teal border border-taysir-teal/20 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-taysir-teal/5 transition-all shadow-sm"
-					>
-						<Download size={18} />
-						{t("payments_export_csv")}
-					</button>
-					<button
-						type="button"
-						onClick={() => setIsAddModalOpen(true)}
-						className="btn-primary flex items-center gap-2 text-sm py-2.5"
-					>
-						<Plus size={20} strokeWidth={2.5} />
-						{t("payments_new_plan")}
-					</button>
-				</div>
+				<StatCard
+					label={t("payments_total_collected")}
+					value={formatCurrency(stats.paid)}
+					icon={<CheckCircle2 size={22} />}
+					tone="positive"
+				/>
+				<StatCard
+					label={t("payments_total_forecast")}
+					value={formatCurrency(stats.total)}
+					icon={<Wallet size={22} />}
+					tone="brand"
+				/>
 			</div>
 
-			{/* Stats Summary */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<div className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm flex items-center gap-5">
-					<div className="h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-						<TrendingUp size={28} />
+			{/* Ancienneté des impayés (aging) — visible seulement s'il y a du retard */}
+			{aging.overdueTotal > 0 && (
+				<Card className="flex flex-col gap-4 border-accent/20 bg-accent-50/40 lg:flex-row lg:items-center">
+					<div className="flex items-center gap-3 lg:min-w-[230px]">
+						<span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
+							<AlertCircle size={22} />
+						</span>
+						<div>
+							<div className="text-[11px] font-bold uppercase tracking-widest text-accent-600">
+								En retard de paiement
+							</div>
+							<div className="text-xl font-extrabold tracking-tight text-accent-600">
+								{formatCurrency(aging.overdueTotal)}
+							</div>
+							<div className="text-xs font-semibold text-ink-500">
+								{aging.count} élève{aging.count > 1 ? "s" : ""} concerné
+								{aging.count > 1 ? "s" : ""}
+							</div>
+						</div>
 					</div>
-					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							{t("payments_total_forecast")}
-						</p>
-						<p className="text-2xl font-black text-gray-900">
-							{stats.total.toLocaleString()} DA
-						</p>
+					<div className="grid flex-1 grid-cols-3 gap-3">
+						<AgingBucket label="0–30 j" value={aging.b0_30} tone="brass" />
+						<AgingBucket label="30–60 j" value={aging.b30_60} tone="accent" />
+						<AgingBucket label="60 j +" value={aging.b60plus} tone="deep" />
 					</div>
-				</div>
-				<div className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm flex items-center gap-5">
-					<div className="h-14 w-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center">
-						<CheckCircle2 size={28} />
-					</div>
-					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							{t("payments_total_collected")}
-						</p>
-						<p className="text-2xl font-black text-gray-900">
-							{stats.paid.toLocaleString()} DA
-						</p>
-					</div>
-				</div>
-				<div className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm flex items-center gap-5">
-					<div className="h-14 w-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-						<AlertCircle size={28} />
-					</div>
-					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-							{t("payments_remaining_collect")}
-						</p>
-						<p className="text-2xl font-black text-red-600">
-							{stats.remaining.toLocaleString()} DA
-						</p>
-					</div>
-				</div>
-			</div>
+				</Card>
+			)}
 
 			{/* Filters */}
-			<div className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-4 rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+			<Card className="flex flex-col gap-3 md:flex-row md:items-center">
 				<div className="relative flex-1">
 					<Search
-						className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+						className="absolute start-4 top-1/2 -translate-y-1/2 text-ink-400"
 						size={18}
 					/>
 					<input
 						type="text"
 						placeholder={t("payments_search_placeholder")}
-						className="block w-full rounded-2xl border-none bg-gray-50 py-3 pl-12 pr-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5 transition-all shadow-inner"
+						className="block w-full rounded-xl border border-line/70 bg-surface-50 py-2.5 ps-12 pe-4 text-sm font-medium text-ink-900 placeholder-ink-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5"
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
 					/>
 				</div>
-				<div className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 rounded-2xl border border-gray-100 min-w-[200px]">
-					<FilterIcon size={18} className="text-gray-400" />
+				<div className="flex items-center gap-2 rounded-xl border border-line/70 bg-surface-50 px-4 md:min-w-[200px]">
+					<FilterIcon size={16} className="text-ink-400" />
 					<select
 						value={statusFilter}
 						onChange={(e) => setStatusFilter(e.target.value)}
-						className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer py-2"
+						className="h-9 flex-1 cursor-pointer border-none bg-transparent text-sm font-bold text-ink-700 focus:ring-0"
 					>
 						<option value="all">{t("payments_all_statuses")}</option>
 						<option value="PAID">{t("paid")}</option>
@@ -359,32 +467,69 @@ export default function PaymentsClientView({
 						<option value="PENDING">{t("pending")}</option>
 					</select>
 				</div>
-			</div>
+			</Card>
 
-			{/* Results Grid */}
+			{/* Table */}
 			{filteredPayments.length > 0 ? (
-				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{filteredPayments.map((payment) => {
-						const student = studentsMap[payment.studentId];
-						return student ? (
-							<PaymentCardStyled
-								key={payment.id}
-								payment={payment}
-								student={student}
-								onManage={handleManage}
-								t={t}
-							/>
-						) : null;
-					})}
-				</div>
+				<Card pad={false} className="overflow-hidden">
+					<div className="overflow-x-auto">
+						<table className="w-full border-collapse text-sm">
+							<thead>
+								<tr className="border-b border-line/70 bg-surface-50">
+									<th className="px-6 py-4 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+										{t("students_identity")}
+									</th>
+									<th className="px-6 py-4 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+										{t("payments_collected")}
+									</th>
+									<th className="px-6 py-4 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+										{t("payments_total_amount")}
+									</th>
+									<th className="px-6 py-4 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+										{t("payments_remaining")}
+									</th>
+									<th className="px-6 py-4 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+										{t("payments_status")}
+									</th>
+									<th className="px-6 py-4 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400" />
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-line/60">
+								{filteredPayments.map((payment) => {
+									const student = studentsMap[payment.studentId];
+									if (!student) return null;
+									return (
+										<PaymentRow
+											key={payment.id}
+											payment={payment}
+											student={student}
+											schoolName={schoolName}
+											lastRelance={relanceMap[payment.studentId]}
+											onManage={handleManage}
+											t={t}
+										/>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				</Card>
 			) : (
-				<EmptyState
-					icon={DollarSign}
-					title={t("payments_no_plan_found")}
-					description={t("payments_empty_desc")}
-					actionLabel={t("payments_create_plan")}
-					onAction={() => setIsAddModalOpen(true)}
-				/>
+				<Card>
+					<SectionEmpty
+						icon={<DollarSign size={24} />}
+						title={t("payments_no_plan_found")}
+						hint={t("payments_empty_desc")}
+						action={
+							<Button
+								onClick={() => setIsAddModalOpen(true)}
+								icon={<Plus size={18} strokeWidth={2.5} />}
+							>
+								{t("payments_create_plan")}
+							</Button>
+						}
+					/>
+				</Card>
 			)}
 
 			{/* Modal: Add New Payment Plan */}
@@ -393,15 +538,14 @@ export default function PaymentsClientView({
 				onClose={() => setIsAddModalOpen(false)}
 				title={t("payments_create_plan_title")}
 				footer={
-					<div className="flex items-center justify-end gap-3 w-full">
-						<button
-							type="button"
+					<div className="flex w-full items-center justify-end gap-3">
+						<Button
+							variant="secondary"
 							onClick={() => setIsAddModalOpen(false)}
-							className="bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl px-5 py-2.5 transition-all font-bold text-sm"
 						>
 							{t("cancel")}
-						</button>
-						<button
+						</Button>
+						<Button
 							form="add-plan-form"
 							type="submit"
 							disabled={
@@ -410,11 +554,14 @@ export default function PaymentsClientView({
 								!newPlanActivityId ||
 								newPlanTotal <= 0
 							}
-							className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50"
+							icon={
+								isPending ? (
+									<Loader2 size={18} className="animate-spin" />
+								) : undefined
+							}
 						>
-							{isPending && <Loader2 size={18} className="animate-spin" />}
 							{t("payments_create_schedule")}
-						</button>
+						</Button>
 					</div>
 				}
 			>
@@ -423,7 +570,7 @@ export default function PaymentsClientView({
 					onSubmit={handleAddPlan}
 					className="space-y-6 py-2"
 				>
-					<div className="bg-gray-50 p-5 rounded-3xl border border-gray-100 space-y-4">
+					<Card tone="ghost" className="space-y-4">
 						<Select
 							label={t("payments_student_concerned")}
 							value={newPlanStudentId}
@@ -467,10 +614,10 @@ export default function PaymentsClientView({
 								required
 							/>
 						</div>
-					</div>
-					<div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-						<Calendar size={18} className="text-blue-500 shrink-0 mt-0.5" />
-						<p className="text-xs text-blue-700 font-medium leading-relaxed">
+					</Card>
+					<div className="flex items-start gap-3 rounded-xl border border-brand-100 bg-brand-50 p-4">
+						<Calendar size={18} className="mt-0.5 shrink-0 text-brand-500" />
+						<p className="text-xs font-medium leading-relaxed text-brand-700">
 							Les tranches seront automatiquement espacées d&apos;un mois à
 							partir d&apos;aujourd&apos;hui. Vous pourrez les modifier
 							individuellement par la suite.
@@ -485,38 +632,43 @@ export default function PaymentsClientView({
 				onClose={() => setIsManageModalOpen(false)}
 				title={t("payments_schedule_details")}
 				footer={
-					<div className="flex items-center justify-end w-full">
-						<button
-							type="button"
-							onClick={() => setIsManageModalOpen(false)}
-							className="btn-primary text-sm"
+					<div className="flex w-full items-center justify-between gap-3">
+						<Button
+							variant="secondary"
+							icon={<Download size={16} />}
+							onClick={() => setIsReceiptOpen(true)}
+							disabled={(selectedPayment?.paidAmount ?? 0) <= 0}
 						>
+							Reçu PDF
+						</Button>
+						<Button onClick={() => setIsManageModalOpen(false)}>
 							{t("payments_done")}
-						</button>
+						</Button>
 					</div>
 				}
 			>
 				<div className="space-y-8 py-2">
 					{/* Header Info */}
-					<div className="flex items-center justify-between bg-gradient-to-br from-primary-teal to-accent-teal p-6 rounded-[32px] text-white shadow-lg">
+					<div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 p-6 text-white shadow-sm">
 						<div>
 							<p className="text-[10px] font-black uppercase tracking-widest opacity-70">
 								{t("payments_remaining_to_pay")}
 							</p>
 							<p className="text-3xl font-black">
-								{(selectedPayment?.totalAmount || 0) -
-									(selectedPayment?.paidAmount || 0)}{" "}
-								DA
+								{formatCurrency(
+									(selectedPayment?.totalAmount || 0) -
+										(selectedPayment?.paidAmount || 0),
+								)}
 							</p>
 						</div>
-						<div className="text-right">
+						<div className="text-end">
 							<p className="text-sm font-bold">
 								{formatFullName(
 									studentsMap[selectedPayment?.studentId || ""]?.firstName,
 									studentsMap[selectedPayment?.studentId || ""]?.lastName,
 								)}
 							</p>
-							<p className="text-[10px] font-medium opacity-70 italic">
+							<p className="text-[10px] font-medium italic opacity-70">
 								Plan ID: {selectedPayment?.id.split("-")[0]}
 							</p>
 						</div>
@@ -525,33 +677,72 @@ export default function PaymentsClientView({
 					{/* Register New Payment Form */}
 					<form
 						onSubmit={handleRegisterPayment}
-						className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm"
+						className="space-y-4 rounded-2xl border border-line/70 bg-surface-white p-5 shadow-ts-1"
 					>
-						<h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-							<DollarSign size={14} className="text-green-500" />
+						<h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-ink-400">
+							<DollarSign size={14} className="text-emerald-600" />
 							{t("payments_register_payment_title")}
 						</h4>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+						{/* Règlement rapide de tout le solde (plusieurs échéances d'un coup) */}
+						{(() => {
+							const unpaidCount =
+								selectedPayment?.tranches?.filter((tr) => !tr.isPaid).length ??
+								0;
+							const planRemaining =
+								(selectedPayment?.totalAmount || 0) -
+								(selectedPayment?.paidAmount || 0);
+							if (unpaidCount < 2 || planRemaining <= 0) return null;
+							return (
+								<button
+									type="button"
+									onClick={() => {
+										setSelectedTrancheId(BULK_TRANCHE);
+										setPaymentAmount(planRemaining);
+									}}
+									className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
+								>
+									<CheckCircle2 size={14} />
+									{t("payments_settle_all")} · {unpaidCount}{" "}
+									{t("payments_installments_word")} ·{" "}
+									{formatCurrency(planRemaining)}
+								</button>
+							);
+						})()}
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
 							<div className="md:col-span-1">
 								<select
 									value={selectedTrancheId}
 									onChange={(e) => {
 										setSelectedTrancheId(e.target.value);
+										if (e.target.value === BULK_TRANCHE) {
+											setPaymentAmount(
+												(selectedPayment?.totalAmount || 0) -
+													(selectedPayment?.paidAmount || 0),
+											);
+											return;
+										}
 										const tr = selectedPayment?.tranches?.find(
 											(tranche) => tranche.id === e.target.value,
 										);
 										if (tr) setPaymentAmount(tr.amount);
 									}}
-									className="w-full bg-gray-50 rounded-xl border-gray-100 py-2.5 px-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5"
+									className="h-9 w-full rounded-xl border border-line/70 bg-surface-50 px-4 text-sm font-bold text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5"
 									required
 								>
 									<option value="">{t("payments_choose_tranche")}</option>
+									{(selectedPayment?.tranches?.filter((tr) => !tr.isPaid)
+										.length ?? 0) >= 2 && (
+										<option value={BULK_TRANCHE}>
+											▸ {t("payments_auto_distribute")}
+										</option>
+									)}
 									{selectedPayment?.tranches
 										?.filter((tr) => !tr.isPaid)
 										.map((tranche) => (
 											<option key={tranche.id} value={tranche.id}>
 												{t("payments_month_label")}{" "}
-												{getMonthName(tranche.dueDate)} ({tranche.amount} DA)
+												{getMonthName(tranche.dueDate)} (
+												{formatCurrency(tranche.amount)})
 											</option>
 										))}
 								</select>
@@ -561,28 +752,71 @@ export default function PaymentsClientView({
 								placeholder={t("payments_amount_da")}
 								value={paymentAmount || ""}
 								onChange={(e) => setPaymentAmount(Number(e.target.value))}
-								className="w-full bg-gray-50 rounded-xl border-gray-100 py-2.5 px-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-primary-teal/5"
+								className="h-9 w-full rounded-xl border border-line/70 bg-surface-50 px-4 text-sm font-bold text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5"
 								required
 							/>
-							<button
+							<Button
 								type="submit"
 								disabled={isPending || !selectedTrancheId || paymentAmount <= 0}
-								className="btn-primary flex items-center justify-center gap-2 py-2.5 px-4 disabled:opacity-50"
+								icon={
+									isPending ? (
+										<Loader2 size={16} className="animate-spin" />
+									) : (
+										<CheckCircle2 size={16} />
+									)
+								}
 							>
-								{isPending ? (
-									<Loader2 size={16} className="animate-spin" />
-								) : (
-									<CheckCircle2 size={16} />
-								)}
 								{t("payments_validate")}
-							</button>
+							</Button>
 						</div>
 					</form>
 
+					{/* Reçu au parent — envoi OPTIONNEL après un règlement : l'utilisateur
+					    choisit le canal (WhatsApp ou SMS). Rien ne s'ouvre tout seul. */}
+					{receiptWa && (
+						<div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center">
+							<CheckCircle2 size={20} className="shrink-0 text-emerald-600" />
+							<div className="min-w-0 flex-1">
+								<p className="text-sm font-bold text-emerald-800">
+									{t("payment_recorded")}
+								</p>
+								<p className="truncate text-xs text-emerald-700">
+									{t("send_receipt_optional")} · {receiptWa.name}
+								</p>
+							</div>
+							<div className="flex shrink-0 items-center gap-2">
+								<a
+									href={receiptWa.waUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-700"
+								>
+									<MessageCircle size={14} />
+									{t("receipt_via_whatsapp")}
+								</a>
+								<a
+									href={receiptWa.smsUrl}
+									className="inline-flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 transition-colors hover:bg-surface-50"
+								>
+									<Smartphone size={14} />
+									{t("receipt_via_sms")}
+								</a>
+								<button
+									type="button"
+									onClick={() => setReceiptWa(null)}
+									className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-white hover:text-ink-700"
+									aria-label={t("close_drawer")}
+								>
+									<X size={16} />
+								</button>
+							</div>
+						</div>
+					)}
+
 					{/* Echeancier (Timeline) */}
 					<div className="space-y-4">
-						<h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 px-2">
-							<Calendar size={14} className="text-primary-teal" />
+						<h4 className="flex items-center gap-2 px-2 text-xs font-black uppercase tracking-widest text-ink-400">
+							<Calendar size={14} className="text-brand-500" />
 							{t("payments_monthly_schedule")}
 						</h4>
 						<div className="space-y-3">
@@ -590,32 +824,32 @@ export default function PaymentsClientView({
 								<div
 									key={tranche.id}
 									className={clsx(
-										"flex items-center gap-4 p-4 rounded-2xl border transition-all",
+										"flex items-center gap-4 rounded-2xl border p-4 transition-all",
 										tranche.isPaid
-											? "bg-green-50/50 border-green-100 opacity-70"
-											: "bg-white border-gray-100 shadow-sm",
+											? "border-emerald-100 bg-emerald-50/50 opacity-70"
+											: "border-line/70 bg-surface-white shadow-ts-1",
 									)}
 								>
 									<div
 										className={clsx(
-											"flex flex-col items-center justify-center min-w-[60px] h-[60px] rounded-xl font-black text-xs",
+											"flex h-[60px] min-w-[60px] flex-col items-center justify-center rounded-xl text-xs font-black",
 											tranche.isPaid
-												? "bg-green-500 text-white"
-												: "bg-gray-100 text-gray-400",
+												? "bg-emerald-500 text-white"
+												: "bg-surface-100 text-ink-400",
 										)}
 									>
 										<span>{new Date(tranche.dueDate).getDate()}</span>
-										<span className="uppercase text-[10px]">
-											{new Date(tranche.dueDate).toLocaleDateString(undefined, {
+										<span className="text-[10px] uppercase">
+											{new Date(tranche.dueDate).toLocaleDateString("fr-FR", {
 												month: "short",
 											})}
 										</span>
 									</div>
 									<div className="flex-1">
-										<p className="text-sm font-bold text-gray-900">
-											{tranche.amount.toLocaleString()} DA
+										<p className="text-sm font-bold text-ink-900">
+											{formatCurrency(tranche.amount)}
 										</p>
-										<p className="text-[10px] font-medium text-gray-500">
+										<p className="text-[10px] font-medium text-ink-500">
 											{getMonthName(tranche.dueDate)} •{" "}
 											{tranche.isPaid
 												? t("payments_paid_label")
@@ -623,11 +857,11 @@ export default function PaymentsClientView({
 										</p>
 									</div>
 									{tranche.isPaid ? (
-										<div className="p-2 bg-green-500 text-white rounded-full">
+										<div className="rounded-full bg-emerald-500 p-2 text-white">
 											<CheckCircle2 size={16} />
 										</div>
 									) : (
-										<div className="p-2 bg-gray-100 text-gray-400 rounded-full">
+										<div className="rounded-full bg-surface-100 p-2 text-ink-400">
 											<Clock size={16} />
 										</div>
 									)}
@@ -637,125 +871,216 @@ export default function PaymentsClientView({
 					</div>
 				</div>
 			</Modal>
+
+			{isReceiptOpen && selectedPayment && (
+				<PdfPreviewModal
+					isOpen={isReceiptOpen}
+					onClose={() => setIsReceiptOpen(false)}
+					title="Reçu de paiement"
+					fileName={`Recu_${selectedPayment.id.slice(0, 8)}.pdf`}
+					build={receiptBuild}
+				/>
+			)}
 		</div>
 	);
 }
 
-function PaymentCardStyled({
+function PaymentRow({
 	payment,
 	student,
+	schoolName,
+	lastRelance,
 	onManage,
 	t,
 }: {
 	payment: Payment;
 	student: Student;
+	schoolName: string;
+	lastRelance?: string | undefined;
 	onManage: (p: Payment) => void;
 	t: ReturnType<typeof useTranslations>;
 }) {
+	const locale = useLocale();
 	const percent =
 		payment.totalAmount > 0
 			? Math.round((payment.paidAmount / payment.totalAmount) * 100)
 			: 0;
 	const paidTranches = payment.tranches?.filter((tr) => tr.isPaid).length || 0;
 	const totalTranches = payment.tranches?.length || 0;
+	const remaining = payment.totalAmount - payment.paidAmount;
+
+	const overdue = overdueInfo(payment);
+	const phone = normalizeDzPhone(student.parentPhone || student.phone);
+	const now = Date.now();
+	const dueLines = (payment.tranches ?? [])
+		.filter((tr) => !tr.isPaid)
+		.map((tr) => ({
+			dueLabel: new Date(tr.dueDate).toLocaleDateString("fr-FR"),
+			amount: tr.amount,
+			overdue: new Date(tr.dueDate).getTime() < now,
+		}));
+	const waUrl =
+		remaining > 0 && phone
+			? buildWaUrl(
+					phone,
+					buildRelanceMessage({
+						firstName: student.firstName,
+						remaining,
+						school: schoolName || undefined,
+						lines: dueLines,
+					}),
+				)
+			: null;
 
 	return (
-		<div className="group bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:border-primary-teal/20 transition-all duration-300">
-			<div className="flex items-start justify-between mb-6">
+		<tr className="group transition-colors hover:bg-surface-50/60">
+			{/* Identity */}
+			<td className="px-6 py-4">
 				<div className="flex items-center gap-3">
-					<div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center font-black text-primary-teal text-lg border border-gray-100 shadow-inner group-hover:scale-110 transition-transform">
+					<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line/70 bg-surface-50 text-sm font-black text-brand-600">
 						{student.firstName.charAt(0)}
 						{student.lastName.charAt(0)}
 					</div>
-					<div>
-						<h3 className="font-bold text-gray-900 text-sm tracking-tight">
-							{student.firstName} {student.lastName}
-						</h3>
-						<div className="flex flex-col">
-							<p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-								{student.email ? student.email.split("@")[0] : t("students")}
-							</p>
-							<p className="text-[10px] font-bold text-primary-teal/70 uppercase tracking-tight mt-0.5">
+					<div className="min-w-0">
+						<p className="truncate text-sm font-bold tracking-tight text-ink-900">
+							{formatFullName(student.firstName, student.lastName)}
+						</p>
+						<div className="mt-0.5 flex items-center gap-2">
+							{payment.activity && (
+								<span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-700">
+									{localizedSubject(payment.activity.name, locale)}
+								</span>
+							)}
+							<span className="text-[10px] font-bold uppercase tracking-widest text-ink-400">
 								{t("payments_months_settled", {
 									paid: paidTranches,
 									total: totalTranches,
 								})}
-							</p>
-							{payment.activity && (
-								<p className="text-[9px] font-bold bg-primary-teal/5 text-primary-teal px-1.5 py-0.5 rounded-md mt-1 self-start">
-									{payment.activity.name}
-								</p>
-							)}
+							</span>
 						</div>
 					</div>
 				</div>
-				<div
-					className={clsx(
-						"px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm",
-						payment.status === "PAID"
-							? "bg-green-50 text-green-600 border border-green-100"
-							: payment.status === "PARTIAL"
-								? "bg-orange-50 text-orange-600 border border-orange-100"
-								: "bg-red-50 text-red-600 border border-red-100",
-					)}
-				>
-					{payment.status === "PAID"
-						? t("payments_settled")
-						: payment.status === "PARTIAL"
-							? t("partial")
-							: t("payments_due")}
-				</div>
-			</div>
+			</td>
 
-			<div className="space-y-4">
-				<div className="flex justify-between items-end">
-					<div className="space-y-1">
-						<p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-							{t("payments_collected")}
-						</p>
-						<p className="text-xl font-black text-gray-900">
-							{payment.paidAmount.toLocaleString()}{" "}
-							<span className="text-xs font-bold text-gray-400">DA</span>
-						</p>
+			{/* Progress */}
+			<td className="px-6 py-4">
+				<div className="w-40 max-w-[160px] space-y-1.5">
+					<div className="flex items-center justify-between">
+						<span className="text-xs font-bold tabular-nums text-ink-700">
+							{formatCurrency(payment.paidAmount)}
+						</span>
+						<span className="text-xs font-black text-brand-600">
+							{percent}%
+						</span>
 					</div>
-					<p className="text-xs font-black text-primary-teal">{percent}%</p>
-				</div>
-
-				<div className="h-2.5 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100 p-0.5">
-					<div
-						className="h-full bg-primary-teal rounded-full transition-all duration-700 shadow-sm"
-						style={{ width: `${percent}%` }}
-					/>
-				</div>
-
-				<div className="flex justify-between py-2 border-t border-gray-50 mt-2">
-					<div>
-						<p className="text-[9px] font-bold text-gray-400 uppercase">
-							{t("total")}
-						</p>
-						<p className="text-xs font-bold text-gray-700">
-							{payment.totalAmount.toLocaleString()} DA
-						</p>
-					</div>
-					<div className="text-right">
-						<p className="text-[9px] font-bold text-gray-400 uppercase">
-							{t("remaining")}
-						</p>
-						<p className="text-xs font-bold text-red-500">
-							{(payment.totalAmount - payment.paidAmount).toLocaleString()} DA
-						</p>
+					<div className="h-2 w-full overflow-hidden rounded-full bg-surface-100">
+						<div
+							className="h-full rounded-full bg-brand-500 transition-all duration-700"
+							style={{ width: `${percent}%` }}
+						/>
 					</div>
 				</div>
-			</div>
+			</td>
 
-			<button
-				type="button"
-				onClick={() => onManage(payment)}
-				className="btn-secondary w-full mt-4 flex items-center justify-center gap-2 py-3 text-xs uppercase tracking-widest"
+			{/* Total */}
+			<td className="px-6 py-4 text-end text-sm font-bold tabular-nums text-ink-700">
+				{formatCurrency(payment.totalAmount)}
+			</td>
+
+			{/* Remaining — focal at-risk figure */}
+			<td
+				className={clsx(
+					"px-6 py-4 text-end text-sm font-black tabular-nums",
+					remaining > 0 ? "text-accent-600" : "text-emerald-700",
+				)}
 			>
-				{t("payments_manage_schedule")}
-				<ArrowRight size={14} strokeWidth={3} />
-			</button>
+				{formatCurrency(remaining)}
+			</td>
+
+			{/* Status */}
+			<td className="px-6 py-4">
+				<div className="flex flex-col items-start gap-1.5">
+					<span
+						className={clsx(
+							"inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest",
+							payment.status === "PAID"
+								? "border-emerald-100 bg-emerald-50 text-emerald-700"
+								: payment.status === "PARTIAL"
+									? "border-brass/20 bg-brass/10 text-brass"
+									: "border-accent-100 bg-accent-50 text-accent-600",
+						)}
+					>
+						{payment.status === "PAID"
+							? t("payments_settled")
+							: payment.status === "PARTIAL"
+								? t("partial")
+								: t("payments_due")}
+					</span>
+					{overdue.overdueAmount > 0 && (
+						<span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-600">
+							<Clock size={10} />
+							Retard {overdue.daysLate} j
+						</span>
+					)}
+					{lastRelance && (
+						<span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-600">
+							<CheckCircle2 size={10} />
+							Relancé le {new Date(lastRelance).toLocaleDateString("fr-FR")}
+						</span>
+					)}
+				</div>
+			</td>
+
+			{/* Action */}
+			<td className="px-6 py-4">
+				<div className="flex items-center justify-end gap-2">
+					{waUrl && (
+						<RelanceButton
+							waUrl={waUrl}
+							studentId={payment.studentId}
+							paymentPlanId={payment.id}
+							amount={remaining}
+							daysLate={overdue.daysLate}
+						/>
+					)}
+					<Button
+						variant="secondary"
+						size="sm"
+						className="h-9"
+						onClick={() => onManage(payment)}
+					>
+						{t("payments_manage_schedule")}
+						<ArrowRight size={14} strokeWidth={3} className="rtl:rotate-180" />
+					</Button>
+				</div>
+			</td>
+		</tr>
+	);
+}
+
+function AgingBucket({
+	label,
+	value,
+	tone,
+}: {
+	label: string;
+	value: number;
+	tone: "brass" | "accent" | "deep";
+}) {
+	const color =
+		tone === "brass"
+			? "text-brass"
+			: tone === "accent"
+				? "text-accent-600"
+				: "text-accent-700";
+	return (
+		<div className="rounded-xl border border-line/60 bg-surface-white px-3 py-2.5 text-center">
+			<div className="text-[10px] font-bold uppercase tracking-widest text-ink-400">
+				{label}
+			</div>
+			<div className={clsx("text-sm font-extrabold tabular-nums", color)}>
+				{formatCurrency(value)}
+			</div>
 		</div>
 	);
 }

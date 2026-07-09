@@ -1,8 +1,16 @@
 "use client";
 
-import { BookOpen, Clock, Loader2, Plus, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import {
+	BookOpen,
+	CalendarClock,
+	Clock,
+	Loader2,
+	Plus,
+	Trash2,
+	Wallet,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { useMemo, useState, useTransition } from "react";
 import {
 	createActivityAction,
 	deleteActivityAction,
@@ -12,11 +20,18 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, TextArea } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
+import { Button, PageHeader, StatCard } from "@/components/ui/primitives";
 import { useRouter } from "@/i18n/routing";
+import { localizedSubject } from "@/lib/subjects";
 import type { Activity } from "@/types/schema";
 
+/* An activity carries its usage: séances planifiées + plans de paiement liés. */
+type ActivityWithUsage = Activity & {
+	_count: { sessions: number; paymentPlans: number };
+};
+
 interface ActivitiesClientViewProps {
-	initialActivities: Activity[];
+	initialActivities: ActivityWithUsage[];
 }
 
 export default function ActivitiesClientView({
@@ -24,28 +39,44 @@ export default function ActivitiesClientView({
 }: ActivitiesClientViewProps) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-	const [activityToDelete, setActivityToDelete] = useState<string | null>(null);
-	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-		null,
-	);
+	const [activityToDelete, setActivityToDelete] =
+		useState<ActivityWithUsage | null>(null);
+	const [selectedActivity, setSelectedActivity] =
+		useState<ActivityWithUsage | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const t = useTranslations();
+	const locale = useLocale();
 	const router = useRouter();
 
-	const handleAction = (activity: Activity) => {
+	const metrics = useMemo(() => {
+		const total = initialActivities.length;
+		const durations = initialActivities
+			.map((a) => a.duration ?? 0)
+			.filter((d) => d > 0);
+		const avgDuration = durations.length
+			? Math.round(durations.reduce((a, d) => a + d, 0) / durations.length)
+			: 0;
+		const totalSessions = initialActivities.reduce(
+			(a, x) => a + x._count.sessions,
+			0,
+		);
+		return { total, avgDuration, totalSessions };
+	}, [initialActivities]);
+
+	const handleAction = (activity: ActivityWithUsage) => {
 		setSelectedActivity(activity);
 		setIsModalOpen(true);
 	};
 
-	const handleDelete = (id: string) => {
-		setActivityToDelete(id);
+	const handleDelete = (activity: ActivityWithUsage) => {
+		setActivityToDelete(activity);
 		setIsDeleteModalOpen(true);
 	};
 
 	const confirmDelete = async () => {
 		if (!activityToDelete) return;
 		startTransition(async () => {
-			const result = await deleteActivityAction({ id: activityToDelete });
+			const result = await deleteActivityAction({ id: activityToDelete.id });
 			if (result.success) {
 				setIsDeleteModalOpen(false);
 				setActivityToDelete(null);
@@ -91,73 +122,136 @@ export default function ActivitiesClientView({
 	const columns = [
 		{
 			header: t("activity_name"),
-			accessor: (activity: Activity) => (
+			accessor: (activity: ActivityWithUsage) => (
 				<div className="flex items-center gap-3">
-					<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-teal/10 text-primary-teal">
+					<div
+						className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-ts-1"
+						style={{ backgroundColor: activity.color || "#0F515C" }}
+					>
 						<BookOpen size={20} />
 					</div>
-					<span className="font-medium text-gray-900">{activity.name}</span>
+					<div className="flex flex-col">
+						<span className="font-bold text-ink-900 text-sm">
+							{localizedSubject(activity.name, locale)}
+						</span>
+						<span className="text-xs font-medium text-ink-400">
+							{t("duration_mins", { count: activity.duration ?? 0 })}
+						</span>
+					</div>
 				</div>
 			),
 		},
 		{
 			header: t("default_duration"),
-			accessor: (activity: Activity) => (
-				<div className="flex items-center gap-2 text-gray-600">
-					<Clock size={16} className="text-gray-400" />
-					<span>{t("duration_mins", { count: activity.duration ?? 0 })}</span>
+			accessor: (activity: ActivityWithUsage) => (
+				<div className="flex items-center gap-2 text-ink-700">
+					<Clock size={16} className="text-ink-400" />
+					<span className="font-semibold tabular-nums">
+						{activity.duration ?? 0} min
+					</span>
 				</div>
 			),
 		},
 		{
-			header: t("label_color"),
-			accessor: (activity: Activity) => (
-				<div className="flex items-center justify-between gap-4">
-					<div className="flex items-center gap-2">
-						<div
-							className="h-4 w-4 rounded-full border border-gray-200"
-							style={{ backgroundColor: activity.color || "#0F515C" }}
-						/>
-						<span className="text-xs text-gray-500 uppercase font-mono">
-							{activity.color || "#0F515C"}
+			header: "Occupation",
+			accessor: (activity: ActivityWithUsage) => (
+				<div className="flex flex-wrap items-center gap-1.5">
+					{activity._count.sessions > 0 ? (
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">
+							<CalendarClock size={13} />
+							{activity._count.sessions} séance
+							{activity._count.sessions > 1 ? "s" : ""}
 						</span>
-					</div>
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation();
-							handleDelete(activity.id);
-						}}
-						className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
-					>
-						<Trash2 size={16} />
-					</button>
+					) : (
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-surface-100 px-3 py-1 text-xs font-bold text-ink-400">
+							<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+							Libre
+						</span>
+					)}
+					{activity._count.paymentPlans > 0 && (
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-brass/15 px-3 py-1 text-xs font-bold text-brass">
+							<Wallet size={13} />
+							{activity._count.paymentPlans} plan
+							{activity._count.paymentPlans > 1 ? "s" : ""}
+						</span>
+					)}
 				</div>
 			),
+		},
+		{
+			header: t("actions"),
+			accessor: (activity: ActivityWithUsage) => {
+				const used =
+					activity._count.sessions > 0 || activity._count.paymentPlans > 0;
+				return (
+					<div className="flex items-center justify-end">
+						<button
+							type="button"
+							disabled={used}
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDelete(activity);
+							}}
+							className={
+								used
+									? "inline-flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-xl text-ink-300"
+									: "inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-400 transition-colors hover:bg-rose-50 hover:text-danger"
+							}
+							title={
+								used
+									? "Activité utilisée (séances ou plans) — impossible de supprimer"
+									: t("delete")
+							}
+						>
+							<Trash2 size={18} />
+						</button>
+					</div>
+				);
+			},
 		},
 	];
 
 	return (
 		<div className="space-y-8">
-			{/* Page Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
-						{t("activities_title")}
-					</h1>
-					<p className="text-sm text-gray-500">{t("activities_subtitle")}</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => {
-						setSelectedActivity(null);
-						setIsModalOpen(true);
-					}}
-					className="btn-primary flex items-center gap-2"
-				>
-					<Plus size={20} />
-					{t("add_activity")}
-				</button>
+			<PageHeader
+				eyebrow={t("activities_title")}
+				title="Gestion des"
+				accent="Activités"
+				subtitle={t("activities_subtitle")}
+				actions={
+					<Button
+						onClick={() => {
+							setSelectedActivity(null);
+							setIsModalOpen(true);
+						}}
+						icon={<Plus size={18} />}
+					>
+						{t("add_activity")}
+					</Button>
+				}
+			/>
+
+			{/* KPIs — concordent avec Salles / Groupes */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<StatCard
+					label={t("activities_total")}
+					value={metrics.total}
+					icon={<BookOpen size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("activities_avg_duration")}
+					value={`${metrics.avgDuration} min`}
+					icon={<Clock size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("activities_linked_sessions")}
+					value={metrics.totalSessions}
+					icon={<CalendarClock size={20} />}
+					tone="positive"
+					hint={t("activities_schedule_occupation")}
+				/>
 			</div>
 
 			{/* Activities Table */}
@@ -166,6 +260,7 @@ export default function ActivitiesClientView({
 				columns={columns}
 				searchPlaceholder={t("search")}
 				onAction={handleAction}
+				hideDefaultAction={true}
 			/>
 
 			{/* Add/Edit Activity Modal */}

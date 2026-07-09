@@ -71,15 +71,15 @@ export default function ProfileSettings({ user }: ProfileSettingsProps) {
 	return (
 		<div className="space-y-8 animate-in fade-in duration-500">
 			{/* Profile Card */}
-			<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+			<div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden">
 				<form onSubmit={handleUpdateProfile} className="p-6 sm:p-8 space-y-8">
-					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-8 border-b border-gray-100">
-						<div className="h-20 w-20 rounded-full bg-primary-teal/10 flex items-center justify-center text-primary-teal text-2xl font-bold border-2 border-white shadow-sm ring-1 ring-gray-100">
+					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-8 border-b border-line/70">
+						<div className="h-20 w-20 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-500 text-2xl font-bold border-2 border-white shadow-sm ring-1 ring-line/70">
 							{user.firstName?.charAt(0)}
 							{user.lastName?.charAt(0)}
 						</div>
 						<div className="space-y-2">
-							<h3 className="text-sm font-semibold text-gray-900">
+							<h3 className="text-sm font-semibold text-ink-900">
 								{t("profile_photo")}
 							</h3>
 							<div className="flex gap-3">

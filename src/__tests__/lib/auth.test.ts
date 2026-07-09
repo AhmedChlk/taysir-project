@@ -257,7 +257,10 @@ describe("authOptions Audit", () => {
 	});
 
 	describe("Variables d'Environnement Fallbacks", () => {
-		it("utilise une chaîne vide si NEXTAUTH_SECRET n'est pas défini", async () => {
+		it("ne retombe JAMAIS sur un secret vide quand NEXTAUTH_SECRET est absent", async () => {
+			// Régression sécurité : un secret "" signerait des JWT forgeables.
+			// Hors production, l'absence de secret doit laisser `secret` indéfini
+			// (next-auth applique son défaut de dev), et surtout jamais "".
 			const originalSecret = process.env.NEXTAUTH_SECRET;
 			delete process.env.NEXTAUTH_SECRET;
 
@@ -266,7 +269,8 @@ describe("authOptions Audit", () => {
 				`@/lib/auth?test=${Date.now()}`
 			);
 
-			expect(reloadedAuthOptions.secret).toBe("");
+			expect(reloadedAuthOptions.secret).not.toBe("");
+			expect(reloadedAuthOptions.secret).toBeUndefined();
 
 			if (originalSecret !== undefined) {
 				process.env.NEXTAUTH_SECRET = originalSecret;

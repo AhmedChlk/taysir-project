@@ -200,7 +200,17 @@ describe("Finance Actions Audit", () => {
 			isPaid: false,
 			paymentPlanId: "plan-1",
 			paiements: [],
-			paymentPlan: { totalAmount: 5000, paidAmount: 0 },
+			paymentPlan: {
+				totalAmount: 5000,
+				paidAmount: 0,
+				student: {
+					firstName: "Test",
+					lastName: "Élève",
+					parentPhone: "0661000000",
+					phone: null,
+				},
+				etablissement: { name: "École Test" },
+			},
 			...overrides,
 		});
 
@@ -308,7 +318,10 @@ describe("Finance Actions Audit", () => {
 						findUnique: vi.fn().mockResolvedValue(buildMockTranche()),
 						update: mockTrancheUpdate,
 					},
-					paiement: { create: mockPaiementCreate },
+					paiement: {
+					create: mockPaiementCreate,
+					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+				},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 
@@ -352,7 +365,10 @@ describe("Finance Actions Audit", () => {
 						findUnique: vi.fn().mockResolvedValue(buildMockTranche()),
 						update: vi.fn(),
 					},
-					paiement: { create: mockPaiementCreate },
+					paiement: {
+					create: mockPaiementCreate,
+					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+				},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 
@@ -390,7 +406,10 @@ describe("Finance Actions Audit", () => {
 						findUnique: vi.fn().mockResolvedValue(buildMockTranche()),
 						update: mockTrancheUpdate,
 					},
-					paiement: { create: mockPaiementCreate },
+					paiement: {
+					create: mockPaiementCreate,
+					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+				},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 

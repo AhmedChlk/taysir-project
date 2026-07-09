@@ -1,7 +1,13 @@
 import { endOfWeek, startOfWeek } from "date-fns";
 import { getWeeklySessionsAction } from "@/actions/schedule.actions";
 import ScheduleClientView from "@/components/dashboard/schedule/ScheduleClientView";
-import { getActivities, getGroups, getRooms, getStaff } from "@/services/api";
+import {
+	getActivities,
+	getCurrentUser,
+	getGroups,
+	getRooms,
+	getStaff,
+} from "@/services/api";
 
 interface PageProps {
 	searchParams: Promise<{
@@ -27,12 +33,15 @@ export default async function SchedulePage({ searchParams }: PageProps) {
 		groupId: params.groupId,
 	});
 
-	const [rooms, staff, activities, groups] = await Promise.all([
+	const [rooms, staff, activities, groups, currentUser] = await Promise.all([
 		getRooms(),
 		getStaff(),
 		getActivities(),
 		getGroups(),
+		getCurrentUser(),
 	]);
+
+	const isInstructor = currentUser?.role === "INTERVENANT";
 
 	return (
 		<ScheduleClientView
@@ -42,6 +51,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
 			activities={activities}
 			groups={groups}
 			currentDate={currentDate}
+			isInstructor={isInstructor}
 		/>
 	);
 }

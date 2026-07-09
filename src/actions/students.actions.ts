@@ -3,8 +3,9 @@
 import type { Prisma } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
+import { createSafeAction, FRONTDESK_ROLES } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
+import { money } from "@/lib/money";
 import { getTenantPrisma } from "@/lib/prisma";
 import { stripUndefined } from "@/lib/utils/prisma-helpers";
 import {
@@ -27,6 +28,7 @@ export const addDocumentToStudentAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_students`, "max");
 		return document;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const createStudentAction = createSafeAction(
@@ -70,6 +72,7 @@ export const createStudentAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_students`, "max");
 		return student;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const updateStudentAction = createSafeAction(
@@ -113,6 +116,7 @@ export const updateStudentAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_students`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const deleteStudentAction = createSafeAction(
@@ -186,12 +190,35 @@ export const deleteStudentAction = createSafeAction(
 
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
+
+// Valide qu'un élève appartient bien au tenant courant. Indispensable avant tout
+// `connect`/`disconnect` : `Student.id` est une PK globale, donc un connect par id
+// brut résoudrait un élève d'un AUTRE établissement (fuite PII cross-tenant).
+async function assertStudentInTenant(
+	tenantPrisma: ReturnType<typeof getTenantPrisma>,
+	studentId: string,
+	tenantId: string,
+) {
+	const student = await tenantPrisma.student.findUnique({
+		where: { id_etablissementId: { id: studentId, etablissementId: tenantId } },
+		select: { id: true },
+	});
+	if (!student) {
+		throw new TaysirError(
+			"Élève introuvable ou accès refusé.",
+			ErrorCodes.ERR_NOT_FOUND,
+			404,
+		);
+	}
+}
 
 export const addStudentToGroupAction = createSafeAction(
 	z.object({ studentId: z.string().uuid(), groupId: z.string().uuid() }),
 	async ({ studentId, groupId }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+		await assertStudentInTenant(tenantPrisma, studentId, tenantId);
 		const result = await tenantPrisma.groupe.update({
 			where: { id: groupId, etablissementId: tenantId },
 			data: { students: { connect: { id: studentId } } },
@@ -199,12 +226,14 @@ export const addStudentToGroupAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_groups`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const removeStudentFromGroupAction = createSafeAction(
 	z.object({ studentId: z.string().uuid(), groupId: z.string().uuid() }),
 	async ({ studentId, groupId }, { tenantId }) => {
 		const tenantPrisma = getTenantPrisma(tenantId);
+		await assertStudentInTenant(tenantPrisma, studentId, tenantId);
 		const result = await tenantPrisma.groupe.update({
 			where: { id: groupId, etablissementId: tenantId },
 			data: { students: { disconnect: { id: studentId } } },
@@ -212,6 +241,7 @@ export const removeStudentFromGroupAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_groups`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const getStudentFullProfileAction = createSafeAction(
@@ -219,7 +249,7 @@ export const getStudentFullProfileAction = createSafeAction(
 	async ({ id }, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
 
-		return await client.student.findUnique({
+		const student = await client.student.findUnique({
 			where: { id, etablissementId: tenantId },
 			include: {
 				groups: true,
@@ -240,5 +270,26 @@ export const getStudentFullProfileAction = createSafeAction(
 				},
 			},
 		});
+
+		if (!student) return null;
+
+		// Conversion Decimal → number à la frontière lecture DB → Client Component.
+		return {
+			...student,
+			paymentPlans: student.paymentPlans.map((p) => ({
+				...p,
+				totalAmount: money(p.totalAmount),
+				paidAmount: money(p.paidAmount),
+				tranches: p.tranches.map((t) => ({
+					...t,
+					amount: money(t.amount),
+					paiements: t.paiements.map((pm) => ({
+						...pm,
+						amount: money(pm.amount),
+					})),
+				})),
+			})),
+		};
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );

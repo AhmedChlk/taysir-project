@@ -1,13 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Plus, Trash2, Wallet } from "lucide-react";
+import { AlertCircle, CalendarRange, Plus, Trash2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createPaymentPlanAction } from "@/actions/finance.actions";
 import { Input, Select } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { generateMonthlyTranches, monthlyPlanTotal } from "@/lib/payment-plans";
 import { formatFullName } from "@/utils/format";
+
+type PlanMode = "manual" | "monthly";
 
 type StudentOption = { id: string; firstName: string; lastName: string };
 type ActivityOption = { id: string; name: string };
@@ -31,7 +34,7 @@ export default function PaymentPlanForm({
 	const [activityId, setActivityId] = useState("");
 	const [totalAmount, setTotalAmount] = useState(0);
 	const [tranches, setTranches] = useState<
-		{ amount: number; dueDate: string }[]
+		{ amount: number; dueDate: string; label?: string }[]
 	>([
 		{
 			amount: 0,
@@ -39,6 +42,33 @@ export default function PaymentPlanForm({
 				new Date().toISOString().split("T")[0] ?? new Date().toISOString(),
 		},
 	]);
+
+	// Mode « mensualités » : frais d'inscription + N mensualités égales (marché DZ).
+	const [mode, setMode] = useState<PlanMode>("manual");
+	const [registrationFee, setRegistrationFee] = useState(0);
+	const [monthlyAmount, setMonthlyAmount] = useState(0);
+	const [months, setMonths] = useState(9);
+	const today =
+		new Date().toISOString().split("T")[0] ?? new Date().toISOString();
+	const [startDate, setStartDate] = useState(today);
+
+	const generateMonthly = () => {
+		if (monthlyAmount <= 0 || months <= 0) return;
+		const generated = generateMonthlyTranches({
+			registrationFee,
+			monthlyAmount,
+			months,
+			startDate,
+		}).map((t) => ({
+			amount: t.amount,
+			dueDate: t.dueDate.split("T")[0] ?? t.dueDate,
+			label: t.label,
+		}));
+		setTranches(generated);
+		setTotalAmount(
+			monthlyPlanTotal({ registrationFee, monthlyAmount, months }),
+		);
+	};
 
 	const addTranche = () => {
 		const lastTranche = tranches[tranches.length - 1];
@@ -170,37 +200,126 @@ export default function PaymentPlanForm({
 					<button
 						type="button"
 						onClick={distributeAmount}
-						className="mb-1 px-4 py-3 bg-taysir-teal/5 text-taysir-teal rounded-xl text-xs font-bold uppercase hover:bg-taysir-teal/10 transition-colors"
+						className="mb-1 px-4 py-3 bg-brand-500/5 text-brand-500 rounded-xl text-xs font-bold uppercase hover:bg-brand-500/10 transition-colors"
 					>
 						Répartir
 					</button>
 				</div>
 			</div>
 
-			<div className="h-px bg-taysir-teal/5 my-2" />
+			<div className="h-px bg-brand-500/5 my-2" />
+
+			{/* Choix du mode d'échéancier : manuel ou mensualités automatiques */}
+			<div className="flex gap-2 rounded-2xl bg-brand-500/5 p-1">
+				<button
+					type="button"
+					onClick={() => setMode("manual")}
+					className={`flex-1 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+						mode === "manual"
+							? "bg-white text-brand-600 shadow-sm"
+							: "text-brand-500/60"
+					}`}
+				>
+					Tranches manuelles
+				</button>
+				<button
+					type="button"
+					onClick={() => setMode("monthly")}
+					className={`flex-1 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+						mode === "monthly"
+							? "bg-white text-brand-600 shadow-sm"
+							: "text-brand-500/60"
+					}`}
+				>
+					Mensualités
+				</button>
+			</div>
+
+			{mode === "monthly" && (
+				<div className="space-y-4 rounded-2xl border border-brand-500/10 bg-white p-4">
+					<div className="grid grid-cols-2 gap-3">
+						<Input
+							label="Frais d'inscription"
+							type="number"
+							value={registrationFee}
+							onChange={(e) => setRegistrationFee(Number(e.target.value))}
+							suffix="DZD"
+						/>
+						<Input
+							label="Mensualité"
+							type="number"
+							value={monthlyAmount}
+							onChange={(e) => setMonthlyAmount(Number(e.target.value))}
+							suffix="DZD"
+						/>
+						<Input
+							label="Nombre de mois"
+							type="number"
+							value={months}
+							onChange={(e) => setMonths(Number(e.target.value))}
+						/>
+						<Input
+							label="1re mensualité"
+							type="date"
+							value={startDate}
+							onChange={(e) => setStartDate(e.target.value)}
+						/>
+					</div>
+					{/* Aperçu du total en direct (inscription + mensualités). */}
+					<div className="flex items-center justify-between rounded-xl bg-brand-500/5 px-4 py-2.5">
+						<span className="text-xs font-bold uppercase tracking-widest text-brand-500/70">
+							Total de l'échéancier
+						</span>
+						<span className="text-base font-black tabular-nums text-brand-700">
+							{monthlyPlanTotal({
+								registrationFee,
+								monthlyAmount,
+								months,
+							}).toLocaleString("fr-FR")}{" "}
+							DZD
+						</span>
+					</div>
+					<button
+						type="button"
+						onClick={generateMonthly}
+						className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-brand-600"
+					>
+						<CalendarRange size={16} /> Générer l'échéancier mensuel
+					</button>
+				</div>
+			)}
 
 			<div className="space-y-4">
 				<div className="flex justify-between items-center px-1">
-					<h3 className="text-sm font-black text-taysir-teal uppercase tracking-widest">
+					<h3 className="text-sm font-black text-brand-500 uppercase tracking-widest">
 						Échéancier (Tranches)
 					</h3>
-					<button
-						type="button"
-						onClick={addTranche}
-						className="flex items-center gap-1 text-xs font-bold text-taysir-accent hover:underline"
-					>
-						<Plus size={14} /> Ajouter une tranche
-					</button>
+					{mode === "manual" && (
+						<button
+							type="button"
+							onClick={addTranche}
+							className="flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+						>
+							<Plus size={14} /> Ajouter une tranche
+						</button>
+					)}
 				</div>
 
 				<div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
 					{tranches.map((tranche, index) => (
 						<div
 							key={index}
-							className="flex items-center gap-3 p-4 bg-white border border-taysir-teal/10 rounded-2xl shadow-sm"
+							className="flex items-center gap-3 p-4 bg-white border border-brand-500/10 rounded-2xl shadow-sm"
 						>
-							<div className="w-8 h-8 rounded-full bg-taysir-teal/5 flex items-center justify-center text-[10px] font-black text-taysir-teal">
-								{index + 1}
+							<div className="flex flex-col items-center gap-1">
+								<div className="w-8 h-8 rounded-full bg-brand-500/5 flex items-center justify-center text-[10px] font-black text-brand-500">
+									{index + 1}
+								</div>
+								{tranche.label && (
+									<span className="max-w-[64px] truncate text-center text-[9px] font-bold text-brand-500/70">
+										{tranche.label}
+									</span>
+								)}
 							</div>
 							<div className="flex-1">
 								<Input

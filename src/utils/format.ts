@@ -18,11 +18,16 @@ export function formatFullName(firstName?: string, lastName?: string): string {
 
 /**
  * Formatte une date selon le locale et les options fournies.
+ * Défaut FR : jj/MM/aaaa (jamais le format US M/J/AAAA).
  */
 export function formatDate(
 	date: Date | string,
-	locale: string = "fr",
-	options?: Intl.DateTimeFormatOptions,
+	locale: string = "fr-FR",
+	options: Intl.DateTimeFormatOptions = {
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+	},
 ): string {
 	const d = typeof date === "string" ? new Date(date) : date;
 	return d.toLocaleDateString(locale, options);
@@ -41,11 +46,12 @@ export function formatTime(
 }
 
 /**
- * Formatte un montant monétaire.
+ * Formatte un montant monétaire. Défaut marché algérien : « 1 500 DA »
+ * (groupage des milliers fr-FR).
  */
 export function formatCurrency(
 	amount: number,
-	currency: string = "DZD",
+	currency: string = "DA",
 ): string {
-	return `${amount.toLocaleString()} ${currency}`;
+	return `${amount.toLocaleString("fr-FR")} ${currency}`;
 }

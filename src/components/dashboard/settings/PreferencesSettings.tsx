@@ -16,23 +16,23 @@ export default function PreferencesSettings() {
 
 	return (
 		<div className="space-y-6 animate-in fade-in duration-500">
-			<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+			<div className="bg-white border border-line rounded-xl shadow-sm overflow-hidden">
 				<div className="p-6 sm:p-8 space-y-8">
-					<div className="flex items-center gap-3 pb-6 border-b border-gray-100">
-						<div className="p-2.5 bg-primary-teal/10 rounded-lg text-primary-teal">
+					<div className="flex items-center gap-3 pb-6 border-b border-line/70">
+						<div className="p-2.5 bg-brand-500/10 rounded-lg text-brand-500">
 							<Bell size={20} />
 						</div>
 						<div>
-							<h3 className="text-sm font-bold text-gray-900">
+							<h3 className="text-sm font-bold text-ink-900">
 								{t("tab_preferences")}
 							</h3>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-ink-500">
 								{t("preferences_settings_desc")}
 							</p>
 						</div>
 					</div>
 
-					<div className="max-w-2xl space-y-4 divide-y divide-gray-50">
+					<div className="max-w-2xl space-y-4 divide-y divide-line/60">
 						<Toggle
 							label={t("pref_email_notifications")}
 							description={t("pref_email_desc")}

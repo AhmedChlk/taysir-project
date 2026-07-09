@@ -1,10 +1,82 @@
 "use server";
 
 import crypto from "node:crypto";
-import { Prisma, StatusSession } from "@prisma/client";
+import { type Prisma, StatusSession } from "@prisma/client";
+import { addDays, addMonths, addWeeks } from "date-fns";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
-import { createSafeAction } from "@/lib/actions/safe-action";
+
+// Plafond dur d'occurrences générées par une récurrence : évite qu'une
+// `recurrenceEnd` très lointaine ne génère des milliers de séances (chaque
+// itération exécute 3 requêtes de conflit → épuisement mémoire sur le VPS 1 Go).
+const MAX_RECURRENCE_OCCURRENCES = 365;
+
+// Détection de conflit de créneau réutilisable (création ET déplacement).
+// `excludeId` exclut la séance en cours de modification pour qu'elle n'entre
+// pas en conflit avec elle-même. Un chevauchement = start < finAutre ET
+// end > débutAutre, uniquement parmi les séances SCHEDULED du tenant.
+async function assertNoSlotConflict(
+	client: ReturnType<typeof getTenantPrisma>,
+	tenantId: string,
+	params: {
+		roomId: string;
+		instructorId: string;
+		groupId: string;
+		start: Date;
+		end: Date;
+		excludeId?: string;
+	},
+) {
+	const overlap = {
+		startTime: { lt: params.end },
+		endTime: { gt: params.start },
+	};
+	const notSelf = params.excludeId ? { id: { not: params.excludeId } } : {};
+	const base = {
+		etablissementId: tenantId,
+		status: StatusSession.SCHEDULED,
+		...notSelf,
+		...overlap,
+	};
+
+	const roomConflict = await client.session.findFirst({
+		where: { ...base, roomId: params.roomId },
+		include: { room: true, group: true },
+	});
+	if (roomConflict) {
+		throw new TaysirError(
+			`Conflit Salle : La salle "${roomConflict.room.name}" est déjà occupée par le groupe "${roomConflict.group.name}" sur ce créneau (${params.start.toLocaleTimeString()} - ${params.end.toLocaleTimeString()}).`,
+			ErrorCodes.ERR_INVALID_DATA,
+			409,
+		);
+	}
+
+	const instructorConflict = await client.session.findFirst({
+		where: { ...base, instructorId: params.instructorId },
+		include: { instructor: true },
+	});
+	if (instructorConflict) {
+		throw new TaysirError(
+			`Conflit Professeur : M. ${instructorConflict.instructor.lastName} a déjà un cours programmé sur ce créneau.`,
+			ErrorCodes.ERR_INVALID_DATA,
+			409,
+		);
+	}
+
+	const groupConflict = await client.session.findFirst({
+		where: { ...base, groupId: params.groupId },
+		include: { group: true },
+	});
+	if (groupConflict) {
+		throw new TaysirError(
+			`Conflit Groupe : Le groupe "${groupConflict.group.name}" est déjà en séance sur ce créneau.`,
+			ErrorCodes.ERR_INVALID_DATA,
+			409,
+		);
+	}
+}
+
+import { createSafeAction, FRONTDESK_ROLES } from "@/lib/actions/safe-action";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 import { getTenantPrisma } from "@/lib/prisma";
 import { CreateSessionSchema } from "@/lib/validations";
@@ -17,16 +89,24 @@ export const getWeeklySessionsAction = createSafeAction(
 		instructorId: z.string().uuid().optional(),
 		groupId: z.string().uuid().optional(),
 	}),
-	async (filters, { tenantId }) => {
+	async (filters, { tenantId, userId, role }) => {
 		const client = getTenantPrisma(tenantId);
+
+		// Un intervenant ne voit QUE ses propres séances : on force son id et on
+		// ignore tout instructorId transmis (anti-usurpation).
+		const scopedInstructorId =
+			role === "INTERVENANT" ? userId : filters.instructorId;
 
 		return await client.session.findMany({
 			where: {
 				etablissementId: tenantId,
-				startTime: { gte: filters.start },
-				endTime: { lte: filters.end },
+				// Chevauchement (et non inclusion stricte) : une séance qui déborde
+				// d'un bord de la fenêtre doit rester visible. overlap ⇔
+				// startTime < fin ET endTime > début.
+				startTime: { lt: filters.end },
+				endTime: { gt: filters.start },
 				...(filters.roomId ? { roomId: filters.roomId } : {}),
-				...(filters.instructorId ? { instructorId: filters.instructorId } : {}),
+				...(scopedInstructorId ? { instructorId: scopedInstructorId } : {}),
 				...(filters.groupId ? { groupId: filters.groupId } : {}),
 			},
 			include: {
@@ -66,61 +146,14 @@ export const createSessionAction = createSafeAction(
 	async (data, { tenantId }) => {
 		const client = getTenantPrisma(tenantId);
 
-		const checkConflict = async (start: Date, end: Date) => {
-			const roomConflict = await client.session.findFirst({
-				where: {
-					etablissementId: tenantId,
-					roomId: data.roomId,
-					status: StatusSession.SCHEDULED,
-					OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
-				},
-				include: { room: true, group: true },
+		const checkConflict = (start: Date, end: Date) =>
+			assertNoSlotConflict(client, tenantId, {
+				roomId: data.roomId,
+				instructorId: data.instructorId,
+				groupId: data.groupId,
+				start,
+				end,
 			});
-
-			if (roomConflict) {
-				throw new TaysirError(
-					`Conflit Salle : La salle "${roomConflict.room.name}" est déjà occupée par le groupe "${roomConflict.group.name}" sur ce créneau (${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}).`,
-					ErrorCodes.ERR_INVALID_DATA,
-					409,
-				);
-			}
-
-			const instructorConflict = await client.session.findFirst({
-				where: {
-					etablissementId: tenantId,
-					instructorId: data.instructorId,
-					status: StatusSession.SCHEDULED,
-					OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
-				},
-				include: { instructor: true },
-			});
-
-			if (instructorConflict) {
-				throw new TaysirError(
-					`Conflit Professeur : M. ${instructorConflict.instructor.lastName} a déjà un cours programmé sur ce créneau.`,
-					ErrorCodes.ERR_INVALID_DATA,
-					409,
-				);
-			}
-
-			const groupConflict = await client.session.findFirst({
-				where: {
-					etablissementId: tenantId,
-					groupId: data.groupId,
-					status: StatusSession.SCHEDULED,
-					OR: [{ startTime: { lt: end }, endTime: { gt: start } }],
-				},
-				include: { group: true },
-			});
-
-			if (groupConflict) {
-				throw new TaysirError(
-					`Conflit Groupe : Le groupe "${groupConflict.group.name}" est déjà en séance sur ce créneau.`,
-					ErrorCodes.ERR_INVALID_DATA,
-					409,
-				);
-			}
-		};
 
 		if (data.recurrenceType === "NONE" || !data.recurrenceEnd) {
 			await checkConflict(data.startTime, data.endTime);
@@ -146,34 +179,46 @@ export const createSessionAction = createSafeAction(
 		// Handle recurrence
 		const sessionsToCreate = [];
 		const recurrenceGroupId = crypto.randomUUID();
-		const currentStart = new Date(data.startTime);
-		const currentEnd = new Date(data.endTime);
+		const baseStart = new Date(data.startTime);
+		const baseEnd = new Date(data.endTime);
 		const recurrenceEnd = new Date(data.recurrenceEnd);
+		// On dérive chaque occurrence depuis la date de BASE via addDays/Weeks/Months
+		// (et non par mutation incrémentale) : addMonths clampe correctement les fins
+		// de mois (31 janv. + 1 mois → 28/29 févr.) au lieu de déborder sur mars.
+		const occurrenceAt = (index: number): { start: Date; end: Date } => {
+			if (data.recurrenceType === "DAILY") {
+				return {
+					start: addDays(baseStart, index),
+					end: addDays(baseEnd, index),
+				};
+			}
+			if (data.recurrenceType === "WEEKLY") {
+				return {
+					start: addWeeks(baseStart, index),
+					end: addWeeks(baseEnd, index),
+				};
+			}
+			return {
+				start: addMonths(baseStart, index),
+				end: addMonths(baseEnd, index),
+			};
+		};
 
-		while (currentStart <= recurrenceEnd) {
-			await checkConflict(currentStart, currentEnd);
+		for (let i = 0; i < MAX_RECURRENCE_OCCURRENCES; i++) {
+			const { start, end } = occurrenceAt(i);
+			if (start > recurrenceEnd) break;
+			await checkConflict(start, end);
 			sessionsToCreate.push({
 				activityId: data.activityId,
 				roomId: data.roomId,
 				instructorId: data.instructorId,
 				groupId: data.groupId,
-				startTime: new Date(currentStart),
-				endTime: new Date(currentEnd),
+				startTime: start,
+				endTime: end,
 				etablissementId: tenantId,
 				status: StatusSession.SCHEDULED,
 				recurrenceGroupId,
 			});
-
-			if (data.recurrenceType === "DAILY") {
-				currentStart.setDate(currentStart.getDate() + 1);
-				currentEnd.setDate(currentEnd.getDate() + 1);
-			} else if (data.recurrenceType === "WEEKLY") {
-				currentStart.setDate(currentStart.getDate() + 7);
-				currentEnd.setDate(currentEnd.getDate() + 7);
-			} else if (data.recurrenceType === "MONTHLY") {
-				currentStart.setMonth(currentStart.getMonth() + 1);
-				currentEnd.setMonth(currentEnd.getMonth() + 1);
-			}
 		}
 
 		const sessions = await client.session.createMany({
@@ -185,6 +230,7 @@ export const createSessionAction = createSafeAction(
 
 		return sessions;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const updateSessionAction = createSafeAction(
@@ -202,6 +248,36 @@ export const updateSessionAction = createSafeAction(
 
 		const { id, ...updateData } = data;
 
+		// Déplacer une séance doit revalider les conflits (salle/prof/groupe) sur le
+		// nouveau créneau, exactement comme la création. On charge l'état courant,
+		// on fusionne les champs modifiés, puis on vérifie en s'excluant soi-même.
+		const current = await client.session.findUnique({
+			where: { id, etablissementId: tenantId },
+			select: {
+				startTime: true,
+				endTime: true,
+				roomId: true,
+				instructorId: true,
+				groupId: true,
+			},
+		});
+		if (!current) {
+			throw new TaysirError(
+				"Séance introuvable.",
+				ErrorCodes.ERR_NOT_FOUND,
+				404,
+			);
+		}
+
+		await assertNoSlotConflict(client, tenantId, {
+			roomId: updateData.roomId ?? current.roomId,
+			instructorId: updateData.instructorId ?? current.instructorId,
+			groupId: updateData.groupId ?? current.groupId,
+			start: updateData.startTime ?? current.startTime,
+			end: updateData.endTime ?? current.endTime,
+			excludeId: id,
+		});
+
 		const result = await client.session.update({
 			where: { id, etablissementId: tenantId },
 			// Zod `.optional()` yields `T | undefined`; under exactOptionalPropertyTypes
@@ -213,6 +289,7 @@ export const updateSessionAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_schedule`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const deleteSessionAction = createSafeAction(
@@ -227,6 +304,7 @@ export const deleteSessionAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_schedule`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const updateSeriesAction = createSafeAction(
@@ -301,6 +379,7 @@ export const updateSeriesAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_schedule`, "max");
 		return { success: true };
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );
 
 export const deleteSeriesAction = createSafeAction(
@@ -333,4 +412,5 @@ export const deleteSeriesAction = createSafeAction(
 		revalidateTag(`etab_${tenantId}_schedule`, "max");
 		return result;
 	},
+	{ requiredRole: FRONTDESK_ROLES },
 );

@@ -6,6 +6,26 @@ import type { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { ErrorCodes, TaysirError } from "@/lib/errors";
 
+// Groupes de rôles = matrice d'autorisation serveur (miroir du périmètre
+// middleware, defense-in-depth). Une action de gestion doit déclarer le groupe
+// autorisé via `options.requiredRole` ; toute action de mutation non déclarée
+// est un trou de sécurité.
+//   MANAGEMENT  : pilotage pur (staff, activités) — direction seule.
+//   FRONTDESK   : front-office (élèves, paiements, groupes, salles, planning).
+//   ATTENDANCE  : tout le staff opérationnel, prof inclus (pointage, messagerie).
+export const MANAGEMENT_ROLES: RoleUser[] = [RoleUser.ADMIN, RoleUser.GERANT];
+export const FRONTDESK_ROLES: RoleUser[] = [
+	RoleUser.ADMIN,
+	RoleUser.GERANT,
+	RoleUser.SECRETAIRE,
+];
+export const ATTENDANCE_ROLES: RoleUser[] = [
+	RoleUser.ADMIN,
+	RoleUser.GERANT,
+	RoleUser.SECRETAIRE,
+	RoleUser.INTERVENANT,
+];
+
 // Récupération de la session
 async function getAuthSession() {
 	return await getServerSession(authOptions);
@@ -26,7 +46,7 @@ export function createSafeAction<TInput, TOutput>(
 		data: TInput,
 		ctx: { tenantId: string; userId: string; role: string },
 	) => Promise<TOutput>,
-	options?: { requiredRole?: RoleUser },
+	options?: { requiredRole?: RoleUser | readonly RoleUser[] },
 ) {
 	return async (input: TInput): Promise<ActionResponse<TOutput>> => {
 		try {
@@ -40,13 +60,18 @@ export function createSafeAction<TInput, TOutput>(
 				);
 			}
 
-			// 1b. Vérification du rôle requis
-			if (options?.requiredRole && session.user.role !== options.requiredRole) {
-				throw new TaysirError(
-					"Accès refusé : Privilèges insuffisants.",
-					ErrorCodes.ERR_FORBIDDEN,
-					403,
-				);
+			// 1b. Vérification du/des rôle(s) requis (accepte un rôle ou une liste)
+			if (options?.requiredRole) {
+				const allowed = Array.isArray(options.requiredRole)
+					? options.requiredRole
+					: [options.requiredRole];
+				if (!allowed.includes(session.user.role as RoleUser)) {
+					throw new TaysirError(
+						"Accès refusé : Privilèges insuffisants.",
+						ErrorCodes.ERR_FORBIDDEN,
+						403,
+					);
+				}
 			}
 
 			// 2. Vérification de l'établissement (tenant)

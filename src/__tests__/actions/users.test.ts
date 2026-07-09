@@ -302,8 +302,15 @@ describe("Users Actions Audit", () => {
 				makeSession({ etablissementId: "my-etab" }) as never,
 			);
 			const mockDelete = vi.fn().mockResolvedValue({ id: VALID_UUID });
+			// La cible est un ADMIN (≠ GERANT) → la garde "dernier gérant" est
+			// contournée ; findUnique doit renvoyer la cible sinon on lève NOT_FOUND.
 			vi.mocked(getTenantPrisma).mockReturnValue({
-				user: { delete: mockDelete },
+				user: {
+					findUnique: vi
+						.fn()
+						.mockResolvedValue({ id: VALID_UUID, role: "ADMIN" }),
+					delete: mockDelete,
+				},
 			} as never);
 
 			await deleteUserAction({ id: VALID_UUID });
@@ -315,7 +322,12 @@ describe("Users Actions Audit", () => {
 
 			// Echec système (ex: déjà supprimé)
 			vi.mocked(getTenantPrisma).mockReturnValue({
-				user: { delete: vi.fn().mockRejectedValue(new Error("P2025")) },
+				user: {
+					findUnique: vi
+						.fn()
+						.mockResolvedValue({ id: VALID_UUID, role: "ADMIN" }),
+					delete: vi.fn().mockRejectedValue(new Error("P2025")),
+				},
 			} as never);
 			const result = await deleteUserAction({ id: VALID_UUID });
 			expect(result.success).toBe(false);

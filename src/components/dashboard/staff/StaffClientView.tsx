@@ -2,8 +2,10 @@
 
 import { clsx } from "clsx";
 import {
+	CalendarClock,
 	CheckCircle2,
 	Filter,
+	GraduationCap,
 	Key,
 	Loader2,
 	Mail,
@@ -14,7 +16,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
 	createUserAction,
 	deleteUserAction,
@@ -25,13 +27,17 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import DataTable from "@/components/ui/DataTable";
 import { Input, Select } from "@/components/ui/FormInput";
 import Modal from "@/components/ui/Modal";
+import { Button, PageHeader, StatCard } from "@/components/ui/primitives";
 import { Toggle } from "@/components/ui/Toggle";
 import { useRouter } from "@/i18n/routing";
 import { type User as StaffMember, UserRole } from "@/types/schema";
 import { formatFullName } from "@/utils/format";
 
+/* A staff member carries their teaching load (séances assurées). */
+type StaffWithUsage = StaffMember & { _count: { sessions: number } };
+
 interface StaffClientViewProps {
-	initialStaff: StaffMember[];
+	initialStaff: StaffWithUsage[];
 }
 
 export default function StaffClientView({
@@ -47,6 +53,16 @@ export default function StaffClientView({
 	const [isPending, startTransition] = useTransition();
 	const t = useTranslations();
 	const router = useRouter();
+
+	const metrics = useMemo(() => {
+		const total = initialStaff.length;
+		const active = initialStaff.filter((s) => s.status === "ACTIVE").length;
+		const teachers = initialStaff.filter(
+			(s) => s.role === UserRole.INTERVENANT,
+		).length;
+		const sessions = initialStaff.reduce((a, s) => a + s._count.sessions, 0);
+		return { total, active, teachers, sessions };
+	}, [initialStaff]);
 
 	const handleAction = (u: StaffMember) => {
 		setSelectedStaff(u);
@@ -138,11 +154,11 @@ export default function StaffClientView({
 			header: t("full_name"),
 			accessor: (u: StaffMember) => (
 				<div className="flex items-center gap-3">
-					<div className="h-10 w-10 rounded-full bg-primary-teal/10 flex items-center justify-center text-primary-teal font-bold">
+					<div className="h-10 w-10 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-500 font-bold">
 						{u.firstName?.charAt(0)}
 						{u.lastName?.charAt(0)}
 					</div>
-					<span className="font-medium text-gray-900">
+					<span className="font-medium text-ink-900">
 						{formatFullName(u.firstName, u.lastName)}
 					</span>
 				</div>
@@ -151,8 +167,8 @@ export default function StaffClientView({
 		{
 			header: t("email"),
 			accessor: (u: StaffMember) => (
-				<div className="flex items-center gap-2 text-gray-600">
-					<Mail size={16} className="text-gray-400" />
+				<div className="flex items-center gap-2 text-ink-700">
+					<Mail size={16} className="text-ink-400" />
 					<span>{u.email}</span>
 				</div>
 			),
@@ -167,7 +183,7 @@ export default function StaffClientView({
 							? t("secretary")
 							: t("teacher");
 				return (
-					<span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+					<span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
 						<ShieldCheck size={12} />
 						{roleLabel}
 					</span>
@@ -215,7 +231,7 @@ export default function StaffClientView({
 							setSelectedStaff(u);
 							setIsResetModalOpen(true);
 						}}
-						className="p-2 text-gray-400 hover:text-primary-teal hover:bg-primary-teal/5 rounded-lg transition-all"
+						className="p-2 text-ink-400 hover:text-brand-500 hover:bg-brand-500/5 rounded-lg transition-all"
 						title={t("reset_password")}
 					>
 						<Key size={18} />
@@ -225,7 +241,7 @@ export default function StaffClientView({
 							e.stopPropagation();
 							handleDelete(u.id);
 						}}
-						className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+						className="p-2 text-ink-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
 						title={t("delete")}
 					>
 						<Trash2 size={18} />
@@ -241,84 +257,52 @@ export default function StaffClientView({
 
 	return (
 		<div className="space-y-8">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
-						{t("staff_title")}
-					</h1>
-					<p className="text-sm text-gray-500">{t("staff_subtitle")}</p>
-				</div>
-				<button
-					onClick={() => {
-						setSelectedStaff(null);
-						setIsModalOpen(true);
-					}}
-					className="btn-secondary flex items-center gap-2 text-sm"
-				>
-					<UserPlus size={20} />
-					{t("add_member")}
-				</button>
-			</div>
+			<PageHeader
+				eyebrow={t("staff_title")}
+				title="Gestion du"
+				accent="Personnel"
+				subtitle={t("staff_subtitle")}
+				actions={
+					<Button
+						variant="secondary"
+						onClick={() => {
+							setSelectedStaff(null);
+							setIsModalOpen(true);
+						}}
+						icon={<UserPlus size={18} />}
+					>
+						{t("add_member")}
+					</Button>
+				}
+			/>
 
-			{/* Bento Stats */}
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-gray-500">
-							{t("total_staff")}
-						</span>
-						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-							<Users size={20} />
-						</div>
-					</div>
-					<div className="mt-4 flex items-baseline gap-2">
-						<span className="text-3xl font-bold text-gray-900">
-							{initialStaff.length}
-						</span>
-						<span className="text-xs text-gray-400">{t("members")}</span>
-					</div>
-				</div>
-
-				<div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-gray-500">
-							{t("active")}
-						</span>
-						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
-							<CheckCircle2 size={20} />
-						</div>
-					</div>
-					<div className="mt-4 flex items-baseline gap-2">
-						<span className="text-3xl font-bold text-gray-900">
-							{initialStaff.filter((s) => s.status === "ACTIVE").length}
-						</span>
-						<span className="text-xs text-green-600 font-medium">
-							{t("online")}
-						</span>
-					</div>
-				</div>
-
-				<div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-gray-500">
-							{t("teachers")}
-						</span>
-						<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-							<ShieldCheck size={20} />
-						</div>
-					</div>
-					<div className="mt-4 flex items-baseline gap-2">
-						<span className="text-3xl font-bold text-gray-900">
-							{
-								initialStaff.filter((s) => s.role === UserRole.INTERVENANT)
-									.length
-							}
-						</span>
-						<span className="text-xs text-blue-600 font-medium">
-							{t("teachers")}
-						</span>
-					</div>
-				</div>
+			{/* KPIs — concordent avec Salles / Activités / Groupes */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<StatCard
+					label={t("total_staff")}
+					value={metrics.total}
+					icon={<Users size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("active")}
+					value={metrics.active}
+					icon={<CheckCircle2 size={20} />}
+					tone="positive"
+				/>
+				<StatCard
+					label={t("teacher")}
+					value={metrics.teachers}
+					icon={<GraduationCap size={20} />}
+					tone="brand"
+				/>
+				<StatCard
+					label={t("staff_sessions_covered")}
+					value={metrics.sessions}
+					icon={<CalendarClock size={20} />}
+					tone="positive"
+					hint={t("staff_schedule_load")}
+				/>
 			</div>
 
 			{/* Role Filters */}
@@ -328,8 +312,8 @@ export default function StaffClientView({
 					className={clsx(
 						"flex items-center gap-2 text-sm border",
 						roleFilter === "ALL"
-							? "btn-primary border-taysir-teal"
-							: "btn-ghost border-transparent hover:border-taysir-teal/20",
+							? "btn-primary border-brand-500"
+							: "btn-ghost border-transparent hover:border-brand-500/20",
 					)}
 				>
 					<Filter size={16} />
@@ -343,8 +327,8 @@ export default function StaffClientView({
 							className={clsx(
 								"text-sm border",
 								roleFilter === role
-									? "btn-primary border-taysir-teal"
-									: "btn-ghost border-transparent hover:border-taysir-teal/20",
+									? "btn-primary border-brand-500"
+									: "btn-ghost border-transparent hover:border-brand-500/20",
 							)}
 						>
 							{role === UserRole.GERANT
@@ -362,6 +346,7 @@ export default function StaffClientView({
 				columns={columns}
 				searchPlaceholder={t("search_staff_placeholder")}
 				onAction={handleAction}
+				hideDefaultAction={true}
 			/>
 
 			{/* Password Reset Modal */}
@@ -390,7 +375,7 @@ export default function StaffClientView({
 				}
 			>
 				<div className="space-y-4">
-					<p className="text-sm text-gray-500">
+					<p className="text-sm text-ink-500">
 						{t("reset_password_desc", {
 							name: formatFullName(
 								selectedStaff?.firstName,

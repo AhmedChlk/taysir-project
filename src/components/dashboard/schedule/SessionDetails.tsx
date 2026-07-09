@@ -11,6 +11,7 @@ import {
 	User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
 import {
 	deleteSeriesAction,
@@ -19,6 +20,7 @@ import {
 	updateSessionAction,
 } from "@/actions/schedule.actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { localizedRoom, localizedSubject } from "@/lib/subjects";
 import { formatFullName } from "@/utils/format";
 
 interface SessionDetailsProps {
@@ -31,6 +33,7 @@ export default function SessionDetails({
 	onSuccess,
 }: SessionDetailsProps) {
 	const router = useRouter();
+	const locale = useLocale();
 	const [isPending, startTransition] = useTransition();
 	const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 	const [deleteMode, setDeleteMode] = useState<"single" | "following" | "all">(
@@ -98,7 +101,7 @@ export default function SessionDetails({
 
 	return (
 		<div className="space-y-8">
-			<div className="p-6 rounded-[32px] bg-white border border-taysir-teal/5 shadow-sm">
+			<div className="p-6 rounded-[32px] bg-white border border-brand-500/5 shadow-sm">
 				<div className="flex justify-between items-start mb-6">
 					<div className="flex items-center gap-4">
 						<div
@@ -106,25 +109,25 @@ export default function SessionDetails({
 							style={{ backgroundColor: session.activity.color || "#0F515C" }}
 						/>
 						<div>
-							<h3 className="text-2xl font-black text-taysir-teal uppercase tracking-tighter">
-								{session.activity.name}
+							<h3 className="text-2xl font-black text-brand-500 uppercase tracking-tighter">
+								{localizedSubject(session.activity.name, locale)}
 							</h3>
-							<p className="text-xs font-bold text-taysir-teal/40 uppercase tracking-widest">
+							<p className="text-xs font-bold text-brand-500/40 uppercase tracking-widest">
 								{session.group.name}
 							</p>
 						</div>
 					</div>
 					<button
 						onClick={() => setIsEditing(!isEditing)}
-						className="p-2 hover:bg-taysir-teal/5 rounded-xl transition-colors text-taysir-teal/40 hover:text-taysir-teal"
+						className="p-2 hover:bg-brand-500/5 rounded-xl transition-colors text-brand-500/40 hover:text-brand-500"
 					>
 						{isEditing ? "Annuler" : "Modifier"}
 					</button>
 				</div>
 
 				{isEditing ? (
-					<div className="p-4 bg-taysir-bg/50 rounded-2xl border border-taysir-teal/5 space-y-4">
-						<p className="text-[10px] font-black uppercase text-taysir-teal/40">
+					<div className="p-4 bg-surface-0/50 rounded-2xl border border-brand-500/5 space-y-4">
+						<p className="text-[10px] font-black uppercase text-brand-500/40">
 							Mode de modification
 						</p>
 						<div className="grid grid-cols-1 gap-2">
@@ -132,8 +135,8 @@ export default function SessionDetails({
 								onClick={() => setEditMode("single")}
 								className={`p-3 rounded-xl border-2 text-left transition-all ${
 									editMode === "single"
-										? "border-taysir-teal bg-white text-taysir-teal shadow-md"
-										: "border-taysir-teal/10 text-taysir-teal/40"
+										? "border-brand-500 bg-white text-brand-500 shadow-md"
+										: "border-brand-500/10 text-brand-500/40"
 								}`}
 							>
 								<p className="font-bold uppercase text-[10px]">
@@ -146,8 +149,8 @@ export default function SessionDetails({
 										onClick={() => setEditMode("following")}
 										className={`p-3 rounded-xl border-2 text-left transition-all ${
 											editMode === "following"
-												? "border-taysir-teal bg-white text-taysir-teal shadow-md"
-												: "border-taysir-teal/10 text-taysir-teal/40"
+												? "border-brand-500 bg-white text-brand-500 shadow-md"
+												: "border-brand-500/10 text-brand-500/40"
 										}`}
 									>
 										<p className="font-bold uppercase text-[10px]">
@@ -158,8 +161,8 @@ export default function SessionDetails({
 										onClick={() => setEditMode("all")}
 										className={`p-3 rounded-xl border-2 text-left transition-all ${
 											editMode === "all"
-												? "border-taysir-teal bg-white text-taysir-teal shadow-md"
-												: "border-taysir-teal/10 text-taysir-teal/40"
+												? "border-brand-500 bg-white text-brand-500 shadow-md"
+												: "border-brand-500/10 text-brand-500/40"
 										}`}
 									>
 										<p className="font-bold uppercase text-[10px]">
@@ -169,7 +172,7 @@ export default function SessionDetails({
 								</div>
 							)}
 						</div>
-						<p className="text-[10px] italic text-taysir-teal/60">
+						<p className="text-[10px] italic text-brand-500/60">
 							Note: Le Drag & Drop sur l&apos;agenda modifie uniquement la
 							séance déplacée.
 						</p>
@@ -184,8 +187,8 @@ export default function SessionDetails({
 				) : (
 					<div className="grid grid-cols-1 gap-4">
 						{/* ... same details as before ... */}
-						<div className="flex items-center gap-3 text-taysir-teal">
-							<div className="p-2 bg-taysir-teal/5 rounded-xl">
+						<div className="flex items-center gap-3 text-brand-500">
+							<div className="p-2 bg-brand-500/5 rounded-xl">
 								<Clock size={18} />
 							</div>
 							<div>
@@ -204,20 +207,22 @@ export default function SessionDetails({
 							</div>
 						</div>
 
-						<div className="flex items-center gap-3 text-taysir-teal">
-							<div className="p-2 bg-taysir-teal/5 rounded-xl">
+						<div className="flex items-center gap-3 text-brand-500">
+							<div className="p-2 bg-brand-500/5 rounded-xl">
 								<MapPin size={18} />
 							</div>
 							<div>
 								<p className="text-[10px] font-bold uppercase opacity-40">
 									Localisation
 								</p>
-								<p className="font-bold">{session.room.name}</p>
+								<p className="font-bold">
+									{localizedRoom(session.room.name, locale)}
+								</p>
 							</div>
 						</div>
 
-						<div className="flex items-center gap-3 text-taysir-teal">
-							<div className="p-2 bg-taysir-teal/5 rounded-xl">
+						<div className="flex items-center gap-3 text-brand-500">
+							<div className="p-2 bg-brand-500/5 rounded-xl">
 								<User size={18} />
 							</div>
 							<div>
@@ -309,7 +314,7 @@ export default function SessionDetails({
 						<div className="flex gap-2">
 							<button
 								onClick={() => setShowConfirmDelete(false)}
-								className="flex-1 py-3 rounded-xl bg-white text-taysir-teal font-bold uppercase text-[10px]"
+								className="flex-1 py-3 rounded-xl bg-white text-brand-500 font-bold uppercase text-[10px]"
 							>
 								Annuler
 							</button>

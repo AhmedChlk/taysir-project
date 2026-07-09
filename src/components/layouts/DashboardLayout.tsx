@@ -39,6 +39,26 @@ export default function DashboardLayout({
 	const pathname = usePathname();
 	const activeDrawer = searchParams.get("drawer");
 
+	/* Contextual page name for the topbar eyebrow (replaces static "BIENVENUE").
+	   Route segment → i18n key; student detail etc. resolve to their section. */
+	const PAGE_KEY: Record<string, string> = {
+		dashboard: "dashboard",
+		students: "students",
+		schedule: "planning",
+		attendance: "attendance",
+		payments: "payments",
+		groups: "groups",
+		rooms: "rooms",
+		staff: "staff",
+		activities: "activities",
+		settings: "settings",
+	};
+	const pageSegment = pathname
+		.split("/")
+		.reverse()
+		.find((s) => s in PAGE_KEY);
+	const pageKey = (pageSegment && PAGE_KEY[pageSegment]) || "dashboard";
+
 	type DashboardFormData = Extract<
 		Awaited<ReturnType<typeof getDashboardFormDataAction>>,
 		{ success: true }
@@ -72,8 +92,8 @@ export default function DashboardLayout({
 
 	if (status === "loading") {
 		return (
-			<div className="flex h-screen w-full items-center justify-center bg-taysir-bg">
-				<Loader2 className="h-10 w-10 animate-spin text-taysir-teal font-bold" />
+			<div className="flex h-screen w-full items-center justify-center bg-surface-0">
+				<Loader2 className="h-10 w-10 animate-spin text-brand-500 font-bold" />
 			</div>
 		);
 	}
@@ -81,22 +101,22 @@ export default function DashboardLayout({
 	if (!session) return null;
 
 	return (
-		<div className="flex h-screen bg-taysir-bg text-taysir-teal font-sans overflow-hidden">
+		<div className="flex h-screen bg-surface-0 text-ink-900 font-sans overflow-hidden">
 			<Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
 			<main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-				<header className="h-20 bg-white border-b border-taysir-teal/5 flex items-center justify-between px-4 md:px-8 shrink-0 z-30 shadow-sm">
+				<header className="h-20 bg-surface-white border-b border-line/60 flex items-center justify-between px-4 md:px-8 shrink-0 z-30">
 					<div className="flex items-center gap-4">
 						<button
 							onClick={() => setIsSidebarOpen(true)}
-							className="p-2 rounded-[16px] hover:bg-taysir-teal/5 text-taysir-teal md:hidden transition-all"
+							className="p-2 rounded-[16px] hover:bg-brand-500/5 text-brand-500 md:hidden transition-all"
 						>
 							<Menu size={24} />
 						</button>
 
 						<div className="hidden md:block">
-							<h2 className="text-xs font-black text-taysir-teal/30 uppercase tracking-[0.2em]">
-								{t("welcome")}
+							<h2 className="text-xs font-black text-ink-400 uppercase tracking-[0.2em]">
+								{t(pageKey)}
 							</h2>
 						</div>
 
@@ -110,7 +130,7 @@ export default function DashboardLayout({
 									sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 								/>
 							</div>
-							<span className="text-lg font-black text-taysir-teal tracking-tighter uppercase">
+							<span className="text-lg font-black text-brand-500 tracking-tighter uppercase">
 								TAYSIR
 							</span>
 						</div>
@@ -121,7 +141,7 @@ export default function DashboardLayout({
 							<LanguageSwitcher />
 						</div>
 
-						<button className="relative p-2.5 rounded-[16px] hover:bg-taysir-teal/5 text-taysir-teal/60 transition-all duration-200">
+						<button className="relative p-2.5 rounded-[16px] hover:bg-brand-500/5 text-brand-500/60 transition-all duration-200">
 							<Bell size={20} />
 							<span className="absolute top-2.5 end-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
 						</button>
@@ -132,25 +152,25 @@ export default function DashboardLayout({
 								className={clsx(
 									"flex items-center gap-3 p-1 rounded-full transition-all duration-200 cursor-pointer",
 									isUserMenuOpen
-										? "bg-taysir-teal/5 ring-1 ring-taysir-teal/10"
-										: "hover:bg-taysir-teal/5",
+										? "bg-brand-500/5 ring-1 ring-brand-500/10"
+										: "hover:bg-brand-500/5",
 								)}
 							>
-								<div className="h-9 w-9 rounded-full bg-taysir-teal flex items-center justify-center text-white text-sm font-black shadow-sm transition-transform group-hover:scale-105">
+								<div className="h-9 w-9 rounded-full bg-brand-500 flex items-center justify-center text-white text-sm font-black shadow-sm transition-transform group-hover:scale-105">
 									{session.user?.name?.charAt(0).toUpperCase() || "U"}
 								</div>
 								<div className="hidden lg:block text-start">
-									<p className="text-sm font-black leading-none text-taysir-teal group-hover:text-taysir-teal transition-colors">
+									<p className="text-sm font-black leading-none text-brand-500 group-hover:text-brand-500 transition-colors">
 										{session.user?.name}
 									</p>
-									<p className="text-[10px] font-black text-taysir-teal/40 uppercase mt-1 tracking-wider">
+									<p className="text-[10px] font-black text-brand-500/40 uppercase mt-1 tracking-wider">
 										{session.user?.role}
 									</p>
 								</div>
 								<ChevronDown
 									size={14}
 									className={clsx(
-										"text-taysir-teal/40 transition-transform duration-200",
+										"text-brand-500/40 transition-transform duration-200",
 										isUserMenuOpen && "rotate-180",
 									)}
 								/>
@@ -166,30 +186,30 @@ export default function DashboardLayout({
 									/>
 									<div
 										className={clsx(
-											"absolute top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-taysir-teal/5 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200",
+											"absolute top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-brand-500/5 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200",
 											isRtl ? "left-0" : "right-0",
 										)}
 									>
 										<Link
 											href="/dashboard/settings"
-											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-taysir-teal/70 hover:bg-taysir-teal/5 transition-colors"
+											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-500/70 hover:bg-brand-500/5 transition-colors"
 											onClick={() => setIsUserMenuOpen(false)}
 										>
-											<User size={18} className="text-taysir-teal/30" />
+											<User size={18} className="text-brand-500/30" />
 											{t("tab_account")}
 										</Link>
 										<Link
 											href="/dashboard/settings"
-											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-taysir-teal/70 hover:bg-taysir-teal/5 transition-colors"
+											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-500/70 hover:bg-brand-500/5 transition-colors"
 											onClick={() => setIsUserMenuOpen(false)}
 										>
-											<Settings size={18} className="text-taysir-teal/30" />
+											<Settings size={18} className="text-brand-500/30" />
 											{t("settings")}
 										</Link>
-										<div className="sm:hidden px-5 py-3 border-t border-taysir-teal/5 mt-2">
+										<div className="sm:hidden px-5 py-3 border-t border-brand-500/5 mt-2">
 											<LanguageSwitcher />
 										</div>
-										<div className="h-px bg-taysir-teal/5 my-2 mx-3" />
+										<div className="h-px bg-brand-500/5 my-2 mx-3" />
 										<button
 											onClick={async () => {
 												await signOut({ redirect: false });
@@ -208,7 +228,7 @@ export default function DashboardLayout({
 				</header>
 
 				<div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
-					<div className="mx-auto max-w-7xl">{children}</div>
+					<div className="mx-auto max-w-7xl px-4 md:px-8 py-8">{children}</div>
 				</div>
 			</main>
 

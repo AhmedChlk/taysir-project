@@ -174,10 +174,21 @@
 
 @theme {
 	--color-brand-900: var(--brand-900);
+	--color-brand-800: var(--brand-800);
 	--color-brand-700: var(--brand-700);
+	--color-brand-600: var(--brand-600);
 	--color-brand-500: var(--brand-500);
+	--color-brand-400: var(--brand-400);
 	--color-brand-300: var(--brand-300);
 	--color-brand-50: var(--brand-50);
+
+	--color-accent: var(--accent);
+	--color-accent-ink: var(--accent-ink);
+	--color-accent-600: var(--accent-600);
+	--color-accent-50: var(--accent-50);
+
+	--color-brass: var(--brass);
+	--color-brass-bright: var(--brass-bright);
 
 	--color-ink-900: var(--ink-900);
 	--color-ink-800: var(--ink-800);
@@ -188,6 +199,11 @@
 	--color-surface-0: var(--surface-0);
 	--color-surface-50: var(--surface-50);
 	--color-surface-100: var(--surface-100);
+	--color-surface-200: var(--surface-200);
+	--color-surface-white: var(--surface-white);
+
+	--color-line: var(--line);
+	--color-line-soft: var(--line-soft);
 
 	--font-sans: var(--font-sans);
 	--font-mono: var(--font-mono);
@@ -584,6 +600,22 @@ html.lenis body {
 	max-width: 470px;
 	margin: 26px 0 32px;
 }
+.hero-trust {
+	display: inline-flex;
+	align-items: center;
+	gap: 9px;
+	font-size: 0.86rem;
+	font-weight: 500;
+	color: var(--fg3);
+}
+.hero-trust-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	background: var(--brand-500);
+	box-shadow: 0 0 0 4px rgba(21, 113, 128, 0.14);
+	flex-shrink: 0;
+}
 .hero-scene {
 	position: absolute;
 	right: clamp(-130px, -5vw, -60px);
@@ -758,11 +790,17 @@ html.lenis body {
 	perspective: 1500px;
 }
 .hz-tile {
-	transition: filter var(--dur-small) var(--ease-order);
+	transition:
+		box-shadow var(--dur-small) var(--ease-order),
+		border-color var(--dur-small) var(--ease-order);
+	border: 1px solid rgba(11, 42, 48, 0.06);
 }
 .hz-tile:not(.hz-star):hover {
 	z-index: 3;
-	filter: drop-shadow(0 12px 22px rgba(11, 42, 48, 0.22));
+	border-color: rgba(43, 160, 166, 0.4);
+	box-shadow:
+		0 18px 40px -18px rgba(11, 42, 48, 0.35),
+		0 0 0 1px rgba(43, 160, 166, 0.18);
 }
 /* Cursor "torch" — a glaze of light follows the mouse across the mosaic */
 .hz-spotlight {
@@ -800,11 +838,10 @@ html.lenis body {
 }
 .hz-grid {
 	display: grid;
-	gap: 2px;
-	padding: 2px;
-	background: var(--accent); /* coral "grout" shows through the gaps */
-	border-radius: 6px;
-	box-shadow: var(--shadow-3);
+	/* airy bone gutters — the canvas breathes between tiles (no coral block) */
+	gap: clamp(10px, 1.1vw, 16px);
+	padding: 0;
+	background: transparent;
 	max-width: 1120px;
 	margin: 0 auto;
 	position: relative;
@@ -855,17 +892,11 @@ html.lenis body {
 	padding: clamp(14px, 1.6vw, 22px);
 	overflow: hidden;
 	background: var(--surface-50);
-	/* octagon chamfer → corners reveal coral grout = girih residual squares */
-	clip-path: polygon(
-		11px 0,
-		calc(100% - 11px) 0,
-		100% 11px,
-		100% calc(100% - 11px),
-		calc(100% - 11px) 100%,
-		11px 100%,
-		0 calc(100% - 11px),
-		0 11px
-	);
+	border-radius: 16px;
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.5) inset,
+		0 10px 24px -16px rgba(11, 42, 48, 0.28),
+		0 1px 2px rgba(11, 42, 48, 0.05);
 }
 .hz-bone {
 	background: var(--surface-50);
@@ -885,16 +916,10 @@ html.lenis body {
 	justify-content: space-between;
 	gap: clamp(14px, 2vw, 26px);
 	padding: clamp(20px, 2.4vw, 34px);
-	clip-path: polygon(
-		22px 0,
-		calc(100% - 22px) 0,
-		100% 22px,
-		100% calc(100% - 22px),
-		calc(100% - 22px) 100%,
-		22px 100%,
-		0 calc(100% - 22px),
-		0 22px
-	);
+	border-radius: 22px;
+	box-shadow:
+		0 24px 60px -28px rgba(11, 42, 48, 0.6),
+		0 2px 8px rgba(11, 42, 48, 0.18);
 }
 .hz-star-top {
 	display: flex;
@@ -913,6 +938,76 @@ html.lenis body {
 	color: var(--brass);
 	font-style: normal;
 	margin: 0 5px;
+}
+/* "En direct" badge — signals the board is a working demo, not a screenshot */
+.hz-live {
+	margin-inline-start: auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: var(--font-display), sans-serif;
+	font-size: clamp(9px, 0.72vw, 11px);
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--fg-on-brand-muted);
+	white-space: nowrap;
+}
+.hz-live-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	background: #34d399;
+	box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+	animation: hz-live-pulse 2s var(--ease-order) infinite;
+}
+@keyframes hz-live-pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+	}
+	70% {
+		box-shadow: 0 0 0 7px rgba(52, 211, 153, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+	}
+}
+/* Receipt flash on the Paiements tile when an encaissement lands */
+.hz-receipt {
+	position: absolute;
+	left: clamp(14px, 1.6vw, 22px);
+	right: clamp(14px, 1.6vw, 22px);
+	bottom: clamp(12px, 1.4vw, 18px);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 10px;
+	border-radius: 10px;
+	background: var(--brand-900);
+	color: var(--fg-on-brand-strong, #fff);
+	font-family: var(--font-numeric), Georgia, serif;
+	font-size: clamp(10px, 0.85vw, 12px);
+	font-weight: 600;
+	box-shadow: 0 12px 26px -12px rgba(11, 42, 48, 0.5);
+}
+.hz-receipt i {
+	display: block;
+	font-style: normal;
+	font-weight: 400;
+	font-size: 0.82em;
+	opacity: 0.72;
+}
+.hz-receipt-tick {
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	border-radius: 999px;
+	background: #16a34a;
+	color: #fff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
 }
 .hz-title {
 	font-family: var(--font-display), sans-serif;

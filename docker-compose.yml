@@ -42,6 +42,9 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+      # Fuseau Algérie (UTC+1) : les calculs "aujourd'hui"/mois/présences
+      # utilisent l'heure locale du process (cf. Dockerfile).
+      TZ: Africa/Algiers
       # Surface more detail in logs without full debug noise.
       NEXT_TELEMETRY_DISABLED: "1"
     ports:

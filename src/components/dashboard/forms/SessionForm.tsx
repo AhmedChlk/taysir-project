@@ -3,11 +3,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Calendar } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { createSessionAction } from "@/actions/schedule.actions";
 import { Input, Select } from "@/components/ui/FormInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { useRouter } from "@/i18n/routing";
+import { localizedRoom, localizedSubject } from "@/lib/subjects";
 import { formatFullName } from "@/utils/format";
 
 type RoomOption = { id: string; name: string; capacity: number };
@@ -36,6 +38,8 @@ export default function SessionForm({
 	groups = [],
 }: SessionFormProps) {
 	const router = useRouter();
+	const t = useTranslations();
+	const locale = useLocale();
 	const searchParams = useSearchParams();
 	const [isPending, setIsPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -86,40 +90,43 @@ export default function SessionForm({
 
 	const activityOptions = useMemo(
 		() => [
-			{ label: "Sélectionner une activité...", value: "" },
-			...activities.map((a) => ({ label: a.name, value: a.id })),
+			{ label: t("payments_select_activity"), value: "" },
+			...activities.map((a) => ({
+				label: localizedSubject(a.name, locale),
+				value: a.id,
+			})),
 		],
-		[activities],
+		[activities, t, locale],
 	);
 
 	const roomOptions = useMemo(
 		() => [
-			{ label: "Choisir une salle...", value: "" },
+			{ label: t("session_select_room"), value: "" },
 			...rooms.map((r) => ({
-				label: `${r.name} (Cap. ${r.capacity})`,
+				label: `${localizedRoom(r.name, locale)} (${t("session_capacity_abbr")} ${r.capacity})`,
 				value: r.id,
 			})),
 		],
-		[rooms],
+		[rooms, t, locale],
 	);
 
 	const instructorOptions = useMemo(
 		() => [
-			{ label: "Choisir un intervenant...", value: "" },
+			{ label: t("session_select_teacher"), value: "" },
 			...instructors.map((i) => ({
 				label: formatFullName(i.firstName, i.lastName),
 				value: i.id,
 			})),
 		],
-		[instructors],
+		[instructors, t],
 	);
 
 	const groupOptions = useMemo(
 		() => [
-			{ label: "Choisir un groupe...", value: "" },
+			{ label: t("session_select_group"), value: "" },
 			...groups.map((g) => ({ label: g.name, value: g.id })),
 		],
-		[groups],
+		[groups, t],
 	);
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +138,7 @@ export default function SessionForm({
 		const end = new Date(`${formData.date}T${formData.endTime}`);
 
 		if (end <= start) {
-			setError("L'heure de fin doit être après l'heure de début.");
+			setError(t("session_end_before_start_error"));
 			return;
 		}
 
@@ -154,12 +161,10 @@ export default function SessionForm({
 				router.refresh();
 				if (onSuccess) onSuccess();
 			} else {
-				setError(result?.error?.message || "Une erreur est survenue");
+				setError(result?.error?.message || t("error_occurred"));
 			}
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Une erreur est survenue",
-			);
+			setError(err instanceof Error ? err.message : t("error_occurred"));
 		} finally {
 			setIsPending(false);
 		}
@@ -183,7 +188,7 @@ export default function SessionForm({
 
 			<div className="grid grid-cols-1 gap-4">
 				<Select
-					label="Activité"
+					label={t("payments_activity")}
 					value={formData.activityId}
 					onChange={(e) =>
 						setFormData({ ...formData, activityId: e.target.value })
@@ -194,7 +199,7 @@ export default function SessionForm({
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<Select
-						label="Salle"
+						label={t("session_room")}
 						value={formData.roomId}
 						onChange={(e) =>
 							setFormData({ ...formData, roomId: e.target.value })
@@ -203,7 +208,7 @@ export default function SessionForm({
 						required
 					/>
 					<Select
-						label="Intervenant"
+						label={t("session_instructor")}
 						value={formData.instructorId}
 						onChange={(e) =>
 							setFormData({ ...formData, instructorId: e.target.value })
@@ -214,7 +219,7 @@ export default function SessionForm({
 				</div>
 
 				<Select
-					label="Groupe d'élèves"
+					label={t("session_student_group")}
 					value={formData.groupId}
 					onChange={(e) =>
 						setFormData({ ...formData, groupId: e.target.value })
@@ -223,18 +228,18 @@ export default function SessionForm({
 					required
 				/>
 
-				<div className="h-px bg-taysir-teal/5 my-2" />
+				<div className="h-px bg-brand-500/5 my-2" />
 
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<Input
-						label="Date"
+						label={t("session_date")}
 						type="date"
 						value={formData.date}
 						onChange={(e) => setFormData({ ...formData, date: e.target.value })}
 						required
 					/>
 					<Input
-						label="Début"
+						label={t("session_start")}
 						type="time"
 						value={formData.startTime}
 						onChange={(e) =>
@@ -243,7 +248,7 @@ export default function SessionForm({
 						required
 					/>
 					<Input
-						label="Fin"
+						label={t("session_end")}
 						type="time"
 						value={formData.endTime}
 						onChange={(e) =>
@@ -253,32 +258,32 @@ export default function SessionForm({
 					/>
 				</div>
 
-				<div className="h-px bg-taysir-teal/5 my-2" />
+				<div className="h-px bg-brand-500/5 my-2" />
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<Select
-						label="Récurrence"
+						label={t("session_recurrence")}
 						value={formData.recurrenceType}
 						onChange={(e) =>
 							setFormData({
 								...formData,
 								recurrenceType: e.target.value as
-								| "NONE"
-								| "DAILY"
-								| "WEEKLY"
-								| "MONTHLY",
+									| "NONE"
+									| "DAILY"
+									| "WEEKLY"
+									| "MONTHLY",
 							})
 						}
 						options={[
-							{ label: "Aucune", value: "NONE" },
-							{ label: "Quotidienne", value: "DAILY" },
-							{ label: "Hebdomadaire", value: "WEEKLY" },
-							{ label: "Mensuelle", value: "MONTHLY" },
+							{ label: t("session_recurrence_none"), value: "NONE" },
+							{ label: t("session_daily"), value: "DAILY" },
+							{ label: t("session_weekly"), value: "WEEKLY" },
+							{ label: t("session_monthly"), value: "MONTHLY" },
 						]}
 					/>
 					{formData.recurrenceType !== "NONE" && (
 						<Input
-							label="Fin de récurrence"
+							label={t("session_recurrence_end")}
 							type="date"
 							value={formData.recurrenceEnd}
 							onChange={(e) =>
@@ -293,10 +298,10 @@ export default function SessionForm({
 			<div className="pt-4">
 				<SubmitButton
 					isLoading={isPending}
-					loadingText="Planification en cours..."
+					loadingText={t("session_form_loading")}
 				>
 					<Calendar size={20} />
-					<span>Confirmer la séance</span>
+					<span>{t("session_confirm")}</span>
 				</SubmitButton>
 			</div>
 		</form>

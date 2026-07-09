@@ -11,12 +11,13 @@ import {
 	GraduationCap,
 	Palette,
 	Plus,
+	Search,
 	ShieldAlert,
 	Trash2,
 	Users,
 	XCircle,
 } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import {
 	createTenantAction,
@@ -52,12 +53,22 @@ export default function SuperAdminTenantsView({
 	initialTenants,
 }: SuperAdminTenantsViewProps) {
 	const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+	const [searchQuery, setSearchQuery] = useState("");
+	const filteredTenants = (() => {
+		const q = searchQuery.trim().toLowerCase();
+		if (!q) return tenants;
+		return tenants.filter(
+			(t) =>
+				t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q),
+		);
+	})();
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
 	const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const locale = useLocale();
+	const t = useTranslations();
 
 	// Auto-slug generation
 	const [formName, setFormName] = useState("");
@@ -181,13 +192,13 @@ export default function SuperAdminTenantsView({
 		<div className="space-y-10 pb-20">
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
 				<div className="space-y-1">
-					<div className="t-eyebrow">Administration Globale</div>
+					<div className="t-eyebrow">{t("superadmin_eyebrow")}</div>
 					<h1 className="text-4xl font-bold text-ink-900 tracking-tight">
-						Parc <span className="text-brand-500">Établissements</span>
+						{t("superadmin_title_prefix")}{" "}
+						<span className="text-brand-500">{t("superadmin_tenants")}</span>
 					</h1>
 					<p className="text-ink-500 font-medium max-w-lg leading-relaxed">
-						Gérez l'ensemble des instances déployées, les contrats et les accès
-						privilégiés de vos clients.
+						{t("superadmin_subtitle")}
 					</p>
 				</div>
 				<button
@@ -199,8 +210,23 @@ export default function SuperAdminTenantsView({
 					className="btn btn--primary btn--lg shadow-xl shadow-brand-500/10 self-start md:self-end"
 				>
 					<Plus size={20} />
-					Nouveau Client
+					{t("superadmin_new_client")}
 				</button>
+			</div>
+
+			{/* Recherche fonctionnelle par nom ou slug d'établissement */}
+			<div className="relative max-w-md">
+				<Search
+					size={18}
+					className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+				/>
+				<input
+					type="search"
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					placeholder={t("superadmin_search_placeholder")}
+					className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-4 text-sm font-medium text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
+				/>
 			</div>
 
 			<AnimatePresence>
@@ -223,8 +249,14 @@ export default function SuperAdminTenantsView({
 				)}
 			</AnimatePresence>
 
+			{filteredTenants.length === 0 && (
+				<p className="rounded-2xl border border-line bg-surface-50 px-6 py-10 text-center text-sm font-semibold text-ink-400">
+					{t("superadmin_no_results")}
+				</p>
+			)}
+
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-				{tenants.map((tenant) => (
+				{filteredTenants.map((tenant) => (
 					<motion.div
 						key={tenant.id}
 						layout
@@ -260,7 +292,7 @@ export default function SuperAdminTenantsView({
 										type="button"
 										onClick={() => setSelectedTenant(tenant)}
 										className="p-2.5 text-ink-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
-										title="Modifier"
+										title={t("edit")}
 									>
 										<Edit3 size={18} />
 									</button>
@@ -273,7 +305,7 @@ export default function SuperAdminTenantsView({
 												? "text-ink-400 hover:text-danger hover:bg-rose-50"
 												: "text-danger hover:text-success hover:bg-emerald-50",
 										)}
-										title={tenant.isActive ? "Désactiver" : "Activer"}
+										title={tenant.isActive ? t("deactivate") : t("activate")}
 									>
 										{tenant.isActive ? (
 											<XCircle size={18} />
@@ -285,7 +317,7 @@ export default function SuperAdminTenantsView({
 										type="button"
 										onClick={() => setTenantToDelete(tenant)}
 										className="p-2.5 text-ink-400 hover:text-danger hover:bg-rose-50 rounded-xl transition-all"
-										title="Supprimer"
+										title={t("delete")}
 									>
 										<Trash2 size={18} />
 									</button>
@@ -327,7 +359,7 @@ export default function SuperAdminTenantsView({
 								>
 									{tenant.contractEndDate
 										? formatDate(tenant.contractEndDate, locale)
-										: "Contrat illimité"}
+										: t("contract_unlimited")}
 								</span>
 							</div>
 
@@ -555,7 +587,7 @@ export default function SuperAdminTenantsView({
 				onConfirm={handleDeleteTenant}
 				title="Supprimer définitivement ?"
 				message={`ATTENTION : La suppression de "${tenantToDelete?.name}" est IRRÉVERSIBLE et effacera toutes les données de ce client. Préférez la désactivation de l'accès si le client n'a simplement pas payé.`}
-				confirmLabel="Supprimer"
+				confirmLabel={t("delete")}
 				isLoading={isPending}
 			/>
 		</div>

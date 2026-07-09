@@ -1,4 +1,5 @@
 import {
+	type NiveauScolaire,
 	PaymentMethod,
 	RoleUser,
 	StatusDocument,
@@ -74,6 +75,7 @@ export interface Student {
 	parentName?: string | null;
 	parentPhone?: string | null;
 	parentEmail?: string | null;
+	niveau?: NiveauScolaire | null;
 	birthDate?: Date | null;
 	registrationDate: Date;
 	isActive: boolean;

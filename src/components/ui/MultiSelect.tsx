@@ -66,7 +66,7 @@ export default function MultiSelect({
 		<div className="w-full space-y-1.5" ref={containerRef}>
 			<label
 				htmlFor={triggerId}
-				className="text-sm font-semibold text-taysir-teal"
+				className="text-sm font-semibold text-brand-500"
 			>
 				{label}
 			</label>
@@ -78,10 +78,10 @@ export default function MultiSelect({
 					aria-haspopup="listbox"
 					onClick={() => setIsOpen(!isOpen)}
 					className={clsx(
-						"flex min-h-[50px] w-full flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm transition-all outline-none cursor-pointer focus:ring-4 focus:ring-taysir-teal/10 text-start",
+						"flex min-h-[50px] w-full flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm transition-all outline-none cursor-pointer focus:ring-4 focus:ring-brand-500/10 text-start",
 						isOpen
-							? "border-taysir-teal ring-4 ring-taysir-teal/10"
-							: "border-taysir-teal/15 hover:border-taysir-teal/30",
+							? "border-brand-500 ring-4 ring-brand-500/10"
+							: "border-brand-500/15 hover:border-brand-500/30",
 					)}
 				>
 					{safeValue.length > 0 ? (
@@ -91,7 +91,7 @@ export default function MultiSelect({
 								.map((opt) => (
 									<span
 										key={opt.value}
-										className="inline-flex items-center gap-1 rounded-lg bg-taysir-teal/5 px-2 py-1 text-[10px] font-black uppercase text-taysir-teal border border-taysir-teal/10"
+										className="inline-flex items-center gap-1 rounded-lg bg-brand-500/5 px-2 py-1 text-[10px] font-black uppercase text-brand-500 border border-brand-500/10"
 									>
 										{opt.label}
 										<X
@@ -138,7 +138,7 @@ export default function MultiSelect({
 								className={clsx(
 									"flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold transition-colors cursor-pointer",
 									safeValue.includes(option.value)
-										? "bg-taysir-teal/5 text-taysir-teal"
+										? "bg-brand-500/5 text-brand-500"
 										: "text-gray-700 hover:bg-gray-50",
 								)}
 							>

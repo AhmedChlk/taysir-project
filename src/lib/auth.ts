@@ -3,6 +3,22 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 
+// Refus catégorique d'un secret vide : un secret "" signerait des JWT
+// trivialement forgeables (un attaquant se fabriquerait un token SUPER_ADMIN).
+// En production on échoue au démarrage ; en dev/test on tolère l'absence
+// (next-auth applique son propre défaut de dev).
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+if (process.env.NODE_ENV === "production" && !NEXTAUTH_SECRET) {
+	throw new Error(
+		"NEXTAUTH_SECRET est requis en production (secret vide = JWT forgeables).",
+	);
+}
+
+// Hash bidon (coût 12) pour égaliser le temps de réponse quand le compte
+// n'existe pas : sans lui, l'absence de bcrypt.compare crée un canal temporel
+// permettant d'énumérer les emails valides.
+const DUMMY_HASH = "$2b$12$kJUQJtnAR1RnAWUPATr6Ce1WRldTDsWWLvXqtyiJ8BVyrZJA2sZZm";
+
 export const authOptions: NextAuthOptions = {
 	providers: [
 		CredentialsProvider({
@@ -22,7 +38,11 @@ export const authOptions: NextAuthOptions = {
 						include: { etablissement: true },
 					});
 
+					// Compte inexistant / inactif : on effectue quand même un compare
+					// bcrypt bidon pour ne pas révéler par le temps de réponse si
+					// l'email existe, puis on refuse.
 					if (!user || user.status !== "ACTIVE") {
+						await bcrypt.compare(credentials.password, DUMMY_HASH);
 						return null;
 					}
 
@@ -32,6 +52,7 @@ export const authOptions: NextAuthOptions = {
 						user.etablissement &&
 						!user.etablissement.isActive
 					) {
+						await bcrypt.compare(credentials.password, DUMMY_HASH);
 						return null;
 					}
 
@@ -90,6 +111,12 @@ export const authOptions: NextAuthOptions = {
 	},
 	session: {
 		strategy: "jwt",
+		// Re-signe le JWT au plus tard toutes les 24h : borne la fenêtre pendant
+		// laquelle un rôle/statut modifié côté DB reste "collé" dans un vieux token.
+		maxAge: 24 * 60 * 60,
 	},
-	secret: process.env.NEXTAUTH_SECRET ?? "",
+	// Fourni seulement s'il existe (en prod il est garanti par le throw ci-dessus ;
+	// en dev/test absent, next-auth applique son défaut). `exactOptionalPropertyTypes`
+	// interdit `secret: undefined`, d'où le spread conditionnel.
+	...(NEXTAUTH_SECRET ? { secret: NEXTAUTH_SECRET } : {}),
 };

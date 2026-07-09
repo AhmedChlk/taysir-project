@@ -440,7 +440,10 @@ describe("Students Actions Audit", () => {
 	describe("getStudentFullProfileAction", () => {
 		it("🔴 Isolation : Récupère les données avec la contrainte stricte sur le tenantId", async () => {
 			vi.mocked(getServerSession).mockResolvedValue(makeSession() as never);
-			mockPrisma.student.findUnique.mockResolvedValue({ id: STUDENT_ID });
+			mockPrisma.student.findUnique.mockResolvedValue({
+				id: STUDENT_ID,
+				paymentPlans: [],
+			});
 
 			const result = await getStudentFullProfileAction({ id: STUDENT_ID });
 			expect(result.success).toBe(true);

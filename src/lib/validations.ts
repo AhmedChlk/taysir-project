@@ -49,6 +49,7 @@ export const CreatePaymentPlanSchema = z.object({
 			z.object({
 				amount: z.number().positive(),
 				dueDate: z.string(), // ISO Date
+				label: z.string().optional(), // ex. « Inscription », « Septembre »
 			}),
 		)
 		.optional(),
@@ -56,6 +57,16 @@ export const CreatePaymentPlanSchema = z.object({
 
 export const RegisterPaymentSchema = z.object({
 	trancheId: z.string().uuid("ID de tranche invalide."),
+	montant_paye: z.number().positive("Le montant doit être supérieur à zéro."),
+	methode: z.nativeEnum(PaymentMethod),
+	reference: z.string().optional(),
+	note: z.string().optional(),
+});
+
+// Règlement global : un montant réparti automatiquement sur les échéances
+// impayées les plus anciennes d'un plan (paie plusieurs tranches en 1 fois).
+export const RegisterBulkPaymentSchema = z.object({
+	paymentPlanId: z.string().uuid("ID de plan invalide."),
 	montant_paye: z.number().positive("Le montant doit être supérieur à zéro."),
 	methode: z.nativeEnum(PaymentMethod),
 	reference: z.string().optional(),
@@ -158,6 +169,23 @@ export const CreateStudentSchema = z.object({
 	parentName: z.string().optional().nullable(),
 	parentPhone: z.string().optional().nullable(),
 	parentEmail: z.string().optional().nullable(),
+	niveau: z
+		.enum([
+			"AP1",
+			"AP2",
+			"AP3",
+			"AP4",
+			"AP5",
+			"AM1",
+			"AM2",
+			"AM3",
+			"AM4",
+			"AS1",
+			"AS2",
+			"AS3",
+		])
+		.optional()
+		.nullable(),
 	groupIds: z.array(z.string().uuid()).optional().default([]),
 });
 

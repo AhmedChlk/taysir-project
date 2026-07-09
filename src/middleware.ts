@@ -45,6 +45,43 @@ export default async function middleware(req: NextRequest) {
 		if (!isSuperAdmin && isSuperAdminPath) {
 			return NextResponse.redirect(new URL(`/${locale}/dashboard`, req.url));
 		}
+
+		// Seuls les rôles opérationnels ont accès au tableau de bord. PARTICIPANT
+		// (élève) et RESPONSABLE (parent) n'ont pas encore de portail dédié : on
+		// les sort du dashboard vers la page publique (sinon ils voyaient le
+		// cockpit dirigeant complet). Tout rôle inconnu est refusé par défaut.
+		const DASHBOARD_ROLES = ["ADMIN", "GERANT", "SECRETAIRE", "INTERVENANT"];
+		if (isDashboardPath && !DASHBOARD_ROLES.includes(token.role as string)) {
+			return NextResponse.redirect(new URL(`/${locale}`, req.url));
+		}
+
+		// Garde par rôle (defense-in-depth, en plus de la barre filtrée) : chaque
+		// rôle a un périmètre. L'enseignant garde son espace + planning + présences ;
+		// la secrétaire fait du front-desk mais pas le pilotage pur (personnel,
+		// activités). Toute page hors périmètre redirige vers l'accueil du rôle.
+		const BLOCKED_BY_ROLE: Record<string, string[]> = {
+			INTERVENANT: [
+				"students",
+				"payments",
+				"groups",
+				"rooms",
+				"activities",
+				"staff",
+			],
+			SECRETAIRE: ["activities", "staff"],
+		};
+		const blocked = BLOCKED_BY_ROLE[token.role as string];
+		// Matching par SEGMENT (pas substring) : le segment qui suit "dashboard"
+		// dans le chemin. Évite qu'une future route type "students-archive" soit
+		// bloquée par erreur, et empêche tout contournement par sous-chaîne.
+		if (blocked && isDashboardPath) {
+			const segments = pathname.split("/");
+			const dashIdx = segments.indexOf("dashboard");
+			const section = dashIdx >= 0 ? segments[dashIdx + 1] : undefined;
+			if (section && blocked.includes(section)) {
+				return NextResponse.redirect(new URL(`/${locale}/dashboard`, req.url));
+			}
+		}
 	}
 
 	// 3. I18n

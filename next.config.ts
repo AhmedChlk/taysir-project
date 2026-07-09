@@ -25,6 +25,9 @@ const securityHeaders = [
 			"img-src 'self' blob: data: https://api.dicebear.com https://skillet-unwritten-errant.ngrok-free.dev",
 			"font-src 'self'",
 			"connect-src 'self'",
+			// Allow in-app PDF preview (jsPDF blob: rendered in an <iframe>)
+			"frame-src 'self' blob:",
+			"object-src 'self' blob:",
 			"frame-ancestors 'none'",
 		].join("; "),
 	},
