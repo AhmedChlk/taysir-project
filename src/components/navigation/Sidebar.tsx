@@ -175,7 +175,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 				{/* Sidebar Header */}
 				<div className="flex items-center gap-3 px-8 h-20 shrink-0 border-b border-white/5">
 					<LogoMark size={32} color="var(--brand-500)" />
-					<span className="text-2xl font-bold tracking-tight text-white font-sans">
+					<span className="text-2xl font-bold tracking-tight text-white font-body">
 						taysir
 					</span>
 				</div>

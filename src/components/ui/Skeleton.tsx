@@ -16,7 +16,7 @@ export function WidgetSkeleton({ className }: { className?: string }) {
 	return (
 		<div
 			className={cn(
-				"bento-card p-8 h-full min-h-[200px] flex flex-col justify-between",
+				"rounded-2xl border border-line/70 bg-surface-white shadow-ts-1 p-8 h-full min-h-[200px] flex flex-col justify-between",
 				className,
 			)}
 		>

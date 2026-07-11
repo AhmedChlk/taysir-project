@@ -28,6 +28,9 @@ export interface DataTableProps<T> {
 	emptyTitle?: string;
 	emptyDescription?: string;
 	onAdd?: () => void;
+	/** Masque la barre de recherche interne : le parent gère le filtrage
+	    (utile quand la recherche est mutualisée avec d'autres contrôles). */
+	hideSearch?: boolean;
 }
 
 export default function DataTable<T extends { id: string | number }>({
@@ -40,6 +43,7 @@ export default function DataTable<T extends { id: string | number }>({
 	emptyTitle,
 	emptyDescription,
 	onAdd,
+	hideSearch = false,
 }: DataTableProps<T>) {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
@@ -88,34 +92,36 @@ export default function DataTable<T extends { id: string | number }>({
 	}
 
 	return (
-		<div className="flex flex-col gap-8 animate-in fade-in duration-500">
-			<div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-				<div className="relative w-full sm:max-w-lg group">
-					<div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-						<Search className="h-4 w-4 text-ink-400 group-focus-within:text-brand-500 transition-colors" />
+		<div className="flex flex-col gap-6 animate-in fade-in duration-500">
+			{!hideSearch && (
+				<div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+					<div className="relative w-full sm:max-w-lg group">
+						<div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
+							<Search className="h-4 w-4 text-ink-400 group-focus-within:text-brand-500 transition-colors" />
+						</div>
+						<input
+							type="text"
+							className="block w-full rounded-2xl border border-line bg-white py-3 ps-12 pe-4 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5 transition-all shadow-sm"
+							placeholder={finalSearchPlaceholder}
+							value={searchTerm}
+							onChange={(e) => {
+								setSearchTerm(e.target.value);
+								setCurrentPage(1);
+							}}
+						/>
 					</div>
-					<input
-						type="text"
-						className="block w-full rounded-2xl border border-line bg-white py-3 ps-12 pe-4 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5 transition-all shadow-sm"
-						placeholder={finalSearchPlaceholder}
-						value={searchTerm}
-						onChange={(e) => {
-							setSearchTerm(e.target.value);
-							setCurrentPage(1);
-						}}
-					/>
-				</div>
 
-				{onAdd && (
-					<button
-						type="button"
-						onClick={onAdd}
-						className="btn btn--primary btn--md px-8 h-12 shadow-xl shadow-brand-500/10 active:scale-95"
-					>
-						{t("add")}
-					</button>
-				)}
-			</div>
+					{onAdd && (
+						<button
+							type="button"
+							onClick={onAdd}
+							className="btn btn--primary btn--md px-8 h-12 shadow-xl shadow-brand-500/10 active:scale-95"
+						>
+							{t("add")}
+						</button>
+					)}
+				</div>
+			)}
 
 			<div className="bg-white rounded-[24px] border border-line shadow-sm overflow-hidden">
 				<div className="overflow-x-auto custom-scrollbar">
@@ -126,7 +132,7 @@ export default function DataTable<T extends { id: string | number }>({
 									<th
 										key={idx}
 										className={clsx(
-											"px-8 py-5 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400",
+											"px-6 py-4 text-start text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400",
 											col.className,
 										)}
 									>
@@ -134,7 +140,7 @@ export default function DataTable<T extends { id: string | number }>({
 									</th>
 								))}
 								{!hideDefaultAction && (
-									<th className="px-8 py-5 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
+									<th className="px-6 py-4 text-end text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">
 										{t("actions")}
 									</th>
 								)}
@@ -151,7 +157,7 @@ export default function DataTable<T extends { id: string | number }>({
 											<td
 												key={idx}
 												className={clsx(
-													"px-8 py-5 whitespace-nowrap text-sm font-medium",
+													"px-6 py-4 whitespace-nowrap text-sm font-medium",
 													col.className,
 												)}
 											>
@@ -161,7 +167,7 @@ export default function DataTable<T extends { id: string | number }>({
 											</td>
 										))}
 										{!hideDefaultAction && (
-											<td className="px-8 py-5 text-end">
+											<td className="px-6 py-4 text-end">
 												<button
 													type="button"
 													onClick={(e) => {

@@ -54,7 +54,7 @@ export default function DashboardSPA({
 	const today = new Date();
 
 	return (
-		<div className="min-h-screen bg-surface-50 p-4 md:p-10 font-sans antialiased">
+		<div className="min-h-screen bg-surface-50 p-4 md:p-10 font-body antialiased">
 			<header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
 				<motion.div
 					initial={{ x: -20, opacity: 0 }}

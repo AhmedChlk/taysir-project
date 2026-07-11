@@ -17,7 +17,8 @@ if (process.env.NODE_ENV === "production" && !NEXTAUTH_SECRET) {
 // Hash bidon (coût 12) pour égaliser le temps de réponse quand le compte
 // n'existe pas : sans lui, l'absence de bcrypt.compare crée un canal temporel
 // permettant d'énumérer les emails valides.
-const DUMMY_HASH = "$2b$12$kJUQJtnAR1RnAWUPATr6Ce1WRldTDsWWLvXqtyiJ8BVyrZJA2sZZm";
+const DUMMY_HASH =
+	"$2b$12$kJUQJtnAR1RnAWUPATr6Ce1WRldTDsWWLvXqtyiJ8BVyrZJA2sZZm";
 
 export const authOptions: NextAuthOptions = {
 	providers: [

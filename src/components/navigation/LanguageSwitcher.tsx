@@ -2,15 +2,21 @@
 
 import { clsx } from "clsx";
 import { Check, ChevronDown, Languages } from "lucide-react";
-import { useLocale } from "next-intl";
-import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useCallback, useState } from "react";
 import { type routing, usePathname, useRouter } from "@/i18n/routing";
+import { usePopoverDismiss } from "@/lib/hooks/usePopoverDismiss";
+
+const PANEL_ID = "lang-menu-panel";
 
 export default function LanguageSwitcher() {
 	const locale = useLocale();
+	const t = useTranslations();
 	const pathname = usePathname();
 	const router = useRouter();
 	const [isOpen, setIsOpen] = useState(false);
+	const close = useCallback(() => setIsOpen(false), []);
+	usePopoverDismiss(isOpen, close);
 
 	const locales = [
 		{ code: "fr", label: "Français", flag: "🇫🇷" },
@@ -29,8 +35,12 @@ export default function LanguageSwitcher() {
 	return (
 		<div className="relative">
 			<button
+				type="button"
 				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-100"
+				aria-haspopup="menu"
+				aria-expanded={isOpen}
+				aria-controls={PANEL_ID}
+				className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
 			>
 				<Languages size={18} className="text-brand-500" />
 				<span className="text-sm font-bold hidden sm:inline">
@@ -49,22 +59,28 @@ export default function LanguageSwitcher() {
 				<>
 					<button
 						type="button"
-						aria-label="Close language menu"
+						tabIndex={-1}
+						aria-hidden
 						className="fixed inset-0 z-40 cursor-default bg-transparent w-full h-full"
 						onClick={() => setIsOpen(false)}
 					/>
 					<div
+						id={PANEL_ID}
+						role="menu"
+						aria-label={t("language_menu")}
 						className={clsx(
-							"absolute top-full mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200",
+							"ts-pop absolute top-full mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50",
 							locale === "ar" ? "left-0" : "right-0",
 						)}
 					>
 						{locales.map((l) => (
 							<button
 								key={l.code}
+								type="button"
+								role="menuitem"
 								onClick={() => handleLocaleChange(l.code)}
 								className={clsx(
-									"flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors",
+									"flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:bg-brand-500/5",
 									locale === l.code
 										? "bg-brand-500/5 text-brand-500"
 										: "text-gray-600 hover:bg-gray-50",

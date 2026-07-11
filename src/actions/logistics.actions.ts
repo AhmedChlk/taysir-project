@@ -324,7 +324,9 @@ export const bulkMarkPresenceAction = createSafeAction(
 
 		// La séance doit appartenir au tenant (non vérifié auparavant).
 		const seance = await tenantPrisma.session.findUnique({
-			where: { id_etablissementId: { id: sessionId, etablissementId: tenantId } },
+			where: {
+				id_etablissementId: { id: sessionId, etablissementId: tenantId },
+			},
 			select: { groupId: true },
 		});
 		if (!seance) {

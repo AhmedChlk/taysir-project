@@ -319,9 +319,9 @@ describe("Finance Actions Audit", () => {
 						update: mockTrancheUpdate,
 					},
 					paiement: {
-					create: mockPaiementCreate,
-					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
-				},
+						create: mockPaiementCreate,
+						findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+					},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 
@@ -366,9 +366,9 @@ describe("Finance Actions Audit", () => {
 						update: vi.fn(),
 					},
 					paiement: {
-					create: mockPaiementCreate,
-					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
-				},
+						create: mockPaiementCreate,
+						findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+					},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 
@@ -407,9 +407,9 @@ describe("Finance Actions Audit", () => {
 						update: mockTrancheUpdate,
 					},
 					paiement: {
-					create: mockPaiementCreate,
-					findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
-				},
+						create: mockPaiementCreate,
+						findFirst: vi.fn().mockResolvedValue({ receiptNumber: 0 }),
+					},
 					paymentPlan: { update: mockPlanUpdate },
 				};
 

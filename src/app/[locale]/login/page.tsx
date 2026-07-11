@@ -38,7 +38,7 @@ const Logo = () => (
 				fontWeight: 700,
 				letterSpacing: "-0.02em",
 				color: "var(--fg1)",
-				fontFamily: "var(--font-sans)",
+				fontFamily: "var(--font-body)",
 			}}
 		>
 			taysir
@@ -82,7 +82,7 @@ export default function LoginPage() {
 
 	return (
 		<div
-			className="min-h-screen w-full bg-white font-sans antialiased flex flex-col"
+			className="min-h-screen w-full bg-white font-body antialiased flex flex-col"
 			dir={isRtl ? "rtl" : "ltr"}
 		>
 			{/* Simple Header */}

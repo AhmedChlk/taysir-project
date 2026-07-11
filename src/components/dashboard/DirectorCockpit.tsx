@@ -8,6 +8,9 @@ import {
 	ClipboardList,
 	Clock,
 	GraduationCap,
+	Phone,
+	TrendingDown,
+	TrendingUp,
 	TriangleAlert,
 	UserCog,
 	UserPlus,
@@ -18,7 +21,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getDirectorOverviewAction } from "@/actions/dashboard.actions";
 import { RelanceButton } from "@/components/dashboard/payments/RelanceButton";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { Card, PageHeader, StatCard } from "@/components/ui/primitives";
+import {
+	Card,
+	PageHeader,
+	Sparkline,
+	StatCard,
+	TrendChart,
+} from "@/components/ui/primitives";
 import { Link } from "@/i18n/routing";
 import { localizedGroup, localizedSubject } from "@/lib/subjects";
 import {
@@ -27,7 +36,7 @@ import {
 	normalizeDzPhone,
 } from "@/lib/wa-relance";
 import { getCurrentTenant } from "@/services/api";
-import { formatCurrency } from "@/utils/format";
+import { cn, formatCurrency } from "@/utils/format";
 
 const QUICK_ACTIONS = [
 	{
@@ -58,6 +67,15 @@ const TEACH_ACTION = {
 	tone: "bg-surface-white text-ink-900 border border-line",
 } as const;
 
+// Petit libellé de section (eyebrow) pour hiérarchiser le cockpit.
+function SectionLabel({ children }: { children: React.ReactNode }) {
+	return (
+		<h3 className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-ink-500">
+			{children}
+		</h3>
+	);
+}
+
 export default async function DirectorCockpit() {
 	const t = await getTranslations();
 	const locale = await getLocale();
@@ -85,8 +103,51 @@ export default async function DirectorCockpit() {
 		month: "long",
 	});
 
+	// Série trésorerie → libellés de mois localisés.
+	const revenue = d.trends.revenue.map((r) => ({
+		label: new Date(r.label).toLocaleDateString(dateLocale, { month: "short" }),
+		value: r.value,
+	}));
+	const total6m = revenue.reduce((a, r) => a + r.value, 0);
+	const delta = d.compare.revenueDeltaPct;
+
+	// File de priorités « À traiter » — n'agrège que ce qui a un compteur > 0.
+	const todos = [
+		d.recouvrement.count > 0 && {
+			key: "relance",
+			icon: AlertCircle,
+			chip: "bg-accent-50 text-accent-600",
+			label: t("to_follow_up"),
+			detail: `${d.recouvrement.count} ${t("students_late_suffix")} · ${formatCurrency(d.recouvrement.amount)}`,
+			href: "/dashboard/payments",
+		},
+		d.alertes.sansPointage.count > 0 && {
+			key: "unmarked",
+			icon: ClipboardList,
+			chip: "bg-brand-50 text-brand-600",
+			label: t("attendance_to_complete"),
+			detail: `${d.alertes.sansPointage.count} ${t("sessions_count_suffix")}`,
+			href: "/dashboard/attendance",
+		},
+		d.alertes.absences.count > 0 && {
+			key: "absences",
+			icon: TriangleAlert,
+			chip: "bg-amber-100 text-amber-700",
+			label: t("repeated_absences"),
+			detail: `${d.alertes.absences.count} ${t("students_count_suffix")}`,
+			href: "/dashboard/attendance",
+		},
+	].filter(Boolean) as {
+		key: string;
+		icon: typeof AlertCircle;
+		chip: string;
+		label: string;
+		detail: string;
+		href: string;
+	}[];
+
 	return (
-		<div className="space-y-8">
+		<div className="space-y-10">
 			<PageHeader
 				eyebrow={t("director_eyebrow")}
 				title={t("director_title")}
@@ -96,21 +157,21 @@ export default async function DirectorCockpit() {
 
 			{/* Actions rapides — 1 clic chacune */}
 			<div
-				className={`grid grid-cols-1 gap-3 duration-500 animate-in fade-in slide-in-from-bottom-2 ${
+				className={cn(
+					"grid grid-cols-1 gap-3",
 					quickActions.length === 4
 						? "sm:grid-cols-2 lg:grid-cols-4"
-						: "sm:grid-cols-3"
-				}`}
+						: "sm:grid-cols-3",
+				)}
 			>
-				{quickActions.map((a, i) => (
+				{quickActions.map((a) => (
 					<Link
 						key={a.href}
 						href={a.href}
-						style={{
-							animationDelay: `${i * 60}ms`,
-							animationFillMode: "backwards",
-						}}
-						className={`group flex items-center gap-3 rounded-2xl px-4 py-4 text-sm font-bold shadow-ts-1 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:shadow-ts-2 active:translate-y-0 active:scale-[0.98] ${a.tone}`}
+						className={cn(
+							"group flex items-center gap-3 rounded-2xl px-4 py-4 text-sm font-bold shadow-ts-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-ts-2 focus-visible:-translate-y-0.5 focus-visible:shadow-ts-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-0 active:translate-y-0 active:scale-[0.98]",
+							a.tone,
+						)}
 					>
 						<a.icon
 							size={20}
@@ -125,187 +186,199 @@ export default async function DirectorCockpit() {
 				))}
 			</div>
 
-			{/* KPIs — argent d'abord, reste à recouvrer en focal */}
-			<div
-				style={{ animationDelay: "120ms", animationFillMode: "backwards" }}
-				className="grid grid-cols-1 gap-4 duration-500 animate-in fade-in slide-in-from-bottom-2 md:grid-cols-2 lg:grid-cols-4"
-			>
-				<div className="lg:col-span-2">
+			{/* ============================= FINANCES ============================= */}
+			<section>
+				<SectionLabel>{t("section_finances")}</SectionLabel>
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+					<div className="lg:col-span-2">
+						<StatCard
+							href="/dashboard/payments"
+							label={t("kpi_remaining_to_collect")}
+							value={
+								<AnimatedNumber
+									value={d.finance.resteARecouvrer}
+									suffix=" DA"
+								/>
+							}
+							icon={<AlertCircle size={22} />}
+							tone={d.finance.resteARecouvrer > 0 ? "danger" : "positive"}
+							hint={
+								d.recouvrement.count > 0
+									? `${d.recouvrement.count} ${t("students_late_suffix")}`
+									: t("kpi_up_to_date")
+							}
+						/>
+					</div>
 					<StatCard
-						label={t("kpi_remaining_to_collect")}
+						href="/dashboard/payments"
+						label={t("kpi_collected_month")}
 						value={
-							<AnimatedNumber value={d.finance.resteARecouvrer} suffix=" DA" />
+							<AnimatedNumber value={d.finance.encaisseCeMois} suffix=" DA" />
 						}
-						icon={<AlertCircle size={22} />}
-						tone={d.finance.resteARecouvrer > 0 ? "danger" : "positive"}
+						icon={<CheckCircle2 size={22} />}
+						tone="positive"
 						hint={
-							d.recouvrement.count > 0
-								? `${d.recouvrement.count} ${t("students_late_suffix")}`
-								: t("kpi_up_to_date")
+							delta === null ? undefined : (
+								<span
+									className={cn(
+										"inline-flex items-center gap-1 font-bold",
+										delta >= 0 ? "text-emerald-600" : "text-accent-600",
+									)}
+								>
+									{delta >= 0 ? (
+										<TrendingUp size={12} />
+									) : (
+										<TrendingDown size={12} />
+									)}
+									{delta >= 0 ? "+" : ""}
+									{delta}% · {t("vs_last_month")}
+								</span>
+							)
+						}
+					/>
+					<StatCard
+						href="/dashboard/payments"
+						label={t("kpi_collection_rate")}
+						value={
+							<AnimatedNumber value={d.finance.tauxRecouvrement} suffix=" %" />
+						}
+						icon={<Wallet size={22} />}
+						tone="brand"
+						hint={
+							<span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-brand-100">
+								<span
+									className="block h-full rounded-full bg-brand-500 transition-[width] duration-700 ease-out"
+									style={{
+										width: `${Math.min(100, Math.max(0, d.finance.tauxRecouvrement))}%`,
+									}}
+								/>
+							</span>
 						}
 					/>
 				</div>
-				<StatCard
-					label={t("kpi_collected_month")}
-					value={
-						<AnimatedNumber value={d.finance.encaisseCeMois} suffix=" DA" />
-					}
-					icon={<CheckCircle2 size={22} />}
-					tone="positive"
-				/>
-				<StatCard
-					label={t("kpi_collection_rate")}
-					value={
-						<AnimatedNumber value={d.finance.tauxRecouvrement} suffix=" %" />
-					}
-					icon={<Wallet size={22} />}
-					tone="brand"
-					hint={
-						<span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-brand-100">
-							<span
-								className="block h-full rounded-full bg-brand-500 transition-[width] duration-700 ease-out"
-								style={{
-									width: `${Math.min(100, Math.max(0, d.finance.tauxRecouvrement))}%`,
-								}}
+
+				{/* Courbe de trésorerie 6 mois */}
+				<Card pad={false} className="mt-4">
+					<div className="flex items-end justify-between gap-4 border-b border-line/60 px-5 py-4">
+						<div className="flex items-center gap-2">
+							<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+								<TrendingUp size={16} />
+							</span>
+							<h3 className="text-sm font-bold text-ink-900">
+								{t("cashflow_title")}
+							</h3>
+						</div>
+						<div className="text-end">
+							<div className="text-lg font-extrabold tracking-tight text-ink-900">
+								{formatCurrency(total6m)}
+							</div>
+							<div className="text-[11px] font-bold uppercase tracking-widest text-ink-500">
+								{t("cashflow_total")}
+							</div>
+						</div>
+					</div>
+					<div className="px-5 py-5">
+						<TrendChart
+							points={revenue}
+							formatValue={formatCurrency}
+							ariaLabel={`${t("cashflow_title")} — ${formatCurrency(total6m)}`}
+						/>
+					</div>
+				</Card>
+			</section>
+
+			{/* ============================== L'ÉCOLE ============================= */}
+			<section>
+				<SectionLabel>{t("section_school")}</SectionLabel>
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+					<StatCard
+						href="/dashboard/students"
+						label={t("kpi_active_students")}
+						value={<AnimatedNumber value={d.students.active} />}
+						icon={<GraduationCap size={22} />}
+						hint={
+							d.students.total > d.students.active
+								? `${d.students.total - d.students.active} ${t("inactive_suffix")}`
+								: t("kpi_all_active")
+						}
+					/>
+					<StatCard
+						href="/dashboard/staff"
+						label={t("staff")}
+						value={<AnimatedNumber value={d.staffCount} />}
+						icon={<UserCog size={22} />}
+					/>
+					<StatCard
+						href="/dashboard/attendance"
+						label={t("kpi_attendance_7d")}
+						value={
+							d.presence7j === null ? (
+								"—"
+							) : (
+								<AnimatedNumber value={d.presence7j} suffix=" %" />
+							)
+						}
+						icon={<ClipboardCheck size={22} />}
+						tone={
+							d.presence7j !== null && d.presence7j < 70 ? "danger" : "positive"
+						}
+						hint={
+							<Sparkline
+								data={d.trends.attendance}
+								height={26}
+								tone={
+									d.presence7j !== null && d.presence7j < 70
+										? "text-accent-500"
+										: "text-emerald-500"
+								}
 							/>
-						</span>
-					}
-				/>
-			</div>
+						}
+					/>
+				</div>
+			</section>
 
-			{/* KPIs « people » — l'école en un coup d'œil (données déjà calculées). */}
-			<div
-				style={{ animationDelay: "200ms", animationFillMode: "backwards" }}
-				className="grid grid-cols-1 gap-4 duration-500 animate-in fade-in slide-in-from-bottom-2 md:grid-cols-3"
-			>
-				<StatCard
-					label={t("kpi_active_students")}
-					value={<AnimatedNumber value={d.students.active} />}
-					icon={<GraduationCap size={22} />}
-					hint={
-						d.students.total > d.students.active
-							? `${d.students.total - d.students.active} ${t("inactive_suffix")}`
-							: t("kpi_all_active")
-					}
-				/>
-				<StatCard
-					label={t("staff")}
-					value={<AnimatedNumber value={d.staffCount} />}
-					icon={<UserCog size={22} />}
-				/>
-				<StatCard
-					label={t("kpi_attendance_7d")}
-					value={
-						d.presence7j === null ? (
-							"—"
-						) : (
-							<AnimatedNumber value={d.presence7j} suffix=" %" />
-						)
-					}
-					icon={<ClipboardCheck size={22} />}
-					tone={
-						d.presence7j !== null && d.presence7j < 70 ? "danger" : "positive"
-					}
-				/>
-			</div>
-
-			{/* Alertes — absences répétées (élève à risque). Masqué si rien. */}
-			{d.alertes.absences.count > 0 && (
-				<Card pad={false} className="border-amber-200 bg-amber-50/40">
-					<div className="flex items-center gap-2 border-b border-amber-200/60 px-5 py-4">
-						<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-							<TriangleAlert size={16} />
-						</span>
-						<h3 className="text-sm font-bold text-ink-900">
-							{t("repeated_absences")}
-						</h3>
-						<span className="rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-800">
-							{d.alertes.absences.count} {t("students_count_suffix")}
-						</span>
-						<span className="ml-auto text-[11px] font-semibold text-ink-400">
-							{t("over_30_days")}
-						</span>
-					</div>
-					<ul className="divide-y divide-amber-200/40">
-						{d.alertes.absences.top.map((a) => (
-							<li
-								key={a.studentId}
-								className="flex items-center gap-3 px-5 py-3"
-							>
-								<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
-									{a.firstName[0]}
-									{a.lastName[0]}
-								</span>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-bold text-ink-900">
-										{a.firstName} {a.lastName}
-									</p>
-									<p className="text-xs font-semibold text-amber-700">
-										{a.count} {t("unjustified_absences_suffix")}
-									</p>
-								</div>
-								<Link
-									href={`/dashboard/students/${a.studentId}`}
-									className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-200 bg-surface-white px-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
-								>
-									{t("view_profile")}
-									<ArrowRight size={13} className="rtl:rotate-180" />
-								</Link>
-							</li>
-						))}
-					</ul>
-				</Card>
+			{/* ============================= À TRAITER ============================ */}
+			{todos.length > 0 && (
+				<section>
+					<SectionLabel>{t("section_todo")}</SectionLabel>
+					<Card pad={false}>
+						<ul className="divide-y divide-line/50">
+							{todos.map((it) => (
+								<li key={it.key}>
+									<Link
+										href={it.href}
+										className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-50 focus-visible:bg-surface-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+									>
+										<span
+											className={cn(
+												"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+												it.chip,
+											)}
+										>
+											<it.icon size={18} />
+										</span>
+										<div className="min-w-0 flex-1">
+											<p className="text-sm font-bold text-ink-900">
+												{it.label}
+											</p>
+											<p className="truncate text-xs font-semibold text-ink-500">
+												{it.detail}
+											</p>
+										</div>
+										<ArrowRight
+											size={16}
+											className="shrink-0 text-ink-400 rtl:rotate-180"
+										/>
+									</Link>
+								</li>
+							))}
+						</ul>
+					</Card>
+				</section>
 			)}
 
-			{/* Pointage à compléter — UNIQUEMENT les séances que le gérant assure
-			    lui-même (il peut aussi enseigner). Masqué s'il n'enseigne pas. */}
-			{d.alertes.sansPointage.count > 0 && (
-				<Card pad={false} className="border-brand-200 bg-brand-50/30">
-					<div className="flex items-center gap-2 border-b border-brand-200/60 px-5 py-4">
-						<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
-							<ClipboardList size={16} />
-						</span>
-						<h3 className="text-sm font-bold text-ink-900">
-							{t("attendance_to_complete")}
-						</h3>
-						<span className="rounded-full bg-brand-200 px-2 py-0.5 text-[11px] font-bold text-brand-800">
-							{d.alertes.sansPointage.count} {t("sessions_count_suffix")}
-						</span>
-						<Link
-							href="/dashboard/attendance"
-							className="ml-auto text-xs font-bold text-brand-600 hover:text-brand-700"
-						>
-							{t("quick_take_attendance")} →
-						</Link>
-					</div>
-					<ul className="divide-y divide-brand-200/40">
-						{d.alertes.sansPointage.top.map((s) => (
-							<li key={s.id} className="flex items-center gap-3 px-5 py-3">
-								<span className="text-xs font-bold tabular-nums text-brand-600">
-									{new Date(s.start).toLocaleDateString(dateLocale, {
-										day: "2-digit",
-										month: "2-digit",
-									})}
-								</span>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold text-ink-900">
-										{localizedSubject(s.activity, dateLocale)} ·{" "}
-										{localizedGroup(s.group, dateLocale)}
-									</p>
-									<p className="text-[11px] text-ink-400">
-										{t("no_attendance_recorded")}
-									</p>
-								</div>
-							</li>
-						))}
-					</ul>
-				</Card>
-			)}
-
-			<div
-				style={{ animationDelay: "280ms", animationFillMode: "backwards" }}
-				className="grid grid-cols-1 gap-6 duration-500 animate-in fade-in slide-in-from-bottom-2 lg:grid-cols-3"
-			>
+			{/* =================== RELANCES + AUJOURD'HUI ========================= */}
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 				{/* Recouvrement — impayés à relancer (1 clic WhatsApp) */}
 				<Card className="lg:col-span-2" pad={false}>
 					<div className="flex items-center justify-between border-b border-line/60 px-5 py-4">
@@ -319,9 +392,10 @@ export default async function DirectorCockpit() {
 						</div>
 						<Link
 							href="/dashboard/payments"
-							className="text-xs font-bold text-brand-600 hover:text-brand-700"
+							className="inline-flex items-center gap-1 rounded-md px-1 text-xs font-bold text-brand-600 transition-colors hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
 						>
-							{t("view_all")} →
+							{t("view_all")}
+							<ArrowRight size={13} className="rtl:rotate-180" />
 						</Link>
 					</div>
 					{d.recouvrement.top.length === 0 ? (
@@ -364,15 +438,23 @@ export default async function DirectorCockpit() {
 												{formatCurrency(o.overdueAmount)}
 											</p>
 										</div>
-										{waUrl && (
+										{waUrl ? (
 											<RelanceButton
 												waUrl={waUrl}
 												studentId={o.studentId}
 												paymentPlanId={o.paymentPlanId}
 												amount={o.remaining}
 												daysLate={o.daysLate}
-												className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
+												className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
 											/>
+										) : (
+											<span
+												title={t("phone_missing")}
+												className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface-50 px-2.5 text-xs font-bold text-ink-400"
+											>
+												<Phone size={12} />
+												{t("phone_missing")}
+											</span>
 										)}
 									</li>
 								);
@@ -396,7 +478,7 @@ export default async function DirectorCockpit() {
 							<div className="text-2xl font-extrabold text-ink-900">
 								{d.today.count}
 							</div>
-							<div className="text-[11px] font-bold uppercase tracking-widest text-ink-400">
+							<div className="text-[11px] font-bold uppercase tracking-widest text-ink-500">
 								{t("sessions_label")}
 							</div>
 						</div>
@@ -406,7 +488,7 @@ export default async function DirectorCockpit() {
 									? "—"
 									: `${d.today.presentRatio}%`}
 							</div>
-							<div className="text-[11px] font-bold uppercase tracking-widest text-ink-400">
+							<div className="text-[11px] font-bold uppercase tracking-widest text-ink-500">
 								{t("presence_label")}
 							</div>
 						</div>
@@ -426,16 +508,27 @@ export default async function DirectorCockpit() {
 											{localizedSubject(s.activity, dateLocale)} ·{" "}
 											{localizedGroup(s.group, dateLocale)}
 										</p>
-										<p className="truncate text-[11px] text-ink-400">
+										<p className="truncate text-[11px] text-ink-500">
 											{s.room ?? t("no_room")}
 											{s.instructor ? ` · ${s.instructor}` : ""}
 										</p>
 									</div>
 								</li>
 							))}
+							{d.today.count > 4 && (
+								<li>
+									<Link
+										href="/dashboard/schedule"
+										className="flex items-center justify-center gap-1 px-3 py-2.5 text-xs font-bold text-brand-600 transition-colors hover:bg-surface-50 hover:text-brand-700 focus-visible:bg-surface-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+									>
+										+{d.today.count - 4} · {t("view_all")}
+										<ArrowRight size={12} className="rtl:rotate-180" />
+									</Link>
+								</li>
+							)}
 						</ul>
 					) : (
-						<div className="flex items-center gap-2 px-5 pb-6 pt-2 text-xs text-ink-400">
+						<div className="flex items-center gap-2 px-5 pb-6 pt-2 text-xs text-ink-500">
 							<Users size={14} />
 							{t("no_session_today")}
 						</div>

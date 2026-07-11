@@ -13,9 +13,11 @@ import {
 	Mail,
 	Phone,
 	Plus,
+	Search,
 	Trash2,
 	User,
 	Wallet,
+	X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -78,13 +80,26 @@ export default function StudentsClientView({
 	const [niveauFilter, setNiveauFilter] = useState<NiveauScolaire | "all">(
 		"all",
 	);
-	const filteredStudents = useMemo(
-		() =>
-			niveauFilter === "all"
-				? optimisticStudents
-				: optimisticStudents.filter((s) => s.niveau === niveauFilter),
-		[optimisticStudents, niveauFilter],
-	);
+	const [search, setSearch] = useState("");
+	const filteredStudents = useMemo(() => {
+		const q = search.trim().toLowerCase();
+		return optimisticStudents.filter((s) => {
+			if (niveauFilter !== "all" && s.niveau !== niveauFilter) return false;
+			if (!q) return true;
+			const haystack = [
+				s.firstName,
+				s.lastName,
+				s.email,
+				s.phone,
+				s.parentPhone,
+				...s.groups.map((g) => g.name),
+			]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+			return haystack.includes(q);
+		});
+	}, [optimisticStudents, niveauFilter, search]);
 	const [previewStudent, setPreviewStudent] =
 		useState<StudentWithGroups | null>(null);
 
@@ -306,7 +321,7 @@ export default function StudentsClientView({
 	];
 
 	return (
-		<div className="space-y-10 pb-20 pt-4">
+		<div className="space-y-6 pb-20 pt-4">
 			<PageHeader
 				eyebrow={t("students_manage_title")}
 				title={t("students_title_prefix")}
@@ -314,49 +329,6 @@ export default function StudentsClientView({
 				subtitle={t("students_manage_subtitle")}
 				actions={
 					<>
-						<select
-							value={niveauFilter}
-							onChange={(e) =>
-								setNiveauFilter(e.target.value as NiveauScolaire | "all")
-							}
-							className="rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink-900 outline-none transition focus:border-brand-500"
-							aria-label={t("students_niveau")}
-						>
-							<option value="all">{t("students_all_levels")}</option>
-							{niveauxByCycle(locale).map((cycle) => (
-								<optgroup key={cycle.cycle} label={cycle.label}>
-									{cycle.options.map((o) => (
-										<option key={o.value} value={o.value}>
-											{o.label}
-										</option>
-									))}
-								</optgroup>
-							))}
-						</select>
-						<div className="bg-surface-50 p-1 rounded-xl flex gap-1 border border-line">
-							<button
-								onClick={() => setViewMode("table")}
-								className={clsx(
-									"p-2 rounded-lg transition-all",
-									viewMode === "table"
-										? "bg-white text-brand-500 shadow-sm"
-										: "text-ink-400 hover:text-ink-900",
-								)}
-							>
-								<List size={20} />
-							</button>
-							<button
-								onClick={() => setViewMode("grid")}
-								className={clsx(
-									"p-2 rounded-lg transition-all",
-									viewMode === "grid"
-										? "bg-white text-brand-500 shadow-sm"
-										: "text-ink-400 hover:text-ink-900",
-								)}
-							>
-								<LayoutGrid size={20} />
-							</button>
-						</div>
 						<button
 							type="button"
 							onClick={handleExportCSV}
@@ -377,12 +349,94 @@ export default function StudentsClientView({
 				}
 			/>
 
+			{/* Barre d'outils unifiée — recherche + filtre + vue. Vaut pour les deux
+			    modes d'affichage (table / grille). Remplace la double rangée de
+			    contrôles (actions du header + recherche de la table). */}
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+				<div className="group relative flex-1">
+					<div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+						<Search className="h-4 w-4 text-ink-400 transition-colors group-focus-within:text-brand-500" />
+					</div>
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder={t("students_search_placeholder")}
+						className="block w-full rounded-2xl border border-line bg-white py-3 ps-12 pe-10 text-sm text-ink-900 placeholder-ink-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/5"
+					/>
+					{search && (
+						<button
+							type="button"
+							onClick={() => setSearch("")}
+							aria-label={t("close")}
+							className="absolute inset-y-0 end-0 flex items-center pe-4 text-ink-400 hover:text-ink-700"
+						>
+							<X size={16} />
+						</button>
+					)}
+				</div>
+				<div className="flex items-center gap-3">
+					<select
+						value={niveauFilter}
+						onChange={(e) =>
+							setNiveauFilter(e.target.value as NiveauScolaire | "all")
+						}
+						className="h-12 rounded-2xl border border-line bg-white px-4 text-sm font-semibold text-ink-900 shadow-sm outline-none transition focus:border-brand-500"
+						aria-label={t("students_niveau")}
+					>
+						<option value="all">{t("students_all_levels")}</option>
+						{niveauxByCycle(locale).map((cycle) => (
+							<optgroup key={cycle.cycle} label={cycle.label}>
+								{cycle.options.map((o) => (
+									<option key={o.value} value={o.value}>
+										{o.label}
+									</option>
+								))}
+							</optgroup>
+						))}
+					</select>
+					<div className="flex h-12 items-center gap-1 rounded-2xl border border-line bg-surface-50 p-1">
+						<button
+							type="button"
+							onClick={() => setViewMode("table")}
+							aria-label={t("students_view_table")}
+							className={clsx(
+								"flex h-full items-center rounded-xl px-2.5 transition-all",
+								viewMode === "table"
+									? "bg-white text-brand-500 shadow-sm"
+									: "text-ink-400 hover:text-ink-900",
+							)}
+						>
+							<List size={18} />
+						</button>
+						<button
+							type="button"
+							onClick={() => setViewMode("grid")}
+							aria-label={t("students_view_grid")}
+							className={clsx(
+								"flex h-full items-center rounded-xl px-2.5 transition-all",
+								viewMode === "grid"
+									? "bg-white text-brand-500 shadow-sm"
+									: "text-ink-400 hover:text-ink-900",
+							)}
+						>
+							<LayoutGrid size={18} />
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Compteur de résultats — repère discret sous la barre d'outils. */}
+			<p className="text-[11px] font-bold uppercase tracking-widest text-ink-400">
+				{filteredStudents.length} {t("students_count_suffix")}
+			</p>
+
 			{viewMode === "table" ? (
 				<DataTable
 					data={filteredStudents}
 					columns={columns}
-					searchPlaceholder={t("students_search_placeholder")}
 					hideDefaultAction={true}
+					hideSearch={true}
 				/>
 			) : (
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -395,11 +449,11 @@ export default function StudentsClientView({
 							onDownloadPDF={handleDownloadPDF}
 						/>
 					))}
-					{optimisticStudents.length === 0 && (
+					{filteredStudents.length === 0 && (
 						<div className="col-span-full py-32 text-center bg-white rounded-[32px] border-2 border-dashed border-line">
 							<User size={48} className="mx-auto mb-4 text-ink-100" />
 							<p className="font-bold uppercase tracking-widest text-[11px] text-ink-300">
-								Aucun étudiant trouvé
+								{t("no_results")}
 							</p>
 						</div>
 					)}

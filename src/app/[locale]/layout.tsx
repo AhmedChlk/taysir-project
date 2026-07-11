@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Big_Shoulders, Petrona, Reem_Kufi, Vazirmatn } from "next/font/google";
+import { getServerSession } from "next-auth/next";
 import SessionProviderWrapper from "@/components/providers/SessionProviderWrapper";
+import { authOptions } from "@/lib/auth";
 import "./globals.css";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
@@ -64,6 +66,9 @@ export default async function LocaleLayout({
 	// side is the easiest way to get started
 	const messages = await getMessages();
 
+	// Session résolue côté serveur → hydrate next-auth (pas de flash "loading").
+	const session = await getServerSession(authOptions);
+
 	const dir = locale === "ar" ? "rtl" : "ltr";
 
 	return (
@@ -72,9 +77,11 @@ export default async function LocaleLayout({
 			dir={dir}
 			className={`${bigShoulders.variable} ${petrona.variable} ${vazirmatn.variable} ${reemKufi.variable} h-full antialiased`}
 		>
-			<body className="min-h-full flex flex-col font-sans">
+			<body className="min-h-full flex flex-col font-body">
 				<NextIntlClientProvider locale={locale} messages={messages}>
-					<SessionProviderWrapper>{children}</SessionProviderWrapper>
+					<SessionProviderWrapper session={session}>
+						{children}
+					</SessionProviderWrapper>
 				</NextIntlClientProvider>
 			</body>
 		</html>

@@ -3,7 +3,6 @@
 import { clsx } from "clsx";
 import { AnimatePresence } from "framer-motion";
 import {
-	Bell,
 	ChevronDown,
 	Loader2,
 	LogOut,
@@ -15,12 +14,14 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { getDashboardFormDataAction } from "@/actions/dashboard.actions";
+import NotificationBell from "@/components/dashboard/NotificationBell";
 import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 import Sidebar from "@/components/navigation/Sidebar";
 import Drawer, { type DrawerType } from "@/components/ui/Drawer";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
+import { usePopoverDismiss } from "@/lib/hooks/usePopoverDismiss";
 
 export default function DashboardLayout({
 	children,
@@ -33,6 +34,8 @@ export default function DashboardLayout({
 	const isRtl = locale === "ar";
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+	const closeUserMenu = useCallback(() => setIsUserMenuOpen(false), []);
+	usePopoverDismiss(isUserMenuOpen, closeUserMenu);
 
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -92,8 +95,13 @@ export default function DashboardLayout({
 
 	if (status === "loading") {
 		return (
-			<div className="flex h-screen w-full items-center justify-center bg-surface-0">
-				<Loader2 className="h-10 w-10 animate-spin text-brand-500 font-bold" />
+			<div
+				role="status"
+				aria-live="polite"
+				className="flex h-screen w-full items-center justify-center bg-surface-0"
+			>
+				<Loader2 className="h-10 w-10 animate-spin text-brand-500" />
+				<span className="sr-only">{t("loading")}</span>
 			</div>
 		);
 	}
@@ -101,15 +109,17 @@ export default function DashboardLayout({
 	if (!session) return null;
 
 	return (
-		<div className="flex h-screen bg-surface-0 text-ink-900 font-sans overflow-hidden">
+		<div className="flex h-screen bg-surface-0 text-ink-900 font-body overflow-hidden">
 			<Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
 			<main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
 				<header className="h-20 bg-surface-white border-b border-line/60 flex items-center justify-between px-4 md:px-8 shrink-0 z-30">
 					<div className="flex items-center gap-4">
 						<button
+							type="button"
 							onClick={() => setIsSidebarOpen(true)}
-							className="p-2 rounded-[16px] hover:bg-brand-500/5 text-brand-500 md:hidden transition-all"
+							aria-label={t("menu_open")}
+							className="p-2 rounded-[16px] hover:bg-brand-500/5 text-brand-500 md:hidden transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
 						>
 							<Menu size={24} />
 						</button>
@@ -141,16 +151,17 @@ export default function DashboardLayout({
 							<LanguageSwitcher />
 						</div>
 
-						<button className="relative p-2.5 rounded-[16px] hover:bg-brand-500/5 text-brand-500/60 transition-all duration-200">
-							<Bell size={20} />
-							<span className="absolute top-2.5 end-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-						</button>
+						<NotificationBell />
 
 						<div className="relative">
 							<button
+								type="button"
 								onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+								aria-haspopup="menu"
+								aria-expanded={isUserMenuOpen}
+								aria-controls="user-menu-panel"
 								className={clsx(
-									"flex items-center gap-3 p-1 rounded-full transition-all duration-200 cursor-pointer",
+									"group flex items-center gap-3 p-1 rounded-full transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50",
 									isUserMenuOpen
 										? "bg-brand-500/5 ring-1 ring-brand-500/10"
 										: "hover:bg-brand-500/5",
@@ -160,17 +171,17 @@ export default function DashboardLayout({
 									{session.user?.name?.charAt(0).toUpperCase() || "U"}
 								</div>
 								<div className="hidden lg:block text-start">
-									<p className="text-sm font-black leading-none text-brand-500 group-hover:text-brand-500 transition-colors">
+									<p className="text-sm font-black leading-none text-brand-600 transition-colors">
 										{session.user?.name}
 									</p>
-									<p className="text-[10px] font-black text-brand-500/40 uppercase mt-1 tracking-wider">
+									<p className="text-[10px] font-black text-ink-500 uppercase mt-1 tracking-wider">
 										{session.user?.role}
 									</p>
 								</div>
 								<ChevronDown
 									size={14}
 									className={clsx(
-										"text-brand-500/40 transition-transform duration-200",
+										"text-ink-400 transition-transform duration-200",
 										isUserMenuOpen && "rotate-180",
 									)}
 								/>
@@ -180,30 +191,35 @@ export default function DashboardLayout({
 								<>
 									<button
 										type="button"
-										aria-label="Close user menu"
+										tabIndex={-1}
+										aria-hidden
 										className="fixed inset-0 z-40 cursor-default bg-transparent w-full h-full"
 										onClick={() => setIsUserMenuOpen(false)}
 									/>
 									<div
+										id="user-menu-panel"
+										role="menu"
 										className={clsx(
-											"absolute top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-brand-500/5 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200",
+											"ts-pop absolute top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-brand-500/5 py-2 z-50",
 											isRtl ? "left-0" : "right-0",
 										)}
 									>
 										<Link
 											href="/dashboard/settings"
-											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-500/70 hover:bg-brand-500/5 transition-colors"
+											role="menuitem"
+											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-600 hover:bg-brand-500/5 transition-colors focus-visible:bg-brand-500/5 focus-visible:outline-none"
 											onClick={() => setIsUserMenuOpen(false)}
 										>
-											<User size={18} className="text-brand-500/30" />
+											<User size={18} className="text-brand-500/50" />
 											{t("tab_account")}
 										</Link>
 										<Link
 											href="/dashboard/settings"
-											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-500/70 hover:bg-brand-500/5 transition-colors"
+											role="menuitem"
+											className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-brand-600 hover:bg-brand-500/5 transition-colors focus-visible:bg-brand-500/5 focus-visible:outline-none"
 											onClick={() => setIsUserMenuOpen(false)}
 										>
-											<Settings size={18} className="text-brand-500/30" />
+											<Settings size={18} className="text-brand-500/50" />
 											{t("settings")}
 										</Link>
 										<div className="sm:hidden px-5 py-3 border-t border-brand-500/5 mt-2">
@@ -211,11 +227,13 @@ export default function DashboardLayout({
 										</div>
 										<div className="h-px bg-brand-500/5 my-2 mx-3" />
 										<button
+											type="button"
+											role="menuitem"
 											onClick={async () => {
 												await signOut({ redirect: false });
 												window.location.href = `/${locale}/login`;
 											}}
-											className="flex w-full items-center gap-3 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+											className="flex w-full items-center gap-3 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors focus-visible:bg-red-50 focus-visible:outline-none"
 										>
 											<LogOut size={18} />
 											{t("logout")}

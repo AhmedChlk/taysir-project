@@ -83,10 +83,10 @@
 	--grad-brand: linear-gradient(135deg, #114c57 0%, #157180 55%, #2ba0a6 100%);
 	--grad-premium: linear-gradient(135deg, #c6a24a 0%, #d5573b 100%);
 
-	/* ---------- Type ---------- */
-	--font-sans:
-		var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-		sans-serif;
+	/* ---------- Type ----------
+	   Body face is Petrona (SERIF). Named --font-text (not --font-sans) so no
+	   consumer assumes sans-serif. --font-body = the bare Petrona next/font var. */
+	--font-text: var(--font-body), Georgia, "Times New Roman", serif;
 	--font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
 	--t-display: 72px;
@@ -205,17 +205,58 @@
 	--color-line: var(--line);
 	--color-line-soft: var(--line-soft);
 
-	--font-sans: var(--font-sans);
+	/* Semantic status — exposed so text-danger / bg-success / border-warning
+	   exist as utilities (kills the raw emerald/rose/amber stopgap). */
+	--color-success: var(--success);
+	--color-success-50: var(--success-50);
+	--color-warning: var(--warning);
+	--color-warning-ink: var(--warning-ink);
+	--color-warning-50: var(--warning-50);
+	--color-danger: var(--danger);
+	--color-danger-50: var(--danger-50);
+	--color-info: var(--info);
+
+	/* Fonts — semantic names. The BODY face is a SERIF (Petrona); there is no
+	   `sans` alias, to avoid a consumer misreading it as sans-serif. */
+	--font-body: var(--font-text);
+	--font-display: var(--font-display);
+	--font-numeric: var(--font-numeric);
+	--font-arabic: var(--font-arabic);
 	--font-mono: var(--font-mono);
+
+	/* Easings (TARTEEB) → ease-order / ease-swipe / ease-zellige utilities. */
+	--ease-order: var(--ease-order);
+	--ease-swipe: var(--ease-swipe);
+	--ease-zellige: var(--ease-zellige);
+
+	/* Missing type sizes (the scale stopped at 12px eyebrow) → text-nano /
+	   text-micro instead of text-[10px] / text-[11px]. */
+	--text-nano: 10px;
+	--text-micro: 11px;
+
+	/* One extra radius for the 32px card corner. We do NOT override the default
+	   --radius-sm/md/lg/xl scale: that would remap 177 existing rounded-*
+	   usages (rounded-xl 12→24, rounded-lg 8→16) and double every corner. */
+	--radius-4xl: 32px;
 
 	--shadow-ts-1: var(--shadow-1);
 	--shadow-ts-2: var(--shadow-2);
 	--shadow-ts-3: var(--shadow-3);
 }
 
+/* Duration utilities (Tailwind v4 has no --duration-* namespace). TARTEEB beats
+   as classes. NB: no `duration-med` (480ms) — it exceeds the 300ms UI ceiling
+   and is unused; keep interactions ≤ dur-small. */
+@utility duration-micro {
+	transition-duration: var(--dur-micro);
+}
+@utility duration-small {
+	transition-duration: var(--dur-small);
+}
+
 @layer base {
 	html {
-		font-family: var(--font-sans);
+		font-family: var(--font-text);
 		color: var(--fg1);
 		-webkit-font-smoothing: antialiased;
 		text-rendering: optimizeLegibility;
@@ -480,6 +521,44 @@ section[style*="0F515C"] .btn.btn--lg:hover {
 	[style*="taysir-fade"],
 	[style*="taysir-pop"] {
 		animation: none !important;
+	}
+}
+
+/* ── Popover enter (dashboard topbar: cloche, menu compte, langue) ──────────
+   Vraie animation (le plugin tailwindcss-animate n'est pas installé, donc les
+   utilitaires .animate-in/.slide-in-from-* sont inertes). Subtile, courte,
+   couverte par le reset reduced-motion global ci-dessous. */
+@keyframes ts-pop {
+	from {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+.ts-pop {
+	animation: ts-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+	transform-origin: top;
+}
+[dir="rtl"] .ts-pop {
+	transform-origin: top;
+}
+
+/* ── Reduced-motion GLOBAL ─────────────────────────────────────────────────
+   Le dashboard est un outil dense ouvert des dizaines de fois/jour : quand
+   l'utilisateur demande « réduire les animations », on neutralise TOUT le
+   mouvement (spinners, pulse, transitions hover/scale, remplissages de barre)
+   — pas seulement la landing. Reset canonique. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }
 

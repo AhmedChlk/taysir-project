@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 
 /* ==========================================================================
-   AnimatedNumber — compteur animé 0 → valeur au montage / entrée en vue.
-   Micro-interaction « satisfaisante » sur les KPIs (loi de Doherty : le
-   mouvement occupe l'œil pendant que la page se pose ; peak-end : la montée
-   des chiffres rend le tableau de bord vivant). Respecte prefers-reduced-motion
-   et l'IntersectionObserver (n'anime qu'une fois visible).
+   AnimatedNumber — compteur animé 0 → valeur AU MONTAGE.
+   Micro-interaction « satisfaisante » sur les KPIs (peak-end : la montée des
+   chiffres rend le tableau de bord vivant). L'animation part au montage (pas
+   d'IntersectionObserver) : les KPI sous la ligne de flottaison ne restent donc
+   plus bloqués sur « 0 » tant qu'on n'a pas scrollé — au moment où l'on arrive,
+   la valeur réelle est déjà affichée. Respecte prefers-reduced-motion.
    ========================================================================== */
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
@@ -24,18 +25,15 @@ export interface AnimatedNumberProps {
 export function AnimatedNumber({
 	value,
 	suffix = "",
-	durationMs = 900,
+	durationMs = 550,
 	className,
 }: AnimatedNumberProps) {
-	const format = (n: number) => `${Math.round(n).toLocaleString("fr-FR")}${suffix}`;
+	const format = (n: number) =>
+		`${Math.round(n).toLocaleString("fr-FR")}${suffix}`;
 	const [display, setDisplay] = useState(0);
 	const ref = useRef<HTMLSpanElement | null>(null);
-	const startedRef = useRef(false);
 
 	useEffect(() => {
-		const node = ref.current;
-		if (!node) return;
-
 		const reduced =
 			typeof window !== "undefined" &&
 			window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -45,35 +43,15 @@ export function AnimatedNumber({
 		}
 
 		let raf = 0;
-		const run = () => {
-			if (startedRef.current) return;
-			startedRef.current = true;
-			const start = performance.now();
-			const tick = (nowT: number) => {
-				const p = Math.min(1, (nowT - start) / durationMs);
-				setDisplay(value * easeOutCubic(p));
-				if (p < 1) raf = requestAnimationFrame(tick);
-			};
-			raf = requestAnimationFrame(tick);
+		const start = performance.now();
+		const tick = (nowT: number) => {
+			const p = Math.min(1, (nowT - start) / durationMs);
+			setDisplay(value * easeOutCubic(p));
+			if (p < 1) raf = requestAnimationFrame(tick);
 		};
+		raf = requestAnimationFrame(tick);
 
-		const io = new IntersectionObserver(
-			(entries) => {
-				for (const e of entries) {
-					if (e.isIntersecting) {
-						run();
-						io.disconnect();
-					}
-				}
-			},
-			{ threshold: 0.2 },
-		);
-		io.observe(node);
-
-		return () => {
-			io.disconnect();
-			cancelAnimationFrame(raf);
-		};
+		return () => cancelAnimationFrame(raf);
 	}, [value, durationMs]);
 
 	return (

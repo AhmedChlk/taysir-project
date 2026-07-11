@@ -12,7 +12,7 @@ export default function SuperAdminLayout({
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 
 	return (
-		<div className="flex h-screen bg-surface-50 overflow-hidden font-sans antialiased">
+		<div className="flex h-screen bg-surface-50 overflow-hidden font-body antialiased">
 			<Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
 			<div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">

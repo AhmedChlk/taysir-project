@@ -8,6 +8,8 @@ import {
 	startOfDay,
 	startOfMonth,
 	startOfWeek,
+	subDays,
+	subMonths,
 } from "date-fns";
 import { z } from "zod";
 import { createSafeAction } from "@/lib/actions/safe-action";
@@ -271,6 +273,7 @@ export const getDirectorOverviewAction = createSafeAction(
 			weekAttendance,
 			weekSessions,
 			teachesCount,
+			trendPaiements,
 		] = await Promise.all([
 			client.student.count(),
 			client.student.count({ where: { isActive: true } }),
@@ -316,10 +319,13 @@ export const getDirectorOverviewAction = createSafeAction(
 					student: { select: { firstName: true, lastName: true } },
 				},
 			}),
-			// Attendance over the last 7 days → présence moyenne.
+			// Attendance over the last 7 days → présence moyenne + série journalière.
 			client.attendanceRecord.findMany({
 				where: { session: { startTime: { gte: weekSince, lte: now } } },
-				select: { status: true },
+				select: {
+					status: true,
+					session: { select: { startTime: true } },
+				},
 			}),
 			// Séances passées (7 j) SANS pointage, restreintes à celles que le
 			// gérant assure lui-même (il peut aussi enseigner). Un gérant qui
@@ -340,6 +346,13 @@ export const getDirectorOverviewAction = createSafeAction(
 			}),
 			// Le gérant enseigne-t-il ? (au moins une séance où il est intervenant)
 			client.session.count({ where: { instructorId: userId } }),
+			// Encaissements des 6 derniers mois (mois courant inclus) → courbe de
+			// trésorerie + comparatif mois précédent. Une seule requête, buckets
+			// calculés en mémoire.
+			client.paiement.findMany({
+				where: { date: { gte: startOfMonth(subMonths(now, 5)), lte: now } },
+				select: { amount: true, date: true },
+			}),
 		]);
 
 		const plansMoney = plans.map((p) => ({
@@ -417,6 +430,54 @@ export const getDirectorOverviewAction = createSafeAction(
 				? Math.round((weekPresent / weekAttendance.length) * 100)
 				: null;
 
+		// Série présence sur 7 jours glissants (une valeur % par jour, du plus
+		// ancien au plus récent) → sparkline sur le KPI présence.
+		const attendance7dSeries: number[] = [];
+		for (let i = 6; i >= 0; i--) {
+			const day = subDays(now, i);
+			const dayStart = startOfDay(day).getTime();
+			const dayEnd = endOfDay(day).getTime();
+			const dayRecords = weekAttendance.filter((a) => {
+				const t = a.session.startTime.getTime();
+				return t >= dayStart && t <= dayEnd;
+			});
+			if (dayRecords.length === 0) {
+				attendance7dSeries.push(0);
+			} else {
+				const p = dayRecords.filter(
+					(a) => a.status === "PRESENT" || a.status === "RETARD",
+				).length;
+				attendance7dSeries.push(Math.round((p / dayRecords.length) * 100));
+			}
+		}
+
+		// Encaissements agrégés par mois sur 6 mois (du plus ancien au courant).
+		const revenueSeries: { label: string; value: number }[] = [];
+		for (let i = 5; i >= 0; i--) {
+			const m = subMonths(now, i);
+			const ms = startOfMonth(m).getTime();
+			const me = endOfMonth(m).getTime();
+			const total = trendPaiements.reduce((acc, p) => {
+				const t = p.date.getTime();
+				return t >= ms && t <= me ? acc + money(p.amount) : acc;
+			}, 0);
+			revenueSeries.push({ label: m.toISOString(), value: total });
+		}
+		// Comparatif mois courant vs mois précédent (delta %).
+		const prevStart = startOfMonth(subMonths(now, 1)).getTime();
+		const prevEnd = endOfMonth(subMonths(now, 1)).getTime();
+		const encaisseMoisPrecedent = trendPaiements.reduce((acc, p) => {
+			const t = p.date.getTime();
+			return t >= prevStart && t <= prevEnd ? acc + money(p.amount) : acc;
+		}, 0);
+		const revenueDeltaPct =
+			encaisseMoisPrecedent > 0
+				? Math.round(
+						((encaisseCeMois - encaisseMoisPrecedent) / encaisseMoisPrecedent) *
+							100,
+					)
+				: null;
+
 		// Séances passées sans pointage saisi (gap opérationnel à combler).
 		const sansPointage = weekSessions.filter((s) => s._count.attendance === 0);
 
@@ -424,6 +485,15 @@ export const getDirectorOverviewAction = createSafeAction(
 			students: { total: totalStudents, active: activeStudents },
 			staffCount,
 			finance: { encaisseCeMois, resteARecouvrer, tauxRecouvrement },
+			// Tendances (graphes) + comparatif période.
+			trends: {
+				revenue: revenueSeries,
+				attendance: attendance7dSeries,
+			},
+			compare: {
+				encaisseMoisPrecedent,
+				revenueDeltaPct,
+			},
 			recouvrement: {
 				count: overdue.length,
 				amount: overdue.reduce((a, o) => a + o.overdueAmount, 0),
@@ -720,5 +790,194 @@ export const getDashboardFormDataAction = createSafeAction(
 				0,
 			),
 		};
+	},
+);
+
+/* ==========================================================================
+   Notifications — DÉRIVÉES (aucune table dédiée). On recalcule à la volée les
+   faits marquants de l'établissement (impayés en retard, absences répétées,
+   séances sans pointage, nouvelles inscriptions) à partir des données
+   existantes. Chaque notif porte un horodatage `at` = date de l'évènement le
+   plus récent de sa catégorie. Une notif est « non lue » si `at` est postérieur
+   à `user.notificationsSeenAt`. Ouvrir la cloche appelle markNotificationsSeen.
+
+   Périmètre : pilotage (GERANT/ADMIN). Les autres rôles ne reçoivent rien pour
+   l'instant → cloche sans badge. À étendre par rôle si besoin.
+   ========================================================================== */
+
+export type NotificationType =
+	| "overdue"
+	| "absences"
+	| "unmarked"
+	| "enrollment";
+
+export interface NotificationItem {
+	id: string;
+	type: NotificationType;
+	count: number;
+	amount: number;
+	/** ISO — date de l'évènement le plus récent de la catégorie. */
+	at: string;
+}
+
+export const getNotificationsAction = createSafeAction(
+	z.object({}),
+	async (_, { tenantId, userId, role }) => {
+		const client = getTenantPrisma(tenantId);
+
+		const me = await client.user.findUnique({
+			where: { id: userId },
+			select: { notificationsSeenAt: true },
+		});
+		const seenAt = me?.notificationsSeenAt ?? null;
+
+		// Seul le pilotage reçoit les notifications de gestion.
+		if (role !== "GERANT" && role !== "ADMIN") {
+			return { items: [] as NotificationItem[], unreadCount: 0, seenAt };
+		}
+
+		const now = new Date();
+		const absSince = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+		const weekSince = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+		const [plans, absents30, unmarkedSessions, newStudents] = await Promise.all(
+			[
+				client.paymentPlan.findMany({
+					include: {
+						student: { select: { firstName: true, lastName: true } },
+						tranches: { select: { amount: true, dueDate: true, isPaid: true } },
+					},
+				}),
+				client.attendanceRecord.findMany({
+					where: {
+						status: "ABSENT",
+						session: { startTime: { gte: absSince } },
+					},
+					select: {
+						studentId: true,
+						session: { select: { startTime: true } },
+					},
+				}),
+				client.session.findMany({
+					where: {
+						startTime: { gte: weekSince, lt: now },
+						instructorId: userId,
+						attendance: { none: {} },
+					},
+					select: { startTime: true },
+					orderBy: { startTime: "desc" },
+				}),
+				client.student.findMany({
+					where: { registrationDate: { gte: weekSince } },
+					select: { registrationDate: true },
+					orderBy: { registrationDate: "desc" },
+				}),
+			],
+		);
+
+		const items: NotificationItem[] = [];
+
+		// 1. Impayés en retard.
+		const plansMoney = plans.map((p) => ({
+			...p,
+			totalAmount: money(p.totalAmount),
+			paidAmount: money(p.paidAmount),
+			tranches: p.tranches.map((t) => ({ ...t, amount: money(t.amount) })),
+		}));
+		let overdueCount = 0;
+		let overdueAmount = 0;
+		let overdueAt = 0;
+		for (const p of plansMoney) {
+			const info = overdueInfo(p, now);
+			if (info.overdueAmount <= 0) continue;
+			overdueCount += 1;
+			overdueAmount += info.overdueAmount;
+			for (const tr of p.tranches) {
+				const due = tr.dueDate?.getTime() ?? 0;
+				if (!tr.isPaid && due < now.getTime() && due > overdueAt) {
+					overdueAt = due;
+				}
+			}
+		}
+		if (overdueCount > 0) {
+			items.push({
+				id: "overdue",
+				type: "overdue",
+				count: overdueCount,
+				amount: overdueAmount,
+				at: new Date(overdueAt || now.getTime()).toISOString(),
+			});
+		}
+
+		// 2. Absences répétées (≥ 3 en 30 j).
+		const ABS_THRESHOLD = 3;
+		const byStudent = new Map<string, { count: number; lastAt: number }>();
+		for (const a of absents30) {
+			const t = a.session.startTime.getTime();
+			const cur = byStudent.get(a.studentId);
+			if (cur) {
+				cur.count += 1;
+				if (t > cur.lastAt) cur.lastAt = t;
+			} else {
+				byStudent.set(a.studentId, { count: 1, lastAt: t });
+			}
+		}
+		const flagged = [...byStudent.values()].filter(
+			(v) => v.count >= ABS_THRESHOLD,
+		);
+		if (flagged.length > 0) {
+			items.push({
+				id: "absences",
+				type: "absences",
+				count: flagged.length,
+				amount: 0,
+				at: new Date(Math.max(...flagged.map((v) => v.lastAt))).toISOString(),
+			});
+		}
+
+		// 3. Séances sans pointage (celles que le gérant assure lui-même).
+		const lastUnmarked = unmarkedSessions[0];
+		if (lastUnmarked) {
+			items.push({
+				id: "unmarked",
+				type: "unmarked",
+				count: unmarkedSessions.length,
+				amount: 0,
+				at: lastUnmarked.startTime.toISOString(),
+			});
+		}
+
+		// 4. Nouvelles inscriptions (7 j).
+		const lastStudent = newStudents[0];
+		if (lastStudent) {
+			items.push({
+				id: "enrollment",
+				type: "enrollment",
+				count: newStudents.length,
+				amount: 0,
+				at: lastStudent.registrationDate.toISOString(),
+			});
+		}
+
+		const seenMs = seenAt ? seenAt.getTime() : 0;
+		const unreadCount = items.filter(
+			(it) => new Date(it.at).getTime() > seenMs,
+		).length;
+
+		items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+		return { items, unreadCount, seenAt };
+	},
+);
+
+export const markNotificationsSeenAction = createSafeAction(
+	z.object({}),
+	async (_, { tenantId, userId }) => {
+		const client = getTenantPrisma(tenantId);
+		await client.user.update({
+			where: { id: userId },
+			data: { notificationsSeenAt: new Date() },
+		});
+		return { ok: true };
 	},
 );

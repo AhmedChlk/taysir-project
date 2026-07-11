@@ -7,7 +7,7 @@ export default function NotFound() {
 	const t = useTranslations();
 
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center bg-surface-50 p-6 text-center font-sans antialiased">
+		<div className="flex min-h-screen flex-col items-center justify-center bg-surface-50 p-6 text-center font-body antialiased">
 			<div className="relative mb-8">
 				<div className="text-[120px] font-bold text-brand-900/5 leading-none select-none">
 					404

@@ -58,7 +58,7 @@ export default async function StudentProfilePage({ params }: PageProps) {
 	);
 
 	return (
-		<div className="space-y-10 pb-24 pt-4 font-sans antialiased">
+		<div className="space-y-10 pb-24 pt-4 font-body antialiased">
 			{/* Breadcrumbs & Header */}
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
 				<div className="flex items-center gap-5">

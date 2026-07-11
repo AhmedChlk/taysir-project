@@ -20,6 +20,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import {
 	useCallback,
+	useEffect,
 	useMemo,
 	useOptimistic,
 	useState,
@@ -89,6 +90,7 @@ export default function PaymentsClientView({
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 	const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [selectedPaymentState, setSelectedPaymentState] =
 		useState<Payment | null>(null);
 	const [isPending, startTransition] = useTransition();
@@ -214,7 +216,7 @@ export default function PaymentsClientView({
 				setTranchesCount(1);
 				router.refresh();
 			} else {
-				alert(result.error.message);
+				setErrorMessage(result.error.message);
 			}
 		});
 	};
@@ -285,7 +287,7 @@ export default function PaymentsClientView({
 					});
 
 			if (!result.success) {
-				alert(result.error.message);
+				setErrorMessage(result.error.message);
 			} else {
 				openReceipt(result.data.receipt);
 			}
@@ -367,7 +369,7 @@ export default function PaymentsClientView({
 				eyebrow={t("payments_subtitle")}
 				title={t("payments_manage_title")}
 				accent={t("payments")}
-				subtitle="Encaissez, suivez les échéances et relancez les impayés."
+				subtitle={t("payments_subtitle_tail")}
 				actions={
 					<>
 						<Button
@@ -420,14 +422,14 @@ export default function PaymentsClientView({
 						</span>
 						<div>
 							<div className="text-[11px] font-bold uppercase tracking-widest text-accent-600">
-								En retard de paiement
+								{t("payments_overdue_title")}
 							</div>
 							<div className="text-xl font-extrabold tracking-tight text-accent-600">
 								{formatCurrency(aging.overdueTotal)}
 							</div>
 							<div className="text-xs font-semibold text-ink-500">
-								{aging.count} élève{aging.count > 1 ? "s" : ""} concerné
-								{aging.count > 1 ? "s" : ""}
+								{aging.count} {t("students_count_suffix")}{" "}
+								{t("payments_concerned")}
 							</div>
 						</div>
 					</div>
@@ -639,7 +641,7 @@ export default function PaymentsClientView({
 							onClick={() => setIsReceiptOpen(true)}
 							disabled={(selectedPayment?.paidAmount ?? 0) <= 0}
 						>
-							Reçu PDF
+							{t("payments_receipt_pdf")}
 						</Button>
 						<Button onClick={() => setIsManageModalOpen(false)}>
 							{t("payments_done")}
@@ -881,6 +883,31 @@ export default function PaymentsClientView({
 					build={receiptBuild}
 				/>
 			)}
+
+			{/* Erreur inline (remplace alert() natif) — toast discret, dismiss manuel. */}
+			{errorMessage && (
+				<div className="fixed bottom-8 left-1/2 z-[100] flex min-w-[320px] max-w-md -translate-x-1/2 items-start gap-4 rounded-2xl border-2 border-danger/20 bg-white p-4 shadow-2xl duration-300 animate-in fade-in slide-in-from-bottom-4">
+					<div className="shrink-0 rounded-xl bg-rose-50 p-2 text-danger">
+						<AlertCircle size={20} />
+					</div>
+					<div className="flex-1">
+						<h4 className="mb-1 text-sm font-bold text-ink-900">
+							{t("error_title")}
+						</h4>
+						<p className="text-xs font-medium leading-relaxed text-ink-500">
+							{errorMessage}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={() => setErrorMessage(null)}
+						className="rounded-lg p-1 text-ink-400 transition-colors hover:bg-surface-50 hover:text-ink-700"
+						aria-label={t("close")}
+					>
+						<X size={16} />
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -901,6 +928,13 @@ function PaymentRow({
 	t: ReturnType<typeof useTranslations>;
 }) {
 	const locale = useLocale();
+	// Remplissage animé de la barre au montage (les transitions CSS ne jouent
+	// pas sur le rendu initial → on part de 0 puis on pousse à `percent`).
+	const [filled, setFilled] = useState(false);
+	useEffect(() => {
+		const id = requestAnimationFrame(() => setFilled(true));
+		return () => cancelAnimationFrame(id);
+	}, []);
 	const percent =
 		payment.totalAmount > 0
 			? Math.round((payment.paidAmount / payment.totalAmount) * 100)
@@ -937,7 +971,7 @@ function PaymentRow({
 			{/* Identity */}
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-3">
-					<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line/70 bg-surface-50 text-sm font-black text-brand-600">
+					<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line/70 bg-surface-50 text-sm font-black text-brand-600 transition-transform duration-200 group-hover:scale-105">
 						{student.firstName.charAt(0)}
 						{student.lastName.charAt(0)}
 					</div>
@@ -975,22 +1009,22 @@ function PaymentRow({
 					</div>
 					<div className="h-2 w-full overflow-hidden rounded-full bg-surface-100">
 						<div
-							className="h-full rounded-full bg-brand-500 transition-all duration-700"
-							style={{ width: `${percent}%` }}
+							className="h-full rounded-full bg-brand-500 transition-[width] duration-700 ease-out"
+							style={{ width: filled ? `${percent}%` : "0%" }}
 						/>
 					</div>
 				</div>
 			</td>
 
 			{/* Total */}
-			<td className="px-6 py-4 text-end text-sm font-bold tabular-nums text-ink-700">
+			<td className="whitespace-nowrap px-6 py-4 text-end text-sm font-bold tabular-nums text-ink-700">
 				{formatCurrency(payment.totalAmount)}
 			</td>
 
 			{/* Remaining — focal at-risk figure */}
 			<td
 				className={clsx(
-					"px-6 py-4 text-end text-sm font-black tabular-nums",
+					"whitespace-nowrap px-6 py-4 text-end text-sm font-black tabular-nums",
 					remaining > 0 ? "text-accent-600" : "text-emerald-700",
 				)}
 			>
@@ -1019,13 +1053,16 @@ function PaymentRow({
 					{overdue.overdueAmount > 0 && (
 						<span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-600">
 							<Clock size={10} />
-							Retard {overdue.daysLate} j
+							{t("late_days")} {overdue.daysLate} {t("days_short")}
 						</span>
 					)}
 					{lastRelance && (
 						<span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-600">
 							<CheckCircle2 size={10} />
-							Relancé le {new Date(lastRelance).toLocaleDateString("fr-FR")}
+							{t("payments_relaunched_on")}{" "}
+							{new Date(lastRelance).toLocaleDateString(
+								locale === "ar" ? "ar-DZ" : "fr-FR",
+							)}
 						</span>
 					)}
 				</div>
@@ -1046,11 +1083,15 @@ function PaymentRow({
 					<Button
 						variant="secondary"
 						size="sm"
-						className="h-9"
+						className="h-9 active:scale-95"
 						onClick={() => onManage(payment)}
 					>
 						{t("payments_manage_schedule")}
-						<ArrowRight size={14} strokeWidth={3} className="rtl:rotate-180" />
+						<ArrowRight
+							size={14}
+							strokeWidth={3}
+							className="transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+						/>
 					</Button>
 				</div>
 			</td>

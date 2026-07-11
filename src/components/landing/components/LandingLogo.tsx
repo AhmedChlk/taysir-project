@@ -30,7 +30,7 @@ export const Logo = ({
 				fontWeight: 700,
 				letterSpacing: "-0.02em",
 				color: textColor || "var(--fg1)",
-				fontFamily: "var(--font-sans)",
+				fontFamily: "var(--font-body)",
 			}}
 		>
 			taysir

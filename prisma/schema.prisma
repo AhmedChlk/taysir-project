@@ -48,6 +48,11 @@ model User {
   etablissementId  String?
   salary           Decimal?       @db.Decimal(12, 2)
   status           UserStatus     @default(ACTIVE)
+  // Horodatage de la dernière ouverture du centre de notifications par cet
+  // utilisateur. Les notifications sont dérivées (impayés, absences, pointages,
+  // inscriptions) : une notif est « non lue » si son évènement est postérieur à
+  // cette date. null = jamais ouvert → tout est non lu.
+  notificationsSeenAt DateTime?
   receivedMessages Message[]      @relation("ReceivedMessages")
   sentMessages     Message[]      @relation("SentMessages")
   sessions         Session[]      @relation("InstructorSessions")
