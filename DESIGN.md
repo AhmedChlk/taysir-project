@@ -116,7 +116,21 @@ Système « TARTEEB ». Une pulsation = un cours.
 - **Type sizes** : `text-nano` (10px) / `text-micro` (11px) **maintenant exposés**. Restent ~130 `text-[9/10/11px]` à migrer.
 - **Easings / durées** : `ease-order/swipe/zellige` + `duration-micro/small` **maintenant exposés**. Restent ~59 `duration-200/300/…` à migrer.
 - **Deux systèmes de boutons** : `.btn/.btn--*` (CSS) vs `<Button>` primitive — **à unifier sur un seul** (choix non tranché).
-- **~224 hex en dur** dans des composants (surtout **landing** : `LiveDemo`, `MicroDemo`, `Pricing` ; aussi `AttendanceSparkline #006A67`, `SessionDetails #0F515C`) — cf. décision landing ci-dessous.
+- **~224 hex en dur** : ~majorité dans **`src/components/landing/`** → **système parallèle assumé** (section dédiée ci-dessous, hors périmètre produit). Hors landing, quelques cas produit à migrer (`AttendanceSparkline #006A67`, `SessionDetails #0F515C`).
 - **RTL** : ~34 propriétés physiques résiduelles (`ml-/mr-/pl-/pr-/left-/right-`) vs 29 logiques ; icônes directionnelles pas toutes miroitées.
 - **Inputs** (`ui/FormInput.tsx`) : bordures `border-gray-200`/`rose`/`emerald` au lieu de `line`/`danger`/`success`.
-- **Landing** : statut non tranché (drift accidentel vs identité parallèle assumée) — à décider, cf. note en fin.
+
+## Landing — système parallèle (assumé)
+> **Décision** : la landing marketing (`src/components/landing/`) a une identité **volontairement distincte** du produit — plus expressive, ancrée sur des **maquettes/démos** de l'app posées sur des neutres froids. Elle est **hors du périmètre du design-system produit** ci-dessus. **Claude Design : respecter cette surface, ne pas la migrer** sur les tokens produit.
+
+Sections : `hero/` · `Footer, Funnel, KPIBand, LiveDemo, MicroDemo, PlatformTabs, PowerShowcase, Pricing, ROISimulator`.
+
+Palette **de facto** (valeurs réelles observées, **non consolidées en tokens nommés** — c'est le compromis assumé, pas un système tokenisé) :
+
+| Famille | Hex récurrents | Rôle apparent |
+|---|---|---|
+| Neutres froids (mockup) | `#EEF1F3` `#F3F4F6` `#F9FAFB` `#E5E7EB` `#F1F3F5` `#A5AEB5` `#5B6770` `#4B5760` | Chrome/écrans de démo, gris UI |
+| Pétrole (repris du produit) | `#0F515C` `#CFE3E7` `#E6F2F4` `#7FD4C1` | Accents marque |
+| Sémantiques standard | `#15803D` (vert) `#B45309`/`#FEF3C7` (ambre) | États dans les démos |
+
+⚠️ Ces valeurs **ne doivent pas** fuiter dans le produit (`dashboard`, `superadmin`). Si un jour on veut une landing propre, il faudra une passe d'extraction dédiée pour les nommer.
